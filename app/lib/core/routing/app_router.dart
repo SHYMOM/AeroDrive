@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:aerodrive/core/routing/responsive_scaffold.dart';
+import 'package:aerodrive/features/auth/auth_screen.dart';
+import 'package:aerodrive/features/auth/auth_provider.dart';
 import 'package:aerodrive/features/drive/drive_screen.dart';
 import 'package:aerodrive/features/search/search_screen.dart';
 import 'package:aerodrive/features/settings/settings_screen.dart';
@@ -54,49 +57,65 @@ enum AppDestination {
   final String path;
 }
 
-/// Application router configuration using [GoRouter].
-///
-/// Uses a [ShellRoute] to provide a persistent responsive navigation
-/// shell (sidebar / nav rail / bottom nav) around the main content area.
-final GoRouter appRouter = GoRouter(
-  initialLocation: AppDestination.drive.path,
-  routes: [
-    ShellRoute(
-      builder: (context, state, child) {
-        return ResponsiveScaffold(child: child);
-      },
-      routes: [
-        GoRoute(
-          path: AppDestination.drive.path,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: DriveScreen(),
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
+  return GoRouter(
+    initialLocation: '/auth', // Always start at auth evaluation
+    redirect: (context, state) {
+      final isAuth = authState == AuthState.authenticated;
+      final isGoingToAuth = state.matchedLocation == '/auth';
+
+      if (!isAuth && !isGoingToAuth) {
+        return '/auth';
+      }
+      if (isAuth && isGoingToAuth) {
+        return AppDestination.drive.path;
+      }
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/auth',
+        builder: (context, state) => const AuthScreen(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) {
+          return ResponsiveScaffold(child: child);
+        },
+        routes: [
+          GoRoute(
+            path: AppDestination.drive.path,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: DriveScreen(),
+            ),
           ),
-        ),
-        GoRoute(
-          path: AppDestination.uploadQueue.path,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: UploadQueueScreen(),
+          GoRoute(
+            path: AppDestination.uploadQueue.path,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: UploadQueueScreen(),
+            ),
           ),
-        ),
-        GoRoute(
-          path: AppDestination.search.path,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: SearchScreen(),
+          GoRoute(
+            path: AppDestination.search.path,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SearchScreen(),
+            ),
           ),
-        ),
-        GoRoute(
-          path: AppDestination.trash.path,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: TrashScreen(),
+          GoRoute(
+            path: AppDestination.trash.path,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TrashScreen(),
+            ),
           ),
-        ),
-        GoRoute(
-          path: AppDestination.settings.path,
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: SettingsScreen(),
+          GoRoute(
+            path: AppDestination.settings.path,
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SettingsScreen(),
+            ),
           ),
-        ),
-      ],
-    ),
-  ],
-);
+        ],
+      ),
+    ],
+  );
+});

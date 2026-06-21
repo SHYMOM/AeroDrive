@@ -1,0 +1,171 @@
+import 'package:drift/drift.dart';
+
+// 1. Folders
+class Folders extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get name => text()();
+  TextColumn get parentId => text().nullable().references(Folders, #id)();
+  BoolColumn get isVault => boolean().withDefault(const Constant(false))();
+  TextColumn get color => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 2. Files
+class Files extends Table {
+  TextColumn get id => text()(); // UUID
+  TextColumn get name => text()();
+  TextColumn get folderId => text().nullable().references(Folders, #id)();
+  IntColumn get size => integer().nullable()();
+  TextColumn get mimeType => text().nullable()();
+  TextColumn get sha256Hash => text().nullable()(); // SHA-256 for deduplication
+  BoolColumn get isEncrypted => boolean().withDefault(const Constant(false))();
+  BoolColumn get isChunked => boolean().withDefault(const Constant(false))();
+  IntColumn get totalChunks => integer().withDefault(const Constant(1))();
+  BlobColumn get thumbnailBlob => blob().nullable()();
+  IntColumn get version => integer().withDefault(const Constant(1))();
+  IntColumn get manifestMessageId => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 3. File Chunks
+class Chunks extends Table {
+  TextColumn get id => text()();
+  TextColumn get fileId => text().nullable().references(Files, #id)();
+  IntColumn get chunkIndex => integer().nullable()();
+  IntColumn get channelId => integer().nullable()();
+  IntColumn get messageId => integer().nullable()();
+  IntColumn get size => integer().nullable()();
+  TextColumn get hash => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 4. Channels
+class Channels extends Table {
+  IntColumn get id => integer()(); // Telegram channel ID
+  TextColumn get name => text().nullable()();
+  TextColumn get accountId => text().nullable()();
+  TextColumn get macroTopic => text().nullable()();
+  IntColumn get messagesCount => integer().withDefault(const Constant(0))();
+  DateTimeColumn get lastUsed => dateTime().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 5. Accounts
+class Accounts extends Table {
+  TextColumn get id => text()();
+  TextColumn get phoneNumber => text().nullable()();
+  BlobColumn get sessionData => blob().nullable()();
+  BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 6. Tags
+class Tags extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().unique()();
+  TextColumn get color => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 7. File-Tag Mapping
+class FileTags extends Table {
+  TextColumn get fileId => text().references(Files, #id)();
+  TextColumn get tagId => text().references(Tags, #id)();
+
+  @override
+  Set<Column> get primaryKey => {fileId, tagId};
+}
+
+// 8. Share Links
+class Shares extends Table {
+  TextColumn get id => text()();
+  TextColumn get fileId => text().nullable().references(Files, #id)();
+  TextColumn get password => text().nullable()();
+  DateTimeColumn get expiresAt => dateTime().nullable()();
+  IntColumn get maxDownloads => integer().nullable()();
+  IntColumn get currentDownloads => integer().withDefault(const Constant(0))();
+  TextColumn get createdBy => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 9. Upload/Download Queue
+class TransferQueue extends Table {
+  TextColumn get id => text()();
+  TextColumn get fileId => text().nullable()(); 
+  TextColumn get type => text().nullable()();
+  TextColumn get status => text().nullable()();
+  IntColumn get priority => integer().withDefault(const Constant(0))();
+  IntColumn get bytesTransferred => integer().withDefault(const Constant(0))();
+  IntColumn get totalBytes => integer().nullable()();
+  IntColumn get retryCount => integer().withDefault(const Constant(0))();
+  TextColumn get errorMessage => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 10. Face Clusters (Local AI)
+class FaceClusters extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().nullable()();
+  BlobColumn get embedding => blob().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 11. Photo-Face Mapping
+class PhotoFaces extends Table {
+  TextColumn get fileId => text().references(Files, #id)();
+  TextColumn get faceClusterId => text().references(FaceClusters, #id)();
+  RealColumn get confidence => real().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {fileId, faceClusterId};
+}
+
+// 12. Backup History
+class BackupHistory extends Table {
+  TextColumn get id => text()();
+  TextColumn get type => text().nullable()();
+  TextColumn get filePath => text().nullable()();
+  IntColumn get fileSize => integer().nullable()();
+  IntColumn get fileCount => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime().nullable()();
+  BoolColumn get isEncrypted => boolean().withDefault(const Constant(true))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 13. Settings
+class Settings extends Table {
+  TextColumn get key => text()();
+  TextColumn get value => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {key};
+}
