@@ -1,0 +1,57 @@
+name: aerodrive
+description: "AeroDrive — Zero-knowledge encrypted cloud storage powered by Telegram."
+publish_to: 'none'
+version: 0.1.0-alpha.1+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Routing
+  go_router: ^14.8.1
+
+  # Local Database
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.28
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+  # Cryptography
+  cryptography: ^2.7.0
+  cryptography_flutter: ^2.3.2
+  flutter_secure_storage: ^9.2.4
+
+  # Utilities
+  uuid: ^4.5.1
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # Code Generation
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.1
+  freezed: ^2.5.7
+  json_serializable: ^6.9.0
+
+  # Linting
+  flutter_lints: ^6.0.0
+
+  # Testing
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true

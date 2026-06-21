@@ -1,0 +1,86 @@
+# ==========================
+# AeroDrive .gitignore
+# ==========================
+
+# --- Flutter / Dart ---
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+
+# Generated files (rebuild with `dart run build_runner build`)
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+
+# --- Android ---
+app/android/.gradle/
+app/android/local.properties
+app/android/app/debug/
+app/android/app/profile/
+app/android/app/release/
+*.jks
+*.keystore
+
+# --- iOS / macOS ---
+app/ios/Pods/
+app/ios/.symlinks/
+app/macos/Pods/
+app/macos/.symlinks/
+**/Flutter/ephemeral/
+**/Pods/
+
+# --- Web ---
+app/web/.dart_tool/
+
+# --- Windows ---
+app/windows/flutter/ephemeral/
+
+# --- Linux ---
+app/linux/flutter/ephemeral/
+
+# --- Go ---
+backend/cmd/server/server
+backend/cmd/server/server.exe
+backend/*.exe
+backend/*.out
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.history/
+
+# --- Secrets & Environment ---
+.env
+.env.*
+*.key
+*.pem
+*.p12
+secrets/
+
+# --- TDLib native binaries ---
+*.so
+*.dylib
+*.dll
+app/android/app/src/main/jniLibs/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# --- Coverage ---
+coverage/
+lcov.info
+
+# --- Misc ---
+*.log
+*.tmp
+*.bak
