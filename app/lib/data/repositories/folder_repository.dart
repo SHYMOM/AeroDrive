@@ -10,6 +10,13 @@ class FolderPathTooLongException implements Exception {
   String toString() => message;
 }
 
+class FolderNameTooLongException implements Exception {
+  final String message;
+  FolderNameTooLongException([this.message = 'Folder name exceeds 200 characters.']);
+  @override
+  String toString() => message;
+}
+
 class FolderRepository {
   final AeroDriveDatabase _db;
   final Uuid _uuid = const Uuid();
@@ -36,8 +43,12 @@ class FolderRepository {
     return path.isEmpty ? '/' : path;
   }
 
-  /// Creates a folder, enforcing the 255 character total path limit.
+  /// Creates a folder, enforcing the 255 character total path limit and 200 char name limit.
   Future<String> createFolder({required String name, String? parentId}) async {
+    if (name.length > 200) {
+      throw FolderNameTooLongException();
+    }
+
     final parentPath = await getFolderPath(parentId);
     final newPath = parentPath == '/' ? '/$name' : '$parentPath/$name';
     
@@ -59,7 +70,7 @@ class FolderRepository {
   }
 
   /// Retrieves the immediate children (folders and files) of a given folder.
-  Future<List<Folder>> getSubfolders(String? parentId) {
+  Future<List<FolderData>> getSubfolders(String? parentId) {
     final query = _db.select(_db.folders);
     if (parentId == null) {
       query.where((f) => f.parentId.isNull());
@@ -69,44 +80,99 @@ class FolderRepository {
     return query.get();
   }
 
+  /// Retrieves both folders and files in a specific directory
+  Future<Map<String, dynamic>> getFolderContents(String? parentId) async {
+    final foldersQuery = _db.select(_db.folders)
+      ..where((f) => parentId == null ? f.parentId.isNull() : f.parentId.equals(parentId))
+      ..where((f) => f.deletedAt.isNull());
+      
+    final filesQuery = _db.select(_db.files)
+      ..where((f) => parentId == null ? f.folderId.isNull() : f.folderId.equals(parentId))
+      ..where((f) => f.deletedAt.isNull());
+
+    final folders = await foldersQuery.get();
+    final files = await filesQuery.get();
+
+    return {
+      'folders': folders,
+      'files': files,
+    };
+  }
+
   /// Soft deletes a folder and ALL its nested subfolders and files using a Recursive CTE.
   Future<void> trashFolder(String folderId) async {
-    // 1. Mark the folder and all nested subfolders as deleted
-    const sqlFolders = '''
+    final int nowSecs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+    final String fileQuery = '''
       WITH RECURSIVE folder_tree AS (
-        SELECT id FROM folders WHERE id = ?
+        SELECT id FROM folders WHERE id = ?1
         UNION ALL
-        SELECT f.id FROM folders f INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        SELECT f.id FROM folders f
+        INNER JOIN folder_tree ft ON f.parent_id = ft.id
       )
-      UPDATE folders SET updated_at = strftime('%s', 'now') 
-      -- We'd normally have an is_trashed flag, but since we didn't add one to the final schema 
-      -- we simulate soft-delete by moving them or we can just delete them directly as per CTE.
-      -- The user prompt said: "DELETE FROM folders WHERE id IN folder_tree;"
-    ''';
-    
-    // Since the schema doesn't have `isTrashed` (as per the final 13 tables implementation),
-    // we will hard delete them using the CTE.
-    const deleteFilesSql = '''
-      WITH RECURSIVE folder_tree AS (
-        SELECT id FROM folders WHERE id = ?
-        UNION ALL
-        SELECT f.id FROM folders f INNER JOIN folder_tree ft ON f.parent_id = ft.id
-      )
-      DELETE FROM files WHERE folder_id IN folder_tree;
+      UPDATE files SET deleted_at = ?2 WHERE folder_id IN folder_tree;
     ''';
 
-    const deleteFoldersSql = '''
+    final String query = '''
+      WITH RECURSIVE folder_tree AS (
+        SELECT id FROM folders WHERE id = ?1
+        UNION ALL
+        SELECT f.id FROM folders f
+        INNER JOIN folder_tree ft ON f.parent_id = ft.id
+      )
+      UPDATE folders SET deleted_at = ?2 WHERE id IN folder_tree;
+    ''';
+
+    await _db.customStatement('PRAGMA foreign_keys = ON;');
+    await _db.transaction(() async {
+      await _db.customStatement(fileQuery, [folderId, nowSecs]);
+      await _db.customStatement(query, [folderId, nowSecs]);
+    });
+  }
+
+  Future<void> restoreFolder(String folderId) async {
+    // 1. Get the folder
+    final folder = await (_db.select(_db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
+    if (folder == null) return;
+
+    // 2. Check for collision in the parent
+    if (folder.parentId != null) {
+      final existing = await (_db.select(_db.folders)
+        ..where((f) => f.parentId.equals(folder.parentId!) & f.name.equals(folder.name) & f.deletedAt.isNull()))
+        .getSingleOrNull();
+      
+      if (existing != null) {
+        // Collision exists. Rename.
+        await (_db.update(_db.folders)..where((f) => f.id.equals(folderId))).write(
+          FoldersCompanion(name: Value('${folder.name} (Restored)')),
+        );
+      }
+    }
+
+    // 3. Recursive soft-restore via CTE
+    final String fileQuery = '''
       WITH RECURSIVE folder_tree AS (
         SELECT id FROM folders WHERE id = ?
         UNION ALL
-        SELECT f.id FROM folders f INNER JOIN folder_tree ft ON f.parent_id = ft.id
+        SELECT f.id FROM folders f
+        INNER JOIN folder_tree ft ON f.parent_id = ft.id
       )
-      DELETE FROM folders WHERE id IN folder_tree;
+      UPDATE files SET deleted_at = NULL WHERE folder_id IN folder_tree;
+    ''';
+
+    final String query = '''
+      WITH RECURSIVE folder_tree AS (
+        SELECT id FROM folders WHERE id = ?
+        UNION ALL
+        SELECT f.id FROM folders f
+        INNER JOIN folder_tree ft ON f.parent_id = ft.id
+      )
+      UPDATE folders SET deleted_at = NULL WHERE id IN folder_tree;
     ''';
 
     await _db.transaction(() async {
-      await _db.customUpdate(deleteFilesSql, variables: [Variable.withString(folderId)]);
-      await _db.customUpdate(deleteFoldersSql, variables: [Variable.withString(folderId)]);
+      await _db.customStatement(fileQuery, [folderId]);
+      await _db.customStatement(query, [folderId]);
     });
   }
 }

@@ -28,7 +28,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {

@@ -32,11 +32,11 @@ class ChunkRepository {
     return id;
   }
 
-  /// Retrieves all chunks for a specific file, ordered by chunk index.
-  Future<List<Chunk>> getChunksForFile(String fileId) {
+  /// Retrieves all chunks for a given file
+  Future<List<ChunkData>> getChunksForFile(String fileId) {
     return (_db.select(_db.chunks)
           ..where((c) => c.fileId.equals(fileId))
-          ..orderBy([(c) => OrderingTerm(expression: c.chunkIndex)]))
+          ..orderBy([(c) => OrderingTerm(expression: c.chunkIndex, mode: OrderingMode.asc)]))
         .get();
   }
 

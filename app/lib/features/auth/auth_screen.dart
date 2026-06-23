@@ -14,11 +14,13 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _phoneController = TextEditingController();
   final _codeController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _phoneController.dispose();
     _codeController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -33,6 +35,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final code = _codeController.text.trim();
     if (code.isNotEmpty) {
       ref.read(telegramServiceProvider.notifier).checkAuthenticationCode(code);
+    }
+  }
+
+  void _submitPassword() {
+    final pass = _passwordController.text.trim();
+    if (pass.isNotEmpty) {
+      ref.read(telegramServiceProvider.notifier).checkAuthenticationPassword(pass);
     }
   }
 
@@ -76,6 +85,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   _buildPhoneEntry()
                 else if (tdState == TelegramAuthState.waitCode)
                   _buildCodeEntry()
+                else if (tdState == TelegramAuthState.waitPassword)
+                  _buildPasswordEntry()
                 else if (tdState == TelegramAuthState.error)
                   const Text('Failed to initialize TDLib. Check your API credentials.', textAlign: TextAlign.center, style: TextStyle(color: Colors.redAccent))
                 else
@@ -169,6 +180,51 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ref.read(telegramServiceProvider.notifier).logOut(); // Go back to phone
           },
           child: const Text('Change phone number'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordEntry() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Your account is protected with 2-Step Verification.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.primaryLight),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your 2FA password',
+            prefixIcon: const Icon(Icons.password),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onSubmitted: (_) => _submitPassword(),
+        ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: _submitPassword,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: const Text('Submit Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () {
+            ref.read(telegramServiceProvider.notifier).logOut();
+          },
+          child: const Text('Log out and try another number'),
         ),
       ],
     );

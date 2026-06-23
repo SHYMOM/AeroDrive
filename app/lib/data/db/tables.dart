@@ -1,6 +1,6 @@
 import 'package:drift/drift.dart';
 
-// 1. Folders
+@DataClassName('FolderData')
 class Folders extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get name => text()();
@@ -9,12 +9,14 @@ class Folders extends Table {
   TextColumn get color => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
 }
 
 // 2. Files
+@DataClassName('FileData')
 class Files extends Table {
   TextColumn get id => text()(); // UUID
   TextColumn get name => text()();
@@ -25,7 +27,9 @@ class Files extends Table {
   BoolColumn get isEncrypted => boolean().withDefault(const Constant(false))();
   BoolColumn get isChunked => boolean().withDefault(const Constant(false))();
   IntColumn get totalChunks => integer().withDefault(const Constant(1))();
-  BlobColumn get thumbnailBlob => blob().nullable()();
+  TextColumn get thumbnailPath => text().nullable()();
+  IntColumn get thumbnailSize => integer().nullable()();
+  DateTimeColumn get thumbnailLastAccess => dateTime().nullable()();
   IntColumn get version => integer().withDefault(const Constant(1))();
   IntColumn get manifestMessageId => integer().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
@@ -37,6 +41,7 @@ class Files extends Table {
 }
 
 // 3. File Chunks
+@DataClassName('ChunkData')
 class Chunks extends Table {
   TextColumn get id => text()();
   TextColumn get fileId => text().nullable().references(Files, #id)();
@@ -55,7 +60,6 @@ class Channels extends Table {
   IntColumn get id => integer()(); // Telegram channel ID
   TextColumn get name => text().nullable()();
   TextColumn get accountId => text().nullable()();
-  TextColumn get macroTopic => text().nullable()();
   IntColumn get messagesCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastUsed => dateTime().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();

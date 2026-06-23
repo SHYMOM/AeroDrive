@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>tdlib.native</id>
+    <version>1.8.64.1</version>
+    <authors>tdlib.native</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">BSL-1.0</license>
+    <licenseUrl>https://licenses.nuget.org/BSL-1.0</licenseUrl>
+    <readme>README.md</readme>
+    <projectUrl>https://github.com/ForNeVeR/tdlib.native</projectUrl>
+    <description>NuGet packaging for tdlib: Telegram client library. Meta-package pulling AArch64 and x86-64 dependencies for Linux, macOS, and Windows.</description>
+    <releaseNotes>[Changed]
+
+- Update to TDLib v1.8.64.1 (https://github.com/ForNeVeR/tdlib-versioned/releases/tag/tdlib%2Fv1.8.64.1).</releaseNotes>
+    <copyright>2018-2026 TDLib authors,
+            2018-2026 tdlib.native contributors</copyright>
+    <tags>telegram</tags>
+    <dependencies>
+      <dependency id="tdlib.native.linux-arm64" version="1.8.64.1" />
+      <dependency id="tdlib.native.linux-x64" version="1.8.64.1" />
+      <dependency id="tdlib.native.osx-arm64" version="1.8.64.1" />
+      <dependency id="tdlib.native.osx-x64" version="1.8.64.1" />
+      <dependency id="tdlib.native.win-arm64" version="1.8.64.1" />
+      <dependency id="tdlib.native.win-x64" version="1.8.64.1" />
+    </dependencies>
+  </metadata>
+</package>

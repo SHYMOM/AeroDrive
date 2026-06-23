@@ -8,10 +8,8 @@ class FileRepository {
 
   FileRepository(this._db);
 
-  Future<File?> getFileByHash(String sha256Hash) async {
-    return (_db.select(_db.files)
-          ..where((f) => f.sha256Hash.equals(sha256Hash))
-          ..limit(1))
+  Future<FileData?> getFileByHash(String sha256Hash) async {
+    return await (_db.select(_db.files)..where((f) => f.sha256Hash.equals(sha256Hash) & f.deletedAt.isNull()))
         .getSingleOrNull();
   }
 
@@ -73,13 +71,14 @@ class FileRepository {
   }
 
   /// Retrieves the files within a specific folder.
-  Future<List<File>> getFilesInFolder(String? folderId) {
+  Future<List<FileData>> getFilesInFolder(String? folderId) {
     final query = _db.select(_db.files);
     if (folderId == null) {
       query.where((f) => f.folderId.isNull());
     } else {
       query.where((f) => f.folderId.equals(folderId));
     }
+    query.where((f) => f.deletedAt.isNull());
     return query.get();
   }
 

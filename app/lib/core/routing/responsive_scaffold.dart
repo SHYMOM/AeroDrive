@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../constants.dart';
 import '../theme/app_colors.dart';
@@ -35,23 +36,28 @@ class ResponsiveScaffold extends StatelessWidget {
       builder: (context, constraints) {
         final width = constraints.maxWidth;
 
+        final location = GoRouterState.of(context).uri.path;
+        final animatedChild = child.animate(key: ValueKey(location))
+            .fadeIn(duration: 300.ms)
+            .slideX(begin: 0.05, end: 0, duration: 300.ms, curve: Curves.easeOut);
+
         if (width >= AppConstants.desktopBreakpoint) {
           return _DesktopLayout(
             selectedIndex: _currentIndex(context),
             onDestinationSelected: (i) => _onDestinationSelected(context, i),
-            child: child,
+            child: animatedChild,
           );
         } else if (width >= AppConstants.mobileBreakpoint) {
           return _TabletLayout(
             selectedIndex: _currentIndex(context),
             onDestinationSelected: (i) => _onDestinationSelected(context, i),
-            child: child,
+            child: animatedChild,
           );
         } else {
           return _MobileLayout(
             selectedIndex: _currentIndex(context),
             onDestinationSelected: (i) => _onDestinationSelected(context, i),
-            child: child,
+            child: animatedChild,
           );
         }
       },
@@ -255,10 +261,13 @@ class _MobileLayout extends StatelessWidget {
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onDestinationSelected,
+        labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+        animationDuration: const Duration(milliseconds: 300),
+        indicatorColor: AppColors.primary.withValues(alpha: 0.2),
         destinations: AppDestination.values.map((dest) {
           return NavigationDestination(
-            icon: Icon(dest.icon),
-            selectedIcon: Icon(dest.selectedIcon),
+            icon: Icon(dest.icon).animate(target: selectedIndex == AppDestination.values.indexOf(dest) ? 0 : 1).scale(begin: const Offset(1.2, 1.2), end: const Offset(1.0, 1.0)),
+            selectedIcon: Icon(dest.selectedIcon, color: AppColors.primary).animate().scale(begin: const Offset(0.8, 0.8), end: const Offset(1.1, 1.1), duration: 200.ms),
             label: dest.label,
           );
         }).toList(),

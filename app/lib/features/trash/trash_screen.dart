@@ -1,57 +1,108 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/data/db/database.dart';
 
-/// Trash screen — shows soft-deleted files with 30-day auto-purge.
-///
-/// Placeholder for Phase 5.
-class TrashScreen extends StatelessWidget {
+final trashedItemsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  
+  // Get soft-deleted folders
+  final folders = await (db.select(db.folders)
+    ..where((f) => f.deletedAt.isNotNull()))
+    .get();
+
+  // Get soft-deleted files
+  final files = await (db.select(db.files)
+    ..where((f) => f.deletedAt.isNotNull()))
+    .get();
+
+  return {'folders': folders, 'files': files};
+});
+
+class TrashScreen extends ConsumerWidget {
   const TrashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final trashAsync = ref.watch(trashedItemsProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trash'),
         actions: [
-          TextButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.delete_forever_outlined, size: 18),
-            label: const Text('Empty Trash'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.error,
-            ),
+          IconButton(
+            icon: const Icon(Icons.delete_forever),
+            tooltip: 'Empty Trash',
+            onPressed: () {
+              // TODO: Execute Hard Delete Purge manually
+            },
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.delete_outline,
-              size: 64,
-              color: AppColors.onSurfaceVariant.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Trash is empty',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: AppColors.onSurface,
+      body: trashAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (contents) {
+          final folders = contents['folders'] as List<FolderData>? ?? [];
+          final files = contents['files'] as List<FileData>? ?? [];
+          
+          if (folders.isEmpty && files.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.delete_outline, size: 64, color: Colors.white24),
+                  SizedBox(height: 16),
+                  Text('Trash is empty', style: TextStyle(color: Colors.white54)),
+                  SizedBox(height: 8),
+                  Text('Items in trash will be permanently deleted after 30 days', style: TextStyle(color: Colors.white30, fontSize: 12)),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Deleted files are kept for 30 days\nbefore permanent removal',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.onSurfaceVariant,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
+            );
+          }
+
+          final totalItems = folders.length + files.length;
+
+          return ListView.builder(
+            itemCount: totalItems,
+            itemBuilder: (context, index) {
+              if (index < folders.length) {
+                final folder = folders[index];
+                final daysLeft = 30 - DateTime.now().difference(folder.deletedAt!).inDays;
+                
+                return ListTile(
+                  leading: const Icon(Icons.folder, color: Colors.redAccent),
+                  title: Text(folder.name),
+                  subtitle: Text('$daysLeft days left'),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      await ref.read(folderRepositoryProvider).restoreFolder(folder.id);
+                      ref.invalidate(trashedItemsProvider);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Folder Restored')));
+                    },
+                    child: const Text('Restore'),
+                  ),
+                );
+              } else {
+                final file = files[index - folders.length];
+                final daysLeft = 30 - DateTime.now().difference(file.deletedAt!).inDays;
+
+                return ListTile(
+                  leading: const Icon(Icons.insert_drive_file, color: Colors.grey),
+                  title: Text(file.name),
+                  subtitle: Text('${(file.size ?? 0) ~/ 1024} KB • $daysLeft days left'),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      // TODO: fileRepo.restoreFile(file.id)
+                    },
+                    child: const Text('Restore'),
+                  ),
+                );
+              }
+            },
+          );
+        },
       ),
     );
   }

@@ -1,0 +1,512 @@
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:aerodrive/core/theme/app_colors.dart';
+import 'package:aerodrive/features/telegram/telegram_manager.dart';
+import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/core/providers/repository_providers.dart';
+
+class ChannelsScreen extends ConsumerStatefulWidget {
+  const ChannelsScreen({super.key});
+
+  @override
+  ConsumerState<ChannelsScreen> createState() => _ChannelsScreenState();
+}
+
+class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
+  String? _activeChannelId;
+  List<Map<String, dynamic>> _storageChannels = [];
+  bool _isLoading = true;
+  bool _isProcessingSetup = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    final activeId = await settings.getSetting('active_channel_id');
+    final savedChannelsJson = await settings.getSetting('storage_channels_list');
+    
+    List<Map<String, dynamic>> loaded = [];
+    if (savedChannelsJson != null && savedChannelsJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(savedChannelsJson);
+        loaded = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+      } catch (e) {
+        // ignore
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _activeChannelId = activeId;
+        _storageChannels = loaded;
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _saveChannelsList() async {
+    final settings = ref.read(settingsRepositoryProvider);
+    await settings.setSetting('storage_channels_list', jsonEncode(_storageChannels));
+  }
+
+  Future<void> _verifyAndAddChannel(String identifier, String accountId) async {
+    setState(() => _isProcessingSetup = true);
+    final accounts = ref.read(telegramManagerProvider);
+    final telegram = accounts.firstWhere((c) => c.accountId == accountId, orElse: () => accounts.first);
+    
+    try {
+      final chat = await telegram.verifyChannel(identifier);
+      if (chat != null) {
+        final chatId = chat['id'];
+        final title = chat['title'] ?? 'Unknown Chat';
+        
+        final newChannel = {
+          'id': chatId,
+          'title': title,
+          'accountId': accountId, // Explicitly bind channel to this account
+        };
+
+        setState(() {
+          if (!_storageChannels.any((c) => c['id'] == newChannel['id'])) {
+            _storageChannels.add(newChannel);
+          }
+        });
+        await _saveChannelsList();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Channel successfully verified and bound!'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Failed to verify. Ensure you are an admin.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingSetup = false);
+      }
+    }
+  }
+
+  Future<void> _confirmAndAddChannel(String id, String title, String accountId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Add Storage Channel', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Are you sure you want to bind "$title" as a storage backend for account "$accountId"?',
+          style: const TextStyle(color: AppColors.onSurface),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Add & Bind'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _verifyAndAddChannel(id, accountId);
+    }
+  }
+
+  void _showAddChannelOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Text(
+                  'Add Storage Channel',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: const Icon(Icons.link, color: AppColors.primaryLight),
+                  title: const Text('Link Existing Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  subtitle: const Text('Choose from Telegram channels you manage', style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showLinkExistingChannelDialog();
+                  },
+                ),
+                const Divider(color: AppColors.outline),
+                ListTile(
+                  leading: const Icon(Icons.add_circle_outline, color: AppColors.secondaryLight),
+                  title: const Text('Create Private Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  subtitle: const Text('Create a new private channel on Telegram', style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showCreateNewChannelDialog();
+                  },
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLinkExistingChannelDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final adminChannelsAsync = ref.watch(adminChannelsProvider);
+
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceElevated,
+              title: const Text('Link Existing Channel', style: TextStyle(color: Colors.white)),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 300,
+                child: adminChannelsAsync.when(
+                  data: (availableChats) {
+                    final filteredAvailable = availableChats.where((chat) {
+                      final id = chat['id'];
+                      return !_storageChannels.any((c) => c['id'] == id);
+                    }).toList();
+
+                    if (filteredAvailable.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No available admin channels found. Ensure you are an administrator of the channels.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: AppColors.onSurfaceVariant),
+                        ),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: filteredAvailable.length,
+                      itemBuilder: (context, index) {
+                        final chat = filteredAvailable[index];
+                        final title = chat['title'] ?? 'Unknown Chat';
+                        final id = chat['id'].toString();
+                        final chatAccountId = chat['accountId'] ?? 'primary';
+
+                        return Card(
+                          color: AppColors.surface,
+                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            side: const BorderSide(color: AppColors.outline),
+                          ),
+                          child: ListTile(
+                            leading: const Icon(Icons.campaign, color: AppColors.primaryLight),
+                            title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                            subtitle: Text('Account: $chatAccountId', style: const TextStyle(fontSize: 11)),
+                            trailing: const Icon(Icons.link, size: 20),
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _confirmAndAddChannel(id, title, chatAccountId);
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.error, size: 36),
+                        const SizedBox(height: 8),
+                        Text('Error: $err', style: const TextStyle(color: Colors.white54, fontSize: 12), textAlign: TextAlign.center),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () => ref.invalidate(adminChannelsProvider),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showCreateNewChannelDialog() {
+    final titleController = TextEditingController();
+    final descController = TextEditingController();
+    final accounts = ref.read(telegramManagerProvider);
+    String selectedAccountId = accounts.first.accountId;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceElevated,
+              title: const Text('Create Private Channel', style: TextStyle(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Channel Title',
+                      labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (accounts.length > 1) ...[
+                    const Text('Create using Account:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    const SizedBox(height: 8),
+                    DropdownButton<String>(
+                      value: selectedAccountId,
+                      dropdownColor: AppColors.surfaceElevated,
+                      isExpanded: true,
+                      style: const TextStyle(color: Colors.white),
+                      items: accounts.map((acc) => DropdownMenuItem(
+                        value: acc.accountId,
+                        child: Text(acc.accountId == 'primary' ? 'Main Account' : acc.accountId),
+                      )).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setStateDialog(() => selectedAccountId = val);
+                        }
+                      },
+                    ),
+                  ]
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final title = titleController.text.trim();
+                    if (title.isEmpty) return;
+                    Navigator.pop(ctx);
+                    setState(() => _isProcessingSetup = true);
+                    try {
+                      final telegram = accounts.firstWhere((c) => c.accountId == selectedAccountId);
+                      await telegram.createNewChannel(title, descController.text.trim());
+                      
+                      // Wait a brief moment for the chat update event to propagate in TDLib
+                      await Future.delayed(const Duration(seconds: 1));
+                      
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Channel created successfully!'),
+                            backgroundColor: AppColors.success,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to create channel: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => _isProcessingSetup = false);
+                    }
+                  },
+                  child: const Text('Create'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Storage Channels'),
+        scrolledUnderElevation: 0,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddChannelOptions,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Channel'),
+      ),
+      body: _isLoading || _isProcessingSetup
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () async {
+                await _loadSettings();
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  const SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
+                      child: Text(
+                        'Active Storage Channels',
+                        style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                      ),
+                    ),
+                  ),
+                  _storageChannels.isEmpty
+                      ? const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(height: 48),
+                                  Icon(Icons.dns_outlined, size: 64, color: Colors.white24),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'No channels added yet.',
+                                    style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Tap the Add Channel button to link or create a channel.',
+                                    style: TextStyle(color: Colors.white30, fontSize: 12),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final chat = _storageChannels[index];
+                              final title = chat['title'] ?? 'Unknown Chat';
+                              final id = chat['id'].toString();
+                              final boundAccount = chat['accountId'] ?? 'primary';
+                              final isActive = _activeChannelId == id;
+
+                              return ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                                leading: CircleAvatar(
+                                  backgroundColor: isActive ? Colors.green.withOpacity(0.2) : AppColors.primaryLight.withOpacity(0.2),
+                                  child: Icon(
+                                    isActive ? Icons.check_circle : Icons.cloud,
+                                    color: isActive ? Colors.green : AppColors.primaryLight,
+                                  ),
+                                ),
+                                title: Text(
+                                  title,
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.white),
+                                ),
+                                subtitle: Text(
+                                  'Bound Account: $boundAccount\nTap to select as primary backend',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                trailing: isActive
+                                    ? const Text('ACTIVE', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12))
+                                    : IconButton(
+                                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                                        onPressed: () {
+                                          setState(() {
+                                            _storageChannels.removeWhere((c) => c['id'].toString() == id);
+                                            if (_activeChannelId == id) _activeChannelId = null;
+                                          });
+                                          _saveChannelsList();
+                                        },
+                                      ),
+                                onTap: () async {
+                                  final settings = ref.read(settingsRepositoryProvider);
+                                  await settings.setSetting('active_channel_id', id);
+                                  await settings.setSetting('active_channel_name', title);
+                                  await settings.setSetting('active_channel_account_id', boundAccount);
+                                  setState(() => _activeChannelId = id);
+
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('Selected "$title" as the active storage channel!'),
+                                        backgroundColor: AppColors.success,
+                                      ),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                            childCount: _storageChannels.length,
+                          ),
+                        ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                ],
+              ),
+            ),
+    );
+  }
+}

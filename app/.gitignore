@@ -1,6 +1,5 @@
 # Miscellaneous
 *.class
-*.log
 *.pyc
 *.swp
 .DS_Store
@@ -44,5 +43,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment Variables
-.env
+# NOTE: .env is NOT ignored — it contains non-secret Telegram API ID/hash
+# and must be bundled as a Flutter asset for the app to start.
+# Do NOT add .env to this file.

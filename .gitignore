@@ -55,19 +55,19 @@ backend/*.out
 *~
 .history/
 
-# --- Secrets & Environment ---
-.env
-.env.*
+# --- Secrets ---
+# IMPORTANT: app/.env is tracked (contains non-secret API ID/hash for builds)
+# Only block root-level or sensitive env files:
 *.key
 *.pem
 *.p12
 secrets/
 
-# --- TDLib native binaries ---
-*.so
-*.dylib
-*.dll
-app/android/app/src/main/jniLibs/
+# --- TDLib native binaries (large, platform-specific) ---
+# These should be downloaded/built per-platform, not stored in git.
+# But keep the jniLibs directory structure (via .gitkeep files).
+app/android/app/src/main/jniLibs/**/*.so
+tdlib/
 
 # --- OS ---
 .DS_Store
@@ -80,7 +80,9 @@ $RECYCLE.BIN/
 coverage/
 lcov.info
 
-# --- Misc ---
+# --- Build outputs ---
 *.log
 *.tmp
 *.bak
+AeroDrive_Windows_Portable.zip
+go-bin/

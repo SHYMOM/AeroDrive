@@ -10,6 +10,10 @@ set(BINARY_NAME "aerodrive")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
+# HARD FIX: Explicitly include the ATL header directory for flutter_secure_storage_windows
+include_directories("D:/Apps-Softwares/VisualStudioCommunity/VC/Tools/MSVC/14.51.36231/atlmfc/include")
+link_directories("D:/Apps-Softwares/VisualStudioCommunity/VC/Tools/MSVC/14.51.36231/atlmfc/lib/x64")
+
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTICONFIG)
@@ -43,6 +47,7 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
+  target_compile_definitions(${TARGET} PRIVATE _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 endfunction()
 
 # Flutter library and tool build rules.
