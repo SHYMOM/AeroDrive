@@ -1,79 +1,171 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerodrive/core/theme/app_colors.dart';
+import 'package:aerodrive/features/telegram/telegram_manager.dart';
+import 'package:aerodrive/features/telegram/telegram_service.dart';
 
-class ProfileScreen extends ConsumerStatefulWidget {
+class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
-  @override
-  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
-}
+  Widget _buildAvatar(TelegramService client, {double radius = 40}) {
+    final photoPath = client.photoPath;
+    if (photoPath != null && File(photoPath).existsSync()) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: FileImage(File(photoPath)),
+      );
+    }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final _nameController = TextEditingController(text: 'AeroDrive User');
-  final _bioController = TextEditingController(text: 'Cloud storage powered by Telegram.');
+    final initials = client.displayName.isNotEmpty
+        ? client.displayName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+        : '';
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.primary.withOpacity(0.2),
+      child: initials.isNotEmpty
+          ? Text(initials, style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: radius * 0.5))
+          : Icon(Icons.person, size: radius, color: AppColors.primaryLight),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accounts = ref.watch(telegramManagerProvider);
+    
+    // Find primary and secondary accounts
+    final primary = accounts.firstWhere((c) => c.accountId == 'primary', orElse: () => accounts.first);
+    final secondaries = accounts.where((c) => c.accountId != 'primary' && c.authState == TelegramAuthState.ready).toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
-            onPressed: () {
-              // TODO: Implement profile update via TDLib
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!')));
-              Navigator.pop(context);
-            },
-          )
-        ],
+        title: const Text('Telegram Profiles'),
+        scrolledUnderElevation: 0,
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
+          // Primary Profile Card
           Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundColor: AppColors.primary.withOpacity(0.2),
-                  child: const Icon(Icons.person, size: 50, color: AppColors.primaryLight),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: CircleAvatar(
-                    backgroundColor: AppColors.primary,
-                    radius: 18,
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                      onPressed: () {
-                        // TODO: Implement avatar upload
-                      },
-                    ),
+            child: Text(
+              'PRIMARY ACCOUNT',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
                   ),
-                )
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
-              prefixIcon: Icon(Icons.person_outline),
             ),
           ),
           const SizedBox(height: 16),
-          TextField(
-            controller: _bioController,
-            decoration: const InputDecoration(
-              labelText: 'Bio',
-              prefixIcon: Icon(Icons.info_outline),
+          Card(
+            color: AppColors.surfaceElevated,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: AppColors.primary, width: 1.5),
             ),
-            maxLines: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  _buildAvatar(primary, radius: 50),
+                  const SizedBox(height: 16),
+                  Text(
+                    primary.displayName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    primary.phoneNumber ?? 'Not authenticated',
+                    style: const TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
+                  ),
+                  if (primary.username != null && primary.username!.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '@${primary.username}',
+                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ),
+          const SizedBox(height: 32),
+
+          // Secondary Account Profiles
+          if (secondaries.isNotEmpty) ...[
+            const Row(
+              children: [
+                Icon(Icons.link, size: 18, color: AppColors.secondaryLight),
+                SizedBox(width: 8),
+                Text(
+                  'LINKED SECONDARY PROFILES',
+                  style: TextStyle(
+                    color: AppColors.secondaryLight,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ...secondaries.map((client) {
+              return Card(
+                color: AppColors.surface,
+                margin: const EdgeInsets.symmetric(vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.outline),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(12),
+                  leading: _buildAvatar(client, radius: 24),
+                  title: Text(
+                    client.displayName,
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(client.phoneNumber ?? 'Secondary Load-Balancer', style: const TextStyle(fontSize: 12)),
+                      if (client.username != null && client.username!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          '@${client.username}',
+                          style: const TextStyle(fontSize: 11, color: AppColors.secondaryLight),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ] else ...[
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Column(
+                  children: [
+                    Icon(Icons.people_outline, size: 48, color: AppColors.onSurfaceVariant),
+                    SizedBox(height: 12),
+                    Text(
+                      'No secondary accounts linked yet',
+                      style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

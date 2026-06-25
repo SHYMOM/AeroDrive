@@ -5,6 +5,7 @@ import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/features/telegram/telegram_manager.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/core/logger.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
   const ChannelsScreen({super.key});
@@ -54,8 +55,37 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     await settings.setSetting('storage_channels_list', jsonEncode(_storageChannels));
   }
 
+  Future<bool?> _showPoolConfirmationDialog(String channelTitle) async {
+    final accounts = ref.read(telegramManagerProvider);
+    final readySecondaries = accounts.where((c) => c.authState == TelegramAuthState.ready).length;
+    if (readySecondaries <= 1) return false;
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Enable Bandwidth Pooling', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Would you like to automatically add and promote all your other logged-in Telegram accounts as administrators of "$channelTitle"?\n\n'
+          'This allows AeroDrive to pool bandwidth across all accounts for faster, load-balanced uploads and downloads.',
+          style: const TextStyle(color: AppColors.onSurface),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('No, only this account', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yes, pool accounts'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _verifyAndAddChannel(String identifier, String accountId) async {
-    setState(() => _isProcessingSetup = true);
     final accounts = ref.read(telegramManagerProvider);
     final telegram = accounts.firstWhere((c) => c.accountId == accountId, orElse: () => accounts.first);
     
@@ -65,10 +95,26 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         final chatId = chat['id'];
         final title = chat['title'] ?? 'Unknown Chat';
         
+        final poolConfirmed = await _showPoolConfirmationDialog(title);
+        
+        setState(() => _isProcessingSetup = true);
+        
+        if (poolConfirmed == true) {
+          for (final client in accounts) {
+            if (client.accountId != accountId && client.authState == TelegramAuthState.ready && client.userId != null) {
+              try {
+                await telegram.addAdminToChat(chatId, client.userId!);
+              } catch (e) {
+                AppLogger.error('Failed to add admin $client to channel $title: $e');
+              }
+            }
+          }
+        }
+
         final newChannel = {
           'id': chatId,
           'title': title,
-          'accountId': accountId, // Explicitly bind channel to this account
+          'accountId': accountId,
         };
 
         setState(() {
@@ -78,10 +124,22 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         });
         await _saveChannelsList();
 
+        // Auto-activate if no active channel is set
+        final settings = ref.read(settingsRepositoryProvider);
+        final activeId = await settings.getSetting('active_channel_id');
+        if (activeId == null || activeId.isEmpty) {
+          await settings.setSetting('active_channel_id', chatId.toString());
+          await settings.setSetting('active_channel_name', title);
+          await settings.setSetting('active_channel_account_id', accountId);
+          setState(() {
+            _activeChannelId = chatId.toString();
+          });
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Channel successfully verified and bound!'),
+              content: Text('Channel successfully verified, pooled, and bound!'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -195,6 +253,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       builder: (ctx) {
         return Consumer(
           builder: (context, ref, child) {
+            final accounts = ref.watch(telegramManagerProvider);
             final adminChannelsAsync = ref.watch(adminChannelsProvider);
 
             return AlertDialog(
@@ -227,6 +286,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                         final title = chat['title'] ?? 'Unknown Chat';
                         final id = chat['id'].toString();
                         final chatAccountId = chat['accountId'] ?? 'primary';
+                        final client = accounts.firstWhere((c) => c.accountId == chatAccountId, orElse: () => accounts.first);
 
                         return Card(
                           color: AppColors.surface,
@@ -238,7 +298,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                           child: ListTile(
                             leading: const Icon(Icons.campaign, color: AppColors.primaryLight),
                             title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                            subtitle: Text('Account: $chatAccountId', style: const TextStyle(fontSize: 11)),
+                            subtitle: Text('Account: ${client.displayName}', style: const TextStyle(fontSize: 11)),
                             trailing: const Icon(Icons.link, size: 20),
                             onTap: () {
                               Navigator.pop(ctx);
@@ -328,7 +388,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       style: const TextStyle(color: Colors.white),
                       items: accounts.map((acc) => DropdownMenuItem(
                         value: acc.accountId,
-                        child: Text(acc.accountId == 'primary' ? 'Main Account' : acc.accountId),
+                        child: Text(acc.displayName),
                       )).toList(),
                       onChanged: (val) {
                         if (val != null) {
@@ -349,18 +409,58 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                     final title = titleController.text.trim();
                     if (title.isEmpty) return;
                     Navigator.pop(ctx);
-                    setState(() => _isProcessingSetup = true);
+                    
                     try {
                       final telegram = accounts.firstWhere((c) => c.accountId == selectedAccountId);
-                      await telegram.createNewChannel(title, descController.text.trim());
+                      final chat = await telegram.createNewChannel(title, descController.text.trim());
+                      final chatId = chat['id'];
                       
-                      // Wait a brief moment for the chat update event to propagate in TDLib
-                      await Future.delayed(const Duration(seconds: 1));
+                      if (chatId != null) {
+                        final poolConfirmed = await _showPoolConfirmationDialog(title);
+                        setState(() => _isProcessingSetup = true);
+                        
+                        if (poolConfirmed == true) {
+                          for (final client in accounts) {
+                            if (client.accountId != selectedAccountId && client.authState == TelegramAuthState.ready && client.userId != null) {
+                              try {
+                                await telegram.addAdminToChat(chatId, client.userId!);
+                              } catch (e) {
+                                AppLogger.error('Failed to add admin $client to new channel: $e');
+                              }
+                            }
+                          }
+                        }
+
+                        final newChannel = {
+                          'id': chatId,
+                          'title': title,
+                          'accountId': selectedAccountId,
+                        };
+
+                        setState(() {
+                          if (!_storageChannels.any((c) => c['id'] == newChannel['id'])) {
+                            _storageChannels.add(newChannel);
+                          }
+                        });
+                        await _saveChannelsList();
+
+                        // Auto-activate if no active channel is set
+                        final settings = ref.read(settingsRepositoryProvider);
+                        final activeId = await settings.getSetting('active_channel_id');
+                        if (activeId == null || activeId.isEmpty) {
+                          await settings.setSetting('active_channel_id', chatId.toString());
+                          await settings.setSetting('active_channel_name', title);
+                          await settings.setSetting('active_channel_account_id', selectedAccountId);
+                          setState(() {
+                            _activeChannelId = chatId.toString();
+                          });
+                        }
+                      }
                       
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Channel created successfully!'),
+                            content: Text('Channel created, pooled, and bound successfully!'),
                             backgroundColor: AppColors.success,
                           ),
                         );
@@ -390,6 +490,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final accounts = ref.watch(telegramManagerProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Storage Channels'),
@@ -467,7 +568,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                                   style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.white),
                                 ),
                                 subtitle: Text(
-                                  'Bound Account: $boundAccount\nTap to select as primary backend',
+                                  'Bound Account: ${accounts.firstWhere((c) => c.accountId == boundAccount, orElse: () => accounts.first).displayName}\nTap to select as primary backend',
                                   style: const TextStyle(fontSize: 12),
                                 ),
                                 trailing: isActive

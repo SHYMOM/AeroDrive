@@ -10,6 +10,7 @@ import 'package:aerodrive/data/db/database.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/domain/streaming/streaming_server.dart';
 
 class MediaPlayerScreen extends ConsumerStatefulWidget {
   final FileData file;
@@ -42,41 +43,8 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
         throw Exception("Vault is locked");
       }
 
-      final fileHash = widget.file.sha256Hash;
-      if (fileHash == null || fileHash.isEmpty) {
-        throw Exception("File is not fully uploaded");
-      }
-
-      // Unwrap DEK
-      final cipher = AesGcm.with256bits();
-      final secretKey = await cipher.newSecretKeyFromBytes(kekBytes);
-      
-      final parts = fileHash.split(':');
-      final nonce = base64Decode(parts[0]);
-      final mac = base64Decode(parts[1]);
-      final cipherText = base64Decode(parts[2]);
-
-      final dekBytes = await cipher.decrypt(
-        SecretBox(cipherText, nonce: nonce, mac: Mac(mac)),
-        secretKey: secretKey,
-      );
-
-      final db = ref.read(databaseProvider);
-      final dbChunk = await (db.select(db.chunks)..where((c) => c.fileId.equals(widget.file.id))).getSingleOrNull();
-      if (dbChunk == null || dbChunk.messageId == null || dbChunk.channelId == null) {
-        throw Exception("Chunk metadata missing");
-      }
-      
-      final telegram = ref.read(telegramServiceProvider.notifier);
-      final message = await telegram.getMessage(dbChunk.channelId!, dbChunk.messageId!);
-      final content = message['content'];
-      if (content == null || content['@type'] != 'messageDocument') {
-        throw Exception("Message is not a document");
-      }
-      final remoteFileId = content['document']['document']['id'];
-
-      final dekBase64 = base64Encode(dekBytes);
-      final url = 'http://localhost:8080/stream?file_id=$remoteFileId&size=${widget.file.size}&dek=${Uri.encodeComponent(dekBase64)}';
+      final streamingServer = ref.read(streamingServerProvider);
+      final url = 'http://127.0.0.1:${streamingServer.port}/stream?id=${widget.file.id}';
       
       player = Player();
       controller = VideoController(player!);

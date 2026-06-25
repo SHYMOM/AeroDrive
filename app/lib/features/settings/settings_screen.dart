@@ -44,10 +44,7 @@ class SettingsScreen extends ConsumerWidget {
           }),
           
           _buildSectionHeader(context, 'Storage Channels', Icons.dns_outlined),
-          _buildTile(context, 'Add New Channel', 'Create or link a Telegram channel', Icons.add_circle_outline, onTap: () {
-            context.push('/settings/channels');
-          }),
-          _buildTile(context, 'Channel List', 'Name, Used Space, Health', Icons.list_alt, onTap: () {
+          _buildTile(context, 'Storage Channels', 'Add, remove, or switch storage backends', Icons.dns_outlined, onTap: () {
             context.push('/settings/channels');
           }),
           _buildTile(context, 'Load Balancing Strategy', 'Round Robin / Fill First / Random / Size-Based', Icons.balance, onTap: () {

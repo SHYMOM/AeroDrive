@@ -222,10 +222,7 @@ class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
     try {
       final cipher = AesGcm.with256bits();
       final masterKey = await cipher.newSecretKeyFromBytes(masterKeyList);
-      final db = ref.read(databaseProvider);
-      final telegramService = ref.read(telegramServiceProvider.notifier);
-
-      final scanner = RecoveryScanner(db, telegramService);
+      final scanner = ref.read(recoveryServiceProvider);
       await scanner.runDisasterRecovery(
         masterKey: masterKey,
         channelId: channelId,

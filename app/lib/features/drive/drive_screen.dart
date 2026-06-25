@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:cross_file/cross_file.dart';
@@ -55,7 +56,7 @@ class DriveScreen extends ConsumerWidget {
           return;
         }
 
-        final scanner = FolderScanner(db);
+        final scanner = ref.read(folderScannerProvider);
         
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -131,7 +132,7 @@ class DriveScreen extends ConsumerWidget {
 
             final List<XFile> result = await openFiles();
             if (result.isNotEmpty) {
-              final scanner = FolderScanner(db);
+              final scanner = ref.read(folderScannerProvider);
               
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -377,11 +378,18 @@ class _DriveAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     );
 
                     final tempDir = await getTemporaryDirectory();
-                    final tempFile = File('${tempDir.path}/folder_$newFolderId.meta');
-                    await tempFile.writeAsString('d');
+                    final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
+                    final pngBytes = Uint8List.fromList([
+                      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+                    ]);
+                    await tempFile.writeAsBytes(pngBytes);
 
                     final telegram = ref.read(telegramServiceProvider.notifier);
                     await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+
+                    if (await tempFile.exists()) {
+                      await tempFile.delete();
+                    }
                   }
                 } catch (e) {
                   if (context.mounted) {

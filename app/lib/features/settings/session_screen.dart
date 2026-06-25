@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/features/telegram/telegram_manager.dart';
 
 class SessionScreen extends ConsumerWidget {
   const SessionScreen({super.key});
@@ -50,7 +51,7 @@ class SessionScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceElevated,
         title: const Text('Terminate Session', style: TextStyle(color: Colors.white)),
         content: Text(
-          'Are you sure you want to terminate the session on ${session['device_model'] ?? 'this device'}?\n\n'
+          'Are you sure you want to terminate the session on ${session['device_model'] ?? 'this device'} for account "${session['accountName']}"?\n\n'
           'This will log out the device immediately.',
           style: const TextStyle(color: AppColors.onSurface),
         ),
@@ -70,8 +71,11 @@ class SessionScreen extends ConsumerWidget {
 
     if (confirmed == true) {
       try {
-        final telegram = ref.read(telegramServiceProvider.notifier);
-        await telegram.terminateSession(session['id']);
+        final accountId = session['accountId'] as String;
+        final manager = ref.read(telegramManagerProvider.notifier);
+        final client = manager.getClient(accountId);
+        
+        await client.terminateSession(session['id']);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -101,7 +105,7 @@ class SessionScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceElevated,
         title: const Text('Terminate All Other Sessions', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Are you sure you want to terminate all other active sessions?\n\n'
+          'Are you sure you want to terminate all other active sessions across ALL logged-in accounts?\n\n'
           'This will log out all other devices immediately.',
           style: TextStyle(color: AppColors.onSurface),
         ),
@@ -121,8 +125,12 @@ class SessionScreen extends ConsumerWidget {
 
     if (confirmed == true) {
       try {
-        final telegram = ref.read(telegramServiceProvider.notifier);
-        await telegram.terminateAllOtherSessions();
+        final manager = ref.read(telegramManagerProvider.notifier);
+        for (final client in manager.state) {
+          if (client.authState == TelegramAuthState.ready) {
+            await client.terminateAllOtherSessions();
+          }
+        }
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -178,11 +186,7 @@ class SessionScreen extends ConsumerWidget {
             );
           }
 
-          final currentSession = sessions.firstWhere(
-            (s) => s['is_current'] == true,
-            orElse: () => <String, dynamic>{},
-          );
-
+          final currentSessions = sessions.where((s) => s['is_current'] == true).toList();
           final otherSessions = sessions.where((s) => s['is_current'] != true).toList();
 
           return RefreshIndicator(
@@ -193,82 +197,96 @@ class SessionScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               children: [
-                if (currentSession.isNotEmpty) ...[
+                if (currentSessions.isNotEmpty) ...[
                   const Text(
-                    'Current Session',
+                    'Current Sessions',
                     style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryLight, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                  Card(
-                    color: AppColors.surfaceElevated,
-                    margin: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              _getDeviceIcon(
-                                currentSession['device_model'] ?? '',
-                                currentSession['system_version'] ?? '',
-                              ),
-                              size: 32,
-                              color: AppColors.primaryLight,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        currentSession['device_model'] ?? 'Unknown Device',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Text(
-                                        'Current',
-                                        style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '${currentSession['application_name'] ?? 'AeroDrive'} • ${currentSession['application_version'] ?? ''}',
-                                  style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${currentSession['ip_address'] ?? 'Unknown IP'} • ${currentSession['location'] ?? 'Unknown location'}',
-                                  style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withOpacity(0.8)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                  ...currentSessions.map((currentSession) {
+                    return Card(
+                      color: AppColors.surfaceElevated,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppColors.primary, width: 1.5),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _getDeviceIcon(
+                                  currentSession['device_model'] ?? '',
+                                  currentSession['system_version'] ?? '',
+                                ),
+                                size: 32,
+                                color: AppColors.primaryLight,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          currentSession['device_model'] ?? 'Unknown Device',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.success.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Text(
+                                          'Current',
+                                          style: TextStyle(color: AppColors.success, fontSize: 11, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${currentSession['application_name'] ?? 'AeroDrive'} • ${currentSession['application_version'] ?? ''}',
+                                    style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${currentSession['ip_address'] ?? 'Unknown IP'} • ${currentSession['location'] ?? 'Unknown location'}',
+                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withOpacity(0.8)),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      'Account: ${currentSession['accountName']}',
+                                      style: const TextStyle(fontSize: 11, color: AppColors.primaryLight, fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 24),
                 ],
                 if (otherSessions.isNotEmpty) ...[
                   Row(
@@ -318,9 +336,27 @@ class SessionScreen extends ConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    session['device_model'] ?? 'Unknown Device',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          session['device_model'] ?? 'Unknown Device',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          session['accountName'] ?? 'Unknown',
+                                          style: const TextStyle(fontSize: 10, color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -350,7 +386,7 @@ class SessionScreen extends ConsumerWidget {
                       ),
                     );
                   }),
-                ] else if (currentSession.isNotEmpty) ...[
+                ] else if (currentSessions.isNotEmpty) ...[
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 32),

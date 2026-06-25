@@ -9,11 +9,15 @@ class EncryptJobPayload {
   final String sourceFilePath;
   final String outputDirectory;
   final List<int> dekBytes;
+  final int? chunkLimit;
+  final List<int>? ctrIv;
 
   EncryptJobPayload({
     required this.sourceFilePath,
     required this.outputDirectory,
     required this.dekBytes,
+    this.chunkLimit,
+    this.ctrIv,
   });
 }
 
@@ -23,8 +27,13 @@ class UploadOrchestrator {
   UploadOrchestrator(this._encryptionEngine);
 
   /// Runs the Stream-to-Disk encryption pipeline inside a background Isolate.
-  /// This ensures that reading 4MB buffers and running AES-GCM never blocks the UI.
-  Future<List<String>> processFileForUpload(File sourceFile, List<int> dekBytes) async {
+  /// This ensures that reading 4MB buffers and running AES-GCM/CTR never blocks the UI.
+  Future<List<String>> processFileForUpload(File sourceFile, List<int> dekBytes, {List<int>? ctrIv}) async {
+    final fileLength = await sourceFile.length();
+    // Split files larger than 20MB into 20MB chunks
+    final int chunkThreshold = 20 * 1024 * 1024;
+    final int? selectedLimit = (fileLength > chunkThreshold) ? chunkThreshold : null;
+
     final tempDir = await getTemporaryDirectory();
     final outputDir = '${tempDir.path}/aerodrive_chunks_${DateTime.now().millisecondsSinceEpoch}';
     await Directory(outputDir).create(recursive: true);
@@ -33,6 +42,8 @@ class UploadOrchestrator {
       sourceFilePath: sourceFile.path,
       outputDirectory: outputDir,
       dekBytes: dekBytes,
+      chunkLimit: selectedLimit,
+      ctrIv: ctrIv,
     );
 
     // Offload the heavy streaming encryption to a background worker
@@ -50,6 +61,8 @@ class UploadOrchestrator {
       sourceFile: File(payload.sourceFilePath),
       outputDirectory: payload.outputDirectory,
       dekBytes: payload.dekBytes,
+      chunkLimit: payload.chunkLimit,
+      ctrIv: payload.ctrIv,
     );
   }
 

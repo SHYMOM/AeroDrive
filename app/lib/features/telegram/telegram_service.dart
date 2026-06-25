@@ -39,6 +39,23 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   late final String _apiHash;
   late final String _dbPath;
 
+  int? userId;
+  String? firstName;
+  String? lastName;
+  String? phoneNumber;
+  String? photoPath;
+  String? username;
+  int? _photoFileId;
+  
+  VoidCallback? onProfileUpdated;
+
+  String get displayName {
+    final name = '${firstName ?? ''} ${lastName ?? ''}'.trim();
+    if (name.isNotEmpty) return name;
+    if (phoneNumber != null && phoneNumber!.isNotEmpty) return phoneNumber!;
+    return accountId == 'primary' ? 'Main Account' : 'Secondary Account';
+  }
+
   Future<void> _initClient() async {
     final apiIdStr = dotenv.env['TELEGRAM_API_ID'];
     final apiHash = dotenv.env['TELEGRAM_API_HASH'];
@@ -172,6 +189,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         state = TelegramAuthState.waitPassword;
       } else if (authState == 'authorizationStateReady') {
         state = TelegramAuthState.ready;
+        _fetchMe();
       } else if (authState == 'authorizationStateLoggingOut') {
         state = TelegramAuthState.loggingOut;
       } else if (authState == 'authorizationStateClosed') {
@@ -181,6 +199,15 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       AppLogger.error('TDLib Error ($accountId): ${json['message']}');
       if (state == TelegramAuthState.initial) {
         state = TelegramAuthState.error;
+      }
+    } else if (type == 'updateFile') {
+      final file = json['file'];
+      if (file != null && _photoFileId != null && file['id'] == _photoFileId) {
+        final local = file['local'];
+        if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {
+          photoPath = local['path'];
+          onProfileUpdated?.call();
+        }
       }
     } else if (type == 'updateNewChat' && !isHeadless) {
       final chat = json['chat'];
@@ -433,6 +460,88 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }));
   }
 
+  Future<void> _fetchMe() async {
+    try {
+      final me = await getMe();
+      userId = me['id'];
+      firstName = me['first_name'];
+      lastName = me['last_name'];
+      phoneNumber = me['phone_number'];
+      username = me['username'];
+      
+      final profilePhoto = me['profile_photo'];
+      if (profilePhoto != null) {
+        final smallFile = profilePhoto['small'];
+        if (smallFile != null) {
+          _photoFileId = smallFile['id'];
+          final local = smallFile['local'];
+          if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {
+            photoPath = local['path'];
+          } else {
+            await downloadFile(_photoFileId!);
+          }
+        }
+      }
+      onProfileUpdated?.call();
+    } catch (e, s) {
+      AppLogger.error('Failed to fetch user info for $accountId', e, s);
+    }
+  }
+
+  Future<void> closeClient() async {
+    if (state == TelegramAuthState.closed) return;
+    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+      "@type": "close"
+    }));
+    int attempts = 0;
+    while (state != TelegramAuthState.closed && attempts < 30) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      attempts++;
+    }
+  }
+
+  Future<void> addAdminToChat(int chatId, int targetUserId) async {
+    try {
+      await sendRequest({
+        "@type": "addChatMember",
+        "chat_id": chatId,
+        "user_id": targetUserId,
+        "forward_limit": 0
+      });
+    } catch (e) {
+      AppLogger.info('addChatMember failed or user already in chat: $e');
+    }
+
+    await sendRequest({
+      "@type": "setChatMemberStatus",
+      "chat_id": chatId,
+      "member_id": {
+        "@type": "messageSenderUser",
+        "user_id": targetUserId
+      },
+      "status": {
+        "@type": "chatMemberStatusAdministrator",
+        "custom_title": "AeroDrive Agent",
+        "can_be_edited": true,
+        "rights": {
+          "@type": "chatAdministratorRights",
+          "can_manage_chat": true,
+          "can_post_messages": true,
+          "can_edit_messages": true,
+          "can_delete_messages": true,
+          "can_invite_users": true,
+          "can_restrict_members": true,
+          "can_pin_messages": true,
+          "can_promote_members": false,
+          "can_manage_video_chats": true,
+          "can_post_stories": true,
+          "can_edit_stories": true,
+          "can_delete_stories": true
+        }
+      }
+    });
+  }
+
   Future<Map<String, dynamic>> getActiveSessions() async {
     return sendRequest({
       "@type": "getActiveSessions",
@@ -523,20 +632,4 @@ final telegramServiceProvider = StateNotifierProvider<TelegramService, TelegramA
   return TelegramService(accountId: 'primary', isHeadless: false);
 });
 
-final activeSessionsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
-  final authState = ref.watch(telegramServiceProvider);
-  if (authState != TelegramAuthState.ready) {
-    return [];
-  }
-  final telegram = ref.watch(telegramServiceProvider.notifier);
-  try {
-    final response = await telegram.getActiveSessions();
-    if (response.containsKey('sessions')) {
-      final List<dynamic> list = response['sessions'];
-      return list.cast<Map<String, dynamic>>();
-    }
-  } catch (e, s) {
-    AppLogger.error('Failed to get active sessions', e, s);
-  }
-  return [];
-});
+
