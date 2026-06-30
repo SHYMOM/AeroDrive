@@ -7,6 +7,7 @@ class Folders extends Table {
   TextColumn get parentId => text().nullable().references(Folders, #id)();
   BoolColumn get isVault => boolean().withDefault(const Constant(false))();
   TextColumn get color => text().nullable()();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();

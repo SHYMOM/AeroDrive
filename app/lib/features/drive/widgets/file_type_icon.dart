@@ -9,57 +9,127 @@ class FileTypeIcon extends StatelessWidget {
     super.key,
     required this.mimeType,
     required this.fileName,
-    this.size = 36,
+    this.size = 56,
   });
 
   @override
   Widget build(BuildContext context) {
-    final type = (mimeType ?? '').toLowerCase();
     final ext = fileName.split('.').last.toLowerCase();
-
-    IconData iconData = Icons.insert_drive_file;
-    Color iconColor = Colors.grey;
-
-    if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(ext)) {
-      iconData = Icons.image;
-      iconColor = Colors.blueAccent;
-    } else if (type.startsWith('video/') || ['mp4', 'mkv', 'avi', 'mov'].contains(ext)) {
-      iconData = Icons.movie;
-      iconColor = Colors.purpleAccent;
-    } else if (type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac'].contains(ext)) {
-      iconData = Icons.audiotrack;
-      iconColor = Colors.amber;
-    } else if (type.contains('pdf') || ext == 'pdf') {
-      iconData = Icons.picture_as_pdf;
-      iconColor = Colors.redAccent;
-    } else if (type.contains('word') || type.contains('document') || ['doc', 'docx'].contains(ext)) {
-      iconData = Icons.description;
-      iconColor = Colors.lightBlue;
-    } else if (type.contains('excel') || type.contains('spreadsheet') || ['xls', 'xlsx', 'csv'].contains(ext)) {
-      iconData = Icons.table_chart;
-      iconColor = Colors.green;
-    } else if (type.contains('presentation') || ['ppt', 'pptx'].contains(ext)) {
-      iconData = Icons.slideshow;
-      iconColor = Colors.orange;
-    } else if (type.contains('zip') || type.contains('compressed') || ['zip', 'rar', '7z', 'tar', 'gz'].contains(ext)) {
-      iconData = Icons.folder_zip;
-      iconColor = Colors.brown;
-    } else if (type.contains('json') || type.contains('xml') || type.contains('html') || ['json', 'xml', 'html', 'js', 'dart', 'py', 'c', 'cpp', 'java'].contains(ext)) {
-      iconData = Icons.code;
-      iconColor = Colors.teal;
+    
+    Color color;
+    switch (ext) {
+      case 'pdf':
+        color = const Color(0xFFEF4444); // Red
+        break;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        color = const Color(0xFF10B981); // Green
+        break;
+      case 'doc':
+      case 'docx':
+        color = const Color(0xFF3B82F6); // Blue
+        break;
+      case 'ppt':
+      case 'pptx':
+        color = const Color(0xFFF97316); // Orange
+        break;
+      case 'ps':
+      case 'psd':
+        color = const Color(0xFF0284C7); // Light Blue
+        break;
+      case 'zip':
+      case 'rar':
+      case '7z':
+      case 'tar':
+        color = const Color(0xFFF59E0B); // Amber
+        break;
+      case 'mp3':
+      case 'wav':
+      case 'ogg':
+      case 'flac':
+      case 'm4a':
+        color = const Color(0xFF8B5CF6); // Purple
+        break;
+      case 'txt':
+      case 'md':
+      case 'log':
+        color = const Color(0xFF64748B); // Slate Grey
+        break;
+      default:
+        color = const Color(0xFF475569); // Dark slate
     }
 
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: iconColor.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(size * 0.25),
-        border: Border.all(color: iconColor.withValues(alpha: 0.3)),
-      ),
-      child: Center(
-        child: Icon(iconData, size: size * 0.6, color: iconColor),
+      child: CustomPaint(
+        painter: DogEarFilePainter(color: color),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.only(top: size * 0.15),
+            child: Text(
+              ext.toUpperCase(),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: size * 0.20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
+}
+
+class DogEarFilePainter extends CustomPainter {
+  final Color color;
+  DogEarFilePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final double fold = size.width * 0.32; // dog-ear corner size
+
+    path.moveTo(0, size.height * 0.1);
+    path.quadraticBezierTo(0, 0, size.height * 0.1, 0); // round top-left slightly
+    path.lineTo(size.width - fold, 0);
+    path.lineTo(size.width, fold);
+    path.lineTo(size.width, size.height - (size.height * 0.1));
+    path.quadraticBezierTo(size.width, size.height, size.width - (size.height * 0.1), size.height);
+    path.lineTo(size.height * 0.1, size.height);
+    path.quadraticBezierTo(0, size.height, 0, size.height - (size.height * 0.1));
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    // Draw folded flap
+    final flapPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    final flapPath = Path();
+    flapPath.moveTo(size.width - fold, 0);
+    flapPath.lineTo(size.width - fold, fold - (fold * 0.2));
+    flapPath.quadraticBezierTo(size.width - fold, fold, size.width - fold + (fold * 0.2), fold);
+    flapPath.lineTo(size.width, fold);
+    flapPath.close();
+
+    canvas.drawPath(flapPath, flapPaint);
+
+    final flapHighlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawPath(flapPath, flapHighlightPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

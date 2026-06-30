@@ -88,6 +88,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             ref.read(currentFolderIdProvider.notifier).state = null;
             return;
           }
+        } else {
+          // If we are on another root tab (media, transfers, settings), navigate back to drive tab!
+          if (isRoot) {
+            context.go(AppDestination.drive.path);
+            return;
+          }
         }
 
         if (!isRoot) {

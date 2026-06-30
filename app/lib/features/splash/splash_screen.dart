@@ -51,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       if (masterKeyList == null) {
         setState(() { _progress = 1; _statusText = 'Ready'; });
         await Future.delayed(const Duration(seconds: 1));
-        if (context.mounted) context.go('/auth');
+        if (mounted) context.go('/auth');
         return;
       }
 
@@ -111,7 +111,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     }
 
     await Future.delayed(const Duration(milliseconds: 1200));
-    if (context.mounted) context.go('/auth');
+    if (mounted) context.go('/auth');
   }
 
   /// Reads the active channel's description for a cross-device salt.

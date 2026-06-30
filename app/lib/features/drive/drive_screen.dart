@@ -14,9 +14,14 @@ import 'package:aerodrive/features/sharing/share_service.dart';
 import 'package:aerodrive/features/sharing/import_link_dialog.dart';
 import 'package:aerodrive/features/drive/widgets/quick_access_row.dart';
 import 'package:aerodrive/features/drive/widgets/folder_grid_item.dart';
+import 'package:aerodrive/features/drive/widgets/folder_list_item.dart';
 import 'package:aerodrive/features/drive/widgets/file_list_item.dart';
+import 'package:aerodrive/features/drive/widgets/file_grid_item.dart';
 import 'package:aerodrive/features/drive/widgets/create_folder_dialog.dart';
+import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
 import 'package:aerodrive/core/constants.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:uuid/uuid.dart';
 
 class DriveScreen extends ConsumerWidget {
   const DriveScreen({super.key});
@@ -28,6 +33,7 @@ class DriveScreen extends ConsumerWidget {
     final breadcrumbsAsync = ref.watch(breadcrumbsProvider);
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
     final isMobile = MediaQuery.of(context).size.width < AppConstants.mobileBreakpoint;
+    final isGridView = ref.watch(isGridViewProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -86,45 +92,84 @@ class DriveScreen extends ConsumerWidget {
                                   error: (_, __) => const SizedBox.shrink(),
                                 ),
                         ),
-                        IconButton(
-                          onPressed: () => _showSortBottomSheet(context, ref),
-                          icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
+                        Row(
+                          children: [
+                            _buildLayoutSelector(context, ref, isGridView),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () => _showSortBottomSheet(context, ref),
+                              icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
                 ),
                 const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                // Grid of Folders (colored)
-                if (folders.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 140,
-                        mainAxisSpacing: 16,
-                        crossAxisSpacing: 16,
-                        childAspectRatio: 0.8,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => FolderGridItem(folder: folders[index]),
-                        childCount: folders.length,
-                      ),
-                    ),
-                  ),
-                if (folders.isNotEmpty)
-                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                // List of Files (Dark Cards)
-                if (files.isNotEmpty)
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) => FileListItem(file: files[index]),
-                        childCount: files.length,
+
+                if (isGridView) ...[
+                  // Grid Layout
+                  if (folders.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.82,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FolderGridItem(folder: folders[index]),
+                          childCount: folders.length,
+                        ),
                       ),
                     ),
-                  ),
+                  if (folders.isNotEmpty && files.isNotEmpty)
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  if (files.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverGrid(
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          childAspectRatio: 0.82,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FileGridItem(file: files[index]),
+                          childCount: files.length,
+                        ),
+                      ),
+                    ),
+                ] else ...[
+                  // List Layout
+                  if (folders.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FolderListItem(folder: folders[index]),
+                          childCount: folders.length,
+                        ),
+                      ),
+                    ),
+                  if (folders.isNotEmpty && files.isNotEmpty)
+                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  if (files.isNotEmpty)
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FileListItem(file: files[index]),
+                          childCount: files.length,
+                        ),
+                      ),
+                    ),
+                ],
+
                 if (folders.isEmpty && files.isEmpty)
                   const SliverFillRemaining(
                     child: Center(
@@ -173,6 +218,44 @@ class DriveScreen extends ConsumerWidget {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
+    final isSelectionMode = ref.watch(isSelectionModeProvider);
+    final selectedItems = ref.watch(selectedItemsProvider);
+
+    if (isSelectionMode) {
+      return AppBar(
+        backgroundColor: AppColors.surfaceElevated,
+        elevation: 4,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () {
+            ref.read(isSelectionModeProvider.notifier).state = false;
+            ref.read(selectedItemsProvider.notifier).state = {};
+          },
+        ),
+        title: Text(
+          '${selectedItems.length} selected',
+          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.copy_rounded, color: Colors.white),
+            tooltip: 'Copy',
+            onPressed: () => _handleCopySelected(context, ref, selectedItems),
+          ),
+          IconButton(
+            icon: const Icon(Icons.drive_file_move_rounded, color: Colors.white),
+            tooltip: 'Move',
+            onPressed: () => _handleMoveSelected(context, ref, selectedItems),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
+            tooltip: 'Delete',
+            onPressed: () => _handleDeleteSelected(context, ref, selectedItems),
+          ),
+        ],
+      );
+    }
+
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
@@ -251,6 +334,181 @@ class DriveScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleDeleteSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Delete Items', style: TextStyle(color: Colors.white)),
+        content: Text('Are you sure you want to delete these ${selectedIds.length} items?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirmed != true) return;
+    
+    final folderRepo = ref.read(folderRepositoryProvider);
+    final fileRepo = ref.read(fileRepositoryProvider);
+    final db = ref.read(databaseProvider);
+    
+    for (final id in selectedIds) {
+      final isFolder = await (db.select(db.folders)..where((f) => f.id.equals(id))).getSingleOrNull() != null;
+      if (isFolder) {
+        await folderRepo.trashFolder(id);
+      } else {
+        await fileRepo.softDelete(id);
+      }
+    }
+    
+    ref.read(isSelectionModeProvider.notifier).state = false;
+    ref.read(selectedItemsProvider.notifier).state = {};
+    
+    ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+    ref.invalidate(folderContentsProvider);
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted selected items.')));
+    }
+  }
+
+  Future<void> _handleMoveSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+    // Open FolderPickerDialog
+    final targetFolderId = await showDialog<String?>(
+      context: context,
+      builder: (context) => FolderPickerDialog(
+        title: 'Move Items to...',
+        excludeFolderId: selectedIds.length == 1 ? selectedIds.first : null,
+      ),
+    );
+    
+    if (targetFolderId == null) return;
+    
+    final db = ref.read(databaseProvider);
+    final String? folderId = targetFolderId == '__root__' ? null : targetFolderId;
+    
+    for (final id in selectedIds) {
+      final isFolder = await (db.select(db.folders)..where((f) => f.id.equals(id))).getSingleOrNull() != null;
+      if (isFolder) {
+        await (db.update(db.folders)..where((f) => f.id.equals(id))).write(
+          FoldersCompanion(parentId: drift.Value(folderId)),
+        );
+      } else {
+        await (db.update(db.files)..where((f) => f.id.equals(id))).write(
+          FilesCompanion(folderId: drift.Value(folderId)),
+        );
+      }
+    }
+    
+    ref.read(isSelectionModeProvider.notifier).state = false;
+    ref.read(selectedItemsProvider.notifier).state = {};
+    ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+    ref.invalidate(folderContentsProvider);
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Moved selected items.')));
+    }
+  }
+
+  Future<void> _handleCopySelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+    final targetFolderId = await showDialog<String?>(
+      context: context,
+      builder: (context) => const FolderPickerDialog(title: 'Copy Items to...'),
+    );
+    
+    if (targetFolderId == null) return;
+    
+    final db = ref.read(databaseProvider);
+    final String? folderId = targetFolderId == '__root__' ? null : targetFolderId;
+    
+    for (final id in selectedIds) {
+      final isFolder = await (db.select(db.folders)..where((f) => f.id.equals(id))).getSingleOrNull() != null;
+      if (isFolder) {
+        await _copyFolder(id, folderId, db);
+      } else {
+        await _copyFile(id, folderId, db);
+      }
+    }
+    
+    ref.read(isSelectionModeProvider.notifier).state = false;
+    ref.read(selectedItemsProvider.notifier).state = {};
+    ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+    ref.invalidate(folderContentsProvider);
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied selected items.')));
+    }
+  }
+
+  Future<void> _copyFile(String fileId, String? targetFolderId, AeroDriveDatabase db) async {
+    final file = await (db.select(db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
+    if (file == null) return;
+    
+    final newId = const Uuid().v4();
+    await db.into(db.files).insert(
+      FilesCompanion.insert(
+        id: newId,
+        name: file.name.contains(' (Copy)') ? file.name : '${file.name} (Copy)',
+        folderId: drift.Value(targetFolderId),
+        size: drift.Value(file.size),
+        mimeType: drift.Value(file.mimeType),
+        sha256Hash: drift.Value(file.sha256Hash),
+        createdAt: drift.Value(DateTime.now()),
+        updatedAt: drift.Value(DateTime.now()),
+      ),
+    );
+    
+    final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(fileId))).get();
+    for (final chunk in chunks) {
+      await db.into(db.chunks).insert(
+        ChunksCompanion.insert(
+          id: const Uuid().v4(),
+          fileId: drift.Value(newId),
+          chunkIndex: drift.Value(chunk.chunkIndex),
+          channelId: drift.Value(chunk.channelId),
+          messageId: drift.Value(chunk.messageId),
+          size: drift.Value(chunk.size),
+          hash: drift.Value(chunk.hash),
+        ),
+      );
+    }
+  }
+
+  Future<void> _copyFolder(String folderId, String? targetParentId, AeroDriveDatabase db) async {
+    final folder = await (db.select(db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
+    if (folder == null) return;
+    
+    final newFolderId = const Uuid().v4();
+    await db.into(db.folders).insert(
+      FoldersCompanion.insert(
+        id: newFolderId,
+        name: folder.name.contains(' (Copy)') ? folder.name : '${folder.name} (Copy)',
+        parentId: drift.Value(targetParentId),
+        color: drift.Value(folder.color),
+        createdAt: drift.Value(DateTime.now()),
+        updatedAt: drift.Value(DateTime.now()),
+      ),
+    );
+    
+    final files = await (db.select(db.files)..where((f) => f.folderId.equals(folderId) & f.deletedAt.isNull())).get();
+    for (final file in files) {
+      await _copyFile(file.id, newFolderId, db);
+    }
+    
+    final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())).get();
+    for (final sub in subfolders) {
+      await _copyFolder(sub.id, newFolderId, db);
+    }
   }
 
   void _showNewOptionsBottomSheet(BuildContext context, WidgetRef ref, String? currentFolderId) {
@@ -491,6 +749,96 @@ class DriveScreen extends ConsumerWidget {
           setModalState(() {});
         }
       },
+    );
+  }
+
+  Widget _buildLayoutSelector(BuildContext context, WidgetRef ref, bool isGridView) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => ref.read(isGridViewProvider.notifier).state = true,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: isGridView ? const Color(0xFF1E293B) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: isGridView 
+                    ? Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4))
+                    : Border.all(color: Colors.transparent),
+                boxShadow: isGridView ? [
+                  BoxShadow(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                    blurRadius: 8,
+                  )
+                ] : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.grid_view_rounded,
+                    size: 14,
+                    color: isGridView ? const Color(0xFF38BDF8) : Colors.white60,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Grid',
+                    style: TextStyle(
+                      color: isGridView ? Colors.white : Colors.white60,
+                      fontSize: 11,
+                      fontWeight: isGridView ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => ref.read(isGridViewProvider.notifier).state = false,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: !isGridView ? const Color(0xFF1E293B) : Colors.transparent,
+                borderRadius: BorderRadius.circular(8),
+                border: !isGridView 
+                    ? Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4))
+                    : Border.all(color: Colors.transparent),
+                boxShadow: !isGridView ? [
+                  BoxShadow(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                    blurRadius: 8,
+                  )
+                ] : null,
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.list_rounded,
+                    size: 14,
+                    color: !isGridView ? const Color(0xFF38BDF8) : Colors.white60,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'List',
+                    style: TextStyle(
+                      color: !isGridView ? Colors.white : Colors.white60,
+                      fontSize: 11,
+                      fontWeight: !isGridView ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

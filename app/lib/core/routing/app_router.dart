@@ -24,6 +24,9 @@ import 'package:aerodrive/features/security/security_setup_screen.dart';
 import 'package:aerodrive/features/security/lock_screen.dart';
 import 'package:aerodrive/features/settings/proxy_settings_screen.dart';
 import 'package:aerodrive/features/settings/appearance_settings_screen.dart';
+import 'package:aerodrive/features/drive/quick_access_tools_screen.dart';
+import 'package:aerodrive/features/media/smart_tags_screen.dart';
+import 'package:aerodrive/features/media/memories_screen.dart';
 
 import 'package:aerodrive/features/settings/accounts_screen.dart';
 import 'package:aerodrive/features/settings/session_screen.dart';
@@ -170,6 +173,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/media/audios',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: AudiosScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/drive/quick-access',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: QuickAccessToolsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/smart-tags',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: SmartTagsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/memories',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: MemoriesScreen(),
             ),
           ),
           GoRoute(

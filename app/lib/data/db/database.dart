@@ -33,7 +33,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration {
@@ -69,6 +69,9 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
           await m.addColumn(tags, tags.source);
           await m.createTable(places);
           await m.createTable(filePlaces);
+        }
+        if (from < 7) {
+          await m.addColumn(folders, folders.isFavorite);
         }
       },
     );

@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/data/db/database.dart';
+import 'package:go_router/go_router.dart';
 
 enum TransferFilter { all, active, completed, failed }
 
@@ -116,7 +117,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.go('/drive'),
         ),
         actions: [
           IconButton(

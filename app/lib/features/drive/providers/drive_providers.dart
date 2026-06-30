@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/data/db/database.dart';
+import 'package:drift/drift.dart';
 
 /// Manages the current folder ID being viewed by the user.
 /// null = Root (Vault)
@@ -170,4 +171,119 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
     'folders': folders,
     'files': files,
   };
+});
+
+/// Recursively calculates the size of a folder and all its nested subfolders.
+Future<int> calculateFolderSize(String folderId, AeroDriveDatabase db) async {
+  int totalSize = 0;
+  
+  // Get all files directly in this folder
+  final directFiles = await (db.select(db.files)
+    ..where((f) => f.folderId.equals(folderId) & f.deletedAt.isNull())
+  ).get();
+  for (final file in directFiles) {
+    totalSize += file.size ?? 0;
+  }
+  
+  // Get all subfolders
+  final subfolders = await (db.select(db.folders)
+    ..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())
+  ).get();
+  for (final sub in subfolders) {
+    totalSize += await calculateFolderSize(sub.id, db);
+  }
+  
+  return totalSize;
+}
+
+/// Provider family to recursively calculate size of a folder.
+final folderSizeProvider = FutureProvider.family<int, String>((ref, folderId) async {
+  final db = ref.watch(databaseProvider);
+  ref.watch(dbRebuildVersionProvider); // Re-calculate size when DB rebuilds
+  return calculateFolderSize(folderId, db);
+});
+
+/// Fetches the real counts of categories for the Quick Access dashboard.
+final quickAccessStatsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final db = ref.watch(databaseProvider);
+  ref.watch(dbRebuildVersionProvider); // Re-calculate stats on changes
+  
+  final files = await (db.select(db.files)..where((f) => f.deletedAt.isNull())).get();
+  final folders = await (db.select(db.folders)..where((f) => f.deletedAt.isNull())).get();
+
+  int imageCount = 0;
+  int videoCount = 0;
+  int audioCount = 0;
+  int docCount = 0;
+
+  for (final f in files) {
+    final mime = (f.mimeType ?? '').toLowerCase();
+    if (mime.startsWith('image/')) {
+      imageCount++;
+    } else if (mime.startsWith('video/')) {
+      videoCount++;
+    } else if (mime.startsWith('audio/')) {
+      audioCount++;
+    } else if (mime.contains('pdf') || mime.startsWith('text/') || mime.contains('document') || mime.contains('msword') || mime.contains('spreadsheet') || mime.contains('presentation') || mime.contains('excel') || mime.contains('powerpoint') || mime.contains('word')) {
+      docCount++;
+    }
+  }
+
+  return {
+    'My Files': files.length + folders.length,
+    'Images': imageCount,
+    'Videos': videoCount,
+    'Documents': docCount,
+    'Audios': audioCount,
+  };
+});
+
+/// Providers to manage multiple item selection mode.
+final selectedItemsProvider = StateProvider<Set<String>>((ref) => {});
+final isSelectionModeProvider = StateProvider<bool>((ref) => false);
+
+/// Finds a cover file (image or video) recursively or directly inside a folder.
+final folderCoverFileProvider = FutureProvider.family<FileData?, String>((ref, folderId) async {
+  final db = ref.watch(databaseProvider);
+  ref.watch(dbRebuildVersionProvider);
+  
+  // Try to find an image or video inside the folder directly
+  final directCover = await (db.select(db.files)
+    ..where((f) => f.folderId.equals(folderId) & (f.mimeType.like('image/%') | f.mimeType.like('video/%')))
+    ..where((f) => f.deletedAt.isNull())
+    ..limit(1)
+  ).getSingleOrNull();
+  
+  if (directCover != null) return directCover;
+  
+  // If not found directly, check subfolders
+  final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())).get();
+  for (final sub in subfolders) {
+    final subCover = await (db.select(db.files)
+      ..where((f) => f.folderId.equals(sub.id) & (f.mimeType.like('image/%') | f.mimeType.like('video/%')))
+      ..where((f) => f.deletedAt.isNull())
+      ..limit(1)
+    ).getSingleOrNull();
+    if (subCover != null) return subCover;
+  }
+  
+  // Try any file in the folder if no image/video exists
+  final anyFile = await (db.select(db.files)
+    ..where((f) => f.folderId.equals(folderId))
+    ..where((f) => f.deletedAt.isNull())
+    ..limit(1)
+  ).getSingleOrNull();
+  
+  return anyFile;
+});
+
+/// Computes the total number of files and folders inside a directory.
+final folderItemsCountProvider = FutureProvider.family<int, String>((ref, folderId) async {
+  final db = ref.watch(databaseProvider);
+  ref.watch(dbRebuildVersionProvider);
+  
+  final files = await (db.select(db.files)..where((f) => f.folderId.equals(folderId) & f.deletedAt.isNull())).get();
+  final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())).get();
+  
+  return files.length + subfolders.length;
 });
