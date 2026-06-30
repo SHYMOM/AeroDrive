@@ -17,18 +17,23 @@ part 'database.g.dart';
   Accounts,
   Tags,
   FileTags,
-  Shares,
+  ShareLinks,
   TransferQueue,
   FaceClusters,
   PhotoFaces,
   BackupHistory,
   Settings,
+  Thumbnails,
+  ManifestMessages,
+  ShareLinks,
+  Places,
+  FilePlaces,
 ])
 class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration {
@@ -37,12 +42,33 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
         await m.createAll();
       },
       onUpgrade: (m, from, to) async {
-        if (from == 1) {
-          // Destructive recreate for massive schema change between alpha and v2
-          for (final table in allTables) {
-            await m.deleteTable(table.actualTableName);
-            await m.createTable(table);
-          }
+        if (from < 2) {
+          await m.createAll();
+        }
+        if (from < 3) {
+          await m.addColumn(files, files.sha256Hash);
+        }
+        if (from < 4) {
+          await m.addColumn(files, files.manifestMessageId);
+          await m.addColumn(files, files.version);
+        }
+        if (from < 5) {
+          await m.addColumn(files, files.encryptionNonce);
+          await m.addColumn(files, files.encryptionAlgo);
+          await m.addColumn(files, files.manifestVersion);
+          await m.addColumn(files, files.isFavorite);
+          await m.addColumn(channels, channels.isHidden);
+          await m.addColumn(accounts, accounts.telegramUserId);
+          await m.addColumn(accounts, accounts.phoneNumberMasked);
+          await m.addColumn(accounts, accounts.isActive);
+          await m.createTable(thumbnails);
+          await m.createTable(manifestMessages);
+          await m.createTable(shareLinks);
+        }
+        if (from < 6) {
+          await m.addColumn(tags, tags.source);
+          await m.createTable(places);
+          await m.createTable(filePlaces);
         }
       },
     );

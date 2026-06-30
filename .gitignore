@@ -18,6 +18,7 @@ build/
 # --- Android ---
 app/android/.gradle/
 app/android/local.properties
+**/local.properties
 app/android/app/debug/
 app/android/app/profile/
 app/android/app/release/
@@ -47,6 +48,14 @@ backend/cmd/server/server.exe
 backend/*.exe
 backend/*.out
 
+# --- Node.js ---
+node_modules/
+tdlib_npm/node_modules/
+
+# --- Python wheels ---
+*.whl
+python_telegram-*/
+
 # --- IDE ---
 .idea/
 .vscode/
@@ -56,8 +65,9 @@ backend/*.out
 .history/
 
 # --- Secrets ---
-# IMPORTANT: app/.env is tracked (contains non-secret API ID/hash for builds)
-# Only block root-level or sensitive env files:
+# .env files contain API credentials — NEVER commit these
+.env
+app/.env
 *.key
 *.pem
 *.p12

@@ -4,13 +4,20 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'theme_provider.dart';
 
 /// AeroDrive dynamic theme generation using FlexColorScheme.
+/// Inspired by deep space and neon aesthetics.
 abstract final class AeroDriveTheme {
   
+  static const int _defaultAccent = 0xFF00E5FF; // Neon Cyan
+  static const int _defaultSecondary = 0xFF7C3AED; // Electric Violet
+
   /// Generates the Light ThemeData based on the current global state.
   static ThemeData getLight(AeroThemeState state) {
+    final primary = Color(state.accentColorValue != 0
+        ? state.accentColorValue
+        : _defaultAccent);
     return FlexThemeData.light(
       colors: FlexSchemeColor.from(
-        primary: Color(state.accentColorValue),
+        primary: primary,
         brightness: Brightness.light,
       ),
       surfaceMode: FlexSurfaceMode.highSurfaceLowScaffold,
@@ -24,13 +31,13 @@ abstract final class AeroDriveTheme {
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 16.0,
+        inputDecoratorRadius: 12.0,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
-        fabRadius: 20.0,
-        cardRadius: 24.0,
-        bottomSheetRadius: 32.0,
-        dialogRadius: 28.0,
+        fabRadius: 16.0,
+        cardRadius: 12.0,
+        bottomSheetRadius: 20.0,
+        dialogRadius: 16.0,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,
@@ -57,9 +64,16 @@ abstract final class AeroDriveTheme {
 
   /// Generates the Dark ThemeData based on the current global state.
   static ThemeData getDark(AeroThemeState state) {
+    final primary = Color(state.accentColorValue != 0
+        ? state.accentColorValue
+        : _defaultAccent);
+    final secondary = Color(state.accentColorValue != 0
+        ? _defaultSecondary
+        : _defaultSecondary);
     return FlexThemeData.dark(
       colors: FlexSchemeColor.from(
-        primary: Color(state.accentColorValue),
+        primary: primary,
+        secondary: secondary,
         brightness: Brightness.dark,
       ),
       surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
@@ -72,13 +86,13 @@ abstract final class AeroDriveTheme {
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 16.0,
+        inputDecoratorRadius: 12.0,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
-        fabRadius: 20.0,
-        cardRadius: 24.0,
-        bottomSheetRadius: 32.0,
-        dialogRadius: 28.0,
+        fabRadius: 16.0,
+        cardRadius: 12.0,
+        bottomSheetRadius: 20.0,
+        dialogRadius: 16.0,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,

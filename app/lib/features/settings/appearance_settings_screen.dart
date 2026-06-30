@@ -175,7 +175,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                 onChanged: (val) async {
                   if (val != null) {
                     await ref.read(settingsRepositoryProvider).setSetting(key, val);
-                    ref.invalidate(settingsRepositoryProvider);
+                    ref.read(settingsUpdateProvider.notifier).state++;
                   }
                 },
               ),

@@ -52,7 +52,7 @@ class TagService {
     );
 
     await db.into(db.tags).insert(companion);
-    return Tag(id: newTagId, name: normalizedName, color: finalColor);
+    return await (db.select(db.tags)..where((t) => t.id.equals(newTagId))).getSingle();
   }
 
   Future<void> attachTagToFile(String fileId, String tagId) async {

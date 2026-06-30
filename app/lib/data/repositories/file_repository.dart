@@ -82,11 +82,24 @@ class FileRepository {
     return query.get();
   }
 
-  /// Deletes a file and its chunks locally.
+  /// Soft deletes a file by setting its deletedAt timestamp.
+  /// After calling this, trigger a UI state refresh to make the file disappear.
+  Future<void> softDelete(String fileId) async {
+    await (_db.update(_db.files)..where((f) => f.id.equals(fileId)))
+        .write(FilesCompanion(deletedAt: Value(DateTime.now())));
+  }
+
+  /// Permanently deletes a file and its chunks locally.
   Future<void> trashFile(String fileId) async {
     await _db.transaction(() async {
       await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fileId))).go();
       await (_db.delete(_db.files)..where((f) => f.id.equals(fileId))).go();
     });
+  }
+
+  /// Restores a soft-deleted file by setting deletedAt to null.
+  Future<void> restoreFile(String fileId) async {
+    await (_db.update(_db.files)..where((f) => f.id.equals(fileId)))
+        .write(const FilesCompanion(deletedAt: Value(null)));
   }
 }

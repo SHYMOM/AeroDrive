@@ -1,51 +1,149 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:drift/drift.dart' hide Column;
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/data/db/database.dart';
-
-import 'package:aerodrive/features/tags/tag_service.dart';
-import 'package:aerodrive/features/tags/tag_dialog.dart';
+import 'package:aerodrive/core/theme/app_colors.dart';
+import 'package:aerodrive/features/drive/widgets/folder_grid_item.dart';
+import 'package:aerodrive/features/drive/widgets/file_list_item.dart';
+import 'package:aerodrive/features/drive/providers/drive_providers.dart';
+import 'package:aerodrive/core/constants.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
-final selectedTagProvider = StateProvider<Tag?>((ref) => null);
 
-final searchResultsProvider = FutureProvider<List<FileData>>((ref) async {
+enum SearchSortBy { name, date, size, type }
+enum SearchFilterType { all, files, folders, images, videos, documents, audio, archives }
+
+final searchSortByProvider = StateProvider<SearchSortBy>((ref) => SearchSortBy.name);
+final searchFilterTypeProvider = StateProvider<SearchFilterType>((ref) => SearchFilterType.all);
+
+class _ParsedSearchQuery {
+  final String textQuery;
+  final String? tagName;
+
+  const _ParsedSearchQuery({required this.textQuery, this.tagName});
+}
+
+_ParsedSearchQuery _parseSearchQuery(String rawQuery) {
+  final regExp = RegExp(r'#([^\s#]+)');
+  final matches = regExp.allMatches(rawQuery);
+  if (matches.isEmpty) {
+    return _ParsedSearchQuery(textQuery: rawQuery.trim());
+  }
+
+  final firstMatch = matches.first;
+  final tagName = firstMatch.group(1);
+  final textQuery = rawQuery.replaceFirst(firstMatch.group(0)!, '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  return _ParsedSearchQuery(textQuery: textQuery, tagName: tagName);
+}
+
+final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final query = ref.watch(searchQueryProvider).trim();
-  final selectedTag = ref.watch(selectedTagProvider);
-  if (query.isEmpty && selectedTag == null) return [];
+  if (query.isEmpty) return {'folders': <FolderData>[], 'files': <FileData>[]};
 
   final db = ref.watch(databaseProvider);
-  
-  if (selectedTag != null) {
-    // Return files that have this tag AND match the query (if any)
-    final fileQuery = db.select(db.files).join([
-      innerJoin(db.fileTags, db.fileTags.fileId.equalsExp(db.files.id)),
-    ])..where(db.fileTags.tagId.equals(selectedTag.id) & db.files.deletedAt.isNull());
-    
-    if (query.isNotEmpty) {
-      fileQuery.where(db.files.name.like('%$query%'));
-    }
-    
-    final results = await fileQuery.get();
-    return results.map((row) => row.readTable(db.files)).toList();
-  } else {
-    // Search file names or tag names
-    final fileQuery = db.select(db.files).join([
-      leftOuterJoin(db.fileTags, db.fileTags.fileId.equalsExp(db.files.id)),
-      leftOuterJoin(db.tags, db.tags.id.equalsExp(db.fileTags.tagId)),
-    ])..where((db.files.name.like('%$query%') | db.tags.name.like('%$query%')) & db.files.deletedAt.isNull());
+  final sortBy = ref.watch(searchSortByProvider);
+  final filterType = ref.watch(searchFilterTypeProvider);
 
-    final results = await fileQuery.get();
-    // Use a Set to deduplicate since left join can return multiple rows for the same file
-    final uniqueFiles = <String, FileData>{};
-    for (final row in results) {
-      final file = row.readTable(db.files);
-      uniqueFiles[file.id] = file;
+  final parsed = _parseSearchQuery(query);
+  final textQuery = parsed.textQuery;
+  final tagName = parsed.tagName;
+
+  Tag? targetTag;
+  if (tagName != null) {
+    final tags = await (db.select(db.tags)..where((t) => t.name.like(tagName))).get();
+    if (tags.isNotEmpty) {
+      targetTag = tags.first;
     }
-    return uniqueFiles.values.toList();
   }
+
+  List<FolderData> matchedFolders = [];
+
+  // Search folders
+  if (filterType == SearchFilterType.all || filterType == SearchFilterType.folders) {
+    final folderQuery = db.select(db.folders)
+      ..where((f) => f.name.like('%$textQuery%') & f.deletedAt.isNull());
+    matchedFolders = await folderQuery.get();
+    switch (sortBy) {
+      case SearchSortBy.name:
+        matchedFolders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        break;
+      case SearchSortBy.date:
+        matchedFolders.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+        break;
+      default:
+        break;
+    }
+  }
+
+  List<FileData> matchedFiles = [];
+
+  // Search files
+  if (filterType != SearchFilterType.folders) {
+    if (tagName != null && targetTag != null) {
+      final fileQuery = db.select(db.files).join([
+        innerJoin(db.fileTags, db.fileTags.fileId.equalsExp(db.files.id)),
+      ])..where(db.fileTags.tagId.equals(targetTag.id) & db.files.deletedAt.isNull());
+      
+      if (textQuery.isNotEmpty) {
+        fileQuery.where(db.files.name.like('%$textQuery%'));
+      }
+      final results = await fileQuery.get();
+      matchedFiles = results.map((row) => row.readTable(db.files)).toList();
+    } else {
+      final searchQueryText = (targetTag == null && tagName != null) ? query : textQuery;
+
+      final fileQuery = db.select(db.files).join([
+        leftOuterJoin(db.fileTags, db.fileTags.fileId.equalsExp(db.files.id)),
+        leftOuterJoin(db.tags, db.tags.id.equalsExp(db.fileTags.tagId)),
+      ])..where((db.files.name.like('%$searchQueryText%') | db.tags.name.like('%$searchQueryText%')) & db.files.deletedAt.isNull());
+
+      final results = await fileQuery.get();
+      final uniqueFiles = <String, FileData>{};
+      for (final row in results) {
+        final file = row.readTable(db.files);
+        uniqueFiles[file.id] = file;
+      }
+      matchedFiles = uniqueFiles.values.toList();
+    }
+
+    if (filterType == SearchFilterType.images) {
+      matchedFiles = matchedFiles.where((f) => f.mimeType?.startsWith('image/') == true).toList();
+    } else if (filterType == SearchFilterType.videos) {
+      matchedFiles = matchedFiles.where((f) => f.mimeType?.startsWith('video/') == true).toList();
+    } else if (filterType == SearchFilterType.documents) {
+      matchedFiles = matchedFiles.where((f) {
+        final m = f.mimeType ?? '';
+        return m.contains('pdf') || m.startsWith('text/') || m.contains('document') || m.contains('msword') || m.contains('spreadsheet') || m.contains('presentation');
+      }).toList();
+    } else if (filterType == SearchFilterType.audio) {
+      matchedFiles = matchedFiles.where((f) => f.mimeType?.startsWith('audio/') == true).toList();
+    } else if (filterType == SearchFilterType.archives) {
+      matchedFiles = matchedFiles.where((f) {
+        final m = f.mimeType ?? '';
+        return m.contains('zip') || m.contains('rar') || m.contains('tar') || m.contains('7z') || m.contains('compress');
+      }).toList();
+    }
+
+    switch (sortBy) {
+      case SearchSortBy.name:
+        matchedFiles.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        break;
+      case SearchSortBy.date:
+        matchedFiles.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+        break;
+      case SearchSortBy.size:
+        matchedFiles.sort((a, b) => (b.size ?? 0).compareTo(a.size ?? 0));
+        break;
+      case SearchSortBy.type:
+        matchedFiles.sort((a, b) => (a.mimeType ?? '').compareTo(b.mimeType ?? ''));
+        break;
+    }
+  }
+
+  return {'folders': matchedFolders, 'files': matchedFiles};
 });
 
 class SearchScreen extends ConsumerWidget {
@@ -55,108 +153,278 @@ class SearchScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final searchResultsAsync = ref.watch(searchResultsProvider);
     final query = ref.watch(searchQueryProvider);
+    final sortBy = ref.watch(searchSortByProvider);
+    final filterType = ref.watch(searchFilterTypeProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: TextField(
           autofocus: true,
+          style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: 'Search files or tags...',
+            hintText: 'Search files, folders or #tags...',
+            hintStyle: TextStyle(color: Colors.white38),
             border: InputBorder.none,
-            icon: Icon(Icons.search),
+            icon: Icon(Icons.search, color: AppColors.primary),
           ),
           onChanged: (val) {
             ref.read(searchQueryProvider.notifier).state = val;
           },
         ),
-        bottom: const PreferredSize(
-          preferredSize: Size.fromHeight(48),
-          child: _TagFilterBar(),
+        actions: [
+          PopupMenuButton<SearchSortBy>(
+            icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant),
+            tooltip: 'Sort',
+            color: AppColors.surfaceElevated,
+            onSelected: (value) {
+              ref.read(searchSortByProvider.notifier).state = value;
+            },
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem<SearchSortBy>(
+                value: SearchSortBy.name,
+                checked: sortBy == SearchSortBy.name,
+                child: const Text('Name', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchSortBy>(
+                value: SearchSortBy.date,
+                checked: sortBy == SearchSortBy.date,
+                child: const Text('Date', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchSortBy>(
+                value: SearchSortBy.size,
+                checked: sortBy == SearchSortBy.size,
+                child: const Text('Size', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchSortBy>(
+                value: SearchSortBy.type,
+                checked: sortBy == SearchSortBy.type,
+                child: const Text('Type', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+          PopupMenuButton<SearchFilterType>(
+            icon: const Icon(Icons.filter_list, color: AppColors.onSurfaceVariant),
+            tooltip: 'Filter',
+            color: AppColors.surfaceElevated,
+            onSelected: (value) {
+              ref.read(searchFilterTypeProvider.notifier).state = value;
+            },
+            itemBuilder: (context) => [
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.all,
+                checked: filterType == SearchFilterType.all,
+                child: const Text('All', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.files,
+                checked: filterType == SearchFilterType.files,
+                child: const Text('Files', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.folders,
+                checked: filterType == SearchFilterType.folders,
+                child: const Text('Folders', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.images,
+                checked: filterType == SearchFilterType.images,
+                child: const Text('Images', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.videos,
+                checked: filterType == SearchFilterType.videos,
+                child: const Text('Videos', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.documents,
+                checked: filterType == SearchFilterType.documents,
+                child: const Text('Documents', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.audio,
+                checked: filterType == SearchFilterType.audio,
+                child: const Text('Audio', style: TextStyle(color: Colors.white)),
+              ),
+              CheckedPopupMenuItem<SearchFilterType>(
+                value: SearchFilterType.archives,
+                checked: filterType == SearchFilterType.archives,
+                child: const Text('Archives', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0.0, -0.3),
+            radius: 1.8,
+            colors: [
+              const Color(0xFF7C3AED).withValues(alpha: 0.15),
+              const Color(0xFF00E5FF).withValues(alpha: 0.05),
+              AppColors.background,
+              AppColors.background,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            if (query.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Text(
+                      'Sort: ${sortBy.name}',
+                      style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                    ),
+                    const SizedBox(width: 8),
+                    if (filterType != SearchFilterType.all)
+                      Chip(
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        labelStyle: const TextStyle(color: AppColors.primary, fontSize: 11),
+                        side: const BorderSide(color: AppColors.primary),
+                        label: Text(filterType.name),
+                        deleteIcon: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                        onDeleted: () => ref.read(searchFilterTypeProvider.notifier).state = SearchFilterType.all,
+                      ),
+                  ],
+                ),
+              ),
+            Expanded(
+              child: searchResultsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+                data: (results) {
+                  final theme = Theme.of(context);
+                  final folders = results['folders'] as List<FolderData>;
+                  final files = results['files'] as List<FileData>;
+                  if (query.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Search your Vault',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Type to search for files, folders, and tags',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  if (folders.isEmpty && files.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No results found',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Try a different search term or filter',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      ref.invalidate(searchResultsProvider);
+                    },
+                    child: CustomScrollView(
+                      slivers: [
+                        if (folders.isNotEmpty) ...[
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                              child: Text(
+                                'Folders',
+                                style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverGrid(
+                              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 140,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 0.8,
+                              ),
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final child = FolderGridItem(folder: folders[index]);
+                                  return child.animate()
+                                      .fadeIn(duration: 250.ms, delay: (index % 10 * 30).ms)
+                                      .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 250.ms);
+                                },
+                                childCount: folders.length,
+                              ),
+                            ),
+                          ),
+                          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        ],
+                        if (files.isNotEmpty) ...[
+                          const SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                              child: Text(
+                                'Files',
+                                style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final child = FileListItem(file: files[index]);
+                                  return child.animate()
+                                      .fadeIn(duration: 250.ms, delay: (index % 10 * 30).ms)
+                                      .slideY(begin: 0.05, end: 0, duration: 250.ms, curve: Curves.easeOutQuad);
+                                },
+                                childCount: files.length,
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SliverToBoxAdapter(child: SizedBox(height: 48)),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
-      body: searchResultsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (files) {
-          if (query.isEmpty) {
-            return const Center(child: Text('Type to search for files in your Vault'));
-          }
-          if (files.isEmpty) {
-            return const Center(child: Text('No files found matching your query'));
-          }
-
-          return ListView.builder(
-            itemCount: files.length,
-            itemBuilder: (context, index) {
-              final file = files[index];
-              return ListTile(
-                leading: const Icon(Icons.insert_drive_file),
-                title: Text(file.name),
-                subtitle: Text('${(file.size ?? 0) ~/ 1024} KB'),
-                onTap: () {
-                  // Open file preview
-                  // PreviewRouter.openPreview(context, file); // We don't have this import here, maybe skip for now
-                },
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _TagFilterBar extends ConsumerWidget {
-  const _TagFilterBar();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tagsStream = ref.watch(tagServiceProvider).watchAllTags();
-    final selectedTag = ref.watch(selectedTagProvider);
-
-    return StreamBuilder<List<Tag>>(
-      stream: tagsStream,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        final tags = snapshot.data!;
-        return SizedBox(
-          height: 48,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: tags.length,
-            itemBuilder: (context, index) {
-              final tag = tags[index];
-              final isSelected = selectedTag?.id == tag.id;
-              final color = tag.color != null ? HexColor.fromHex(tag.color!) : Colors.grey;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: FilterChip(
-                  selected: isSelected,
-                  label: Text(tag.name),
-                  backgroundColor: color.withOpacity(0.2),
-                  selectedColor: color,
-                  labelStyle: TextStyle(
-                    color: isSelected ? color.contrastColor : Colors.white,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                  onSelected: (selected) {
-                    if (selected) {
-                      ref.read(selectedTagProvider.notifier).state = tag;
-                    } else {
-                      ref.read(selectedTagProvider.notifier).state = null;
-                    }
-                  },
-                ),
-              );
-            },
-          ),
-        );
-      },
     );
   }
 }

@@ -12,8 +12,8 @@ import 'package:cryptography/cryptography.dart';
 
 import 'package:aerodrive/core/logger.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/core/security/master_key_provider.dart';
 import 'package:aerodrive/data/db/database.dart';
 import 'package:aerodrive/data/crypto/encryption_engine.dart';
 import 'package:drift/drift.dart';
@@ -22,10 +22,33 @@ class StreamingServer {
   final Ref ref;
   HttpServer? _server;
   
+  static const int _maxCacheSize = 100;
+
   // Cache of messageId -> TDLib FFI remote file_id to avoid redundant FFI calls
   final Map<int, int> _remoteFileIdCache = {};
+  // Cache of fileId -> local path to avoid redundant downloads
+  final Map<int, String> _localFilePathCache = {};
 
   StreamingServer(this.ref);
+
+  void _trimCache() {
+    while (_remoteFileIdCache.length > _maxCacheSize) {
+      _remoteFileIdCache.remove(_remoteFileIdCache.keys.first);
+    }
+    while (_localFilePathCache.length > _maxCacheSize) {
+      _localFilePathCache.remove(_localFilePathCache.keys.first);
+    }
+  }
+
+  void _cacheRemoteFileId(int messageId, int fileId) {
+    _trimCache();
+    _remoteFileIdCache[messageId] = fileId;
+  }
+
+  void _cacheLocalFilePath(int fileId, String path) {
+    _trimCache();
+    _localFilePathCache[fileId] = path;
+  }
 
   int get port => _server?.port ?? 0;
 
@@ -74,8 +97,9 @@ class StreamingServer {
       }
 
       // 3. Unwrap DEK & CTR IV
-      final masterKeyBytes = ref.read(masterKeyProvider);
+      final masterKeyBytes = MasterKeyProvider.instance.key;
       if (masterKeyBytes == null) {
+        AppLogger.warning('StreamingServer: Vault is locked - rejecting stream for $fileId');
         return Response(401, body: 'Vault is locked');
       }
 
@@ -195,7 +219,7 @@ class StreamingServer {
         if (content != null && content['@type'] == 'messageDocument') {
           remoteFileId = content['document']['document']['id'] as int?;
           if (remoteFileId != null) {
-            _remoteFileIdCache[chunk.messageId!] = remoteFileId;
+            _cacheRemoteFileId(chunk.messageId!, remoteFileId);
           }
         }
       }
@@ -270,55 +294,75 @@ class StreamingServer {
   }
 
   /// Downloads a specific offset and limit range via TDLib, polling until downloaded.
+  /// Uses the same reliable approach as _downloadFullChunk in decrypted_image_viewer.
   Future<Uint8List> _downloadAndReadRange(TelegramService telegram, int fileId, int offset, int limit) async {
-    // Request download for the specific range
-    await telegram.sendRequest({
-      "@type": "downloadFile",
-      "file_id": fileId,
-      "priority": 32,
-      "offset": offset,
-      "limit": limit,
-      "synchronous": false
-    });
-
-    final int partSize = 1024 * 1024; // Read in 1MB chunks
-    final bytesBuilder = BytesBuilder();
-    
-    int currentOffset = offset;
-    final int endOffset = offset + limit;
-
-    while (currentOffset < endOffset) {
-      final int count = min(partSize, endOffset - currentOffset);
-      bool success = false;
-
-      for (int attempt = 0; attempt < 50; attempt++) {
-        try {
-          final res = await telegram.sendRequest({
-            "@type": "readFilePart",
-            "file_id": fileId,
-            "offset": currentOffset,
-            "count": count
-          });
-          final base64Data = res['data'] as String?;
-          if (base64Data != null && base64Data.isNotEmpty) {
-            final decoded = base64Decode(base64Data);
-            bytesBuilder.add(decoded);
-            currentOffset += decoded.length;
-            success = true;
-            break;
-          }
-        } catch (_) {
-          // Range not fully downloaded yet
-        }
-        await Future.delayed(const Duration(milliseconds: 200));
+    // Check if we already have a local path cached
+    if (!_localFilePathCache.containsKey(fileId)) {
+      // Download the entire file synchronously
+      final res = await telegram.sendRequest({
+        "@type": "downloadFile",
+        "file_id": fileId,
+        "priority": 32,
+        "synchronous": true,
+      });
+      final file = res['file'] as Map<String, dynamic>? ?? res;
+      final local = file['local'] as Map<String, dynamic>?;
+      if (local == null) {
+        throw Exception("No local info in TDLib download response for file $fileId");
       }
 
-      if (!success) {
-        throw Exception("Timeout waiting for TDLib download range at offset $currentOffset");
+      final localPath = local['path'] as String?;
+      if (localPath == null || localPath.isEmpty) {
+        throw Exception("Empty local path for file $fileId");
+      }
+
+      if (local['is_downloading_completed'] == true) {
+        _cacheLocalFilePath(fileId, localPath);
+      } else {
+        // Poll with getFile until download completes
+        for (int i = 0; i < 60; i++) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          final getFileRes = await telegram.sendRequest({
+            "@type": "getFile",
+            "file_id": fileId,
+          });
+          final getFileLocal = getFileRes['local'] as Map<String, dynamic>?;
+          if (getFileLocal != null && getFileLocal['is_downloading_completed'] == true) {
+            final path = getFileLocal['path'] as String?;
+            if (path != null && path.isNotEmpty) {
+              _cacheLocalFilePath(fileId, path);
+              break;
+            }
+          }
+          if (getFileRes['@type'] == 'error') {
+            throw Exception("TDLib error downloading file $fileId: ${getFileRes['message']}");
+          }
+        }
       }
     }
 
-    return bytesBuilder.toBytes();
+    final cachedPath = _localFilePathCache[fileId];
+    if (cachedPath == null) {
+      throw Exception("Timeout waiting for TDLib download range at offset $offset");
+    }
+
+    final fileOnDisk = File(cachedPath);
+    if (!await fileOnDisk.exists()) {
+      _localFilePathCache.remove(fileId);
+      throw Exception("Downloaded file not found at $cachedPath");
+    }
+
+    final raf = await fileOnDisk.open(mode: FileMode.read);
+    try {
+      await raf.setPosition(offset);
+      final bytes = await raf.read(limit);
+      if (bytes.isEmpty) {
+        throw Exception("Read 0 bytes at offset $offset from $cachedPath");
+      }
+      return Uint8List.fromList(bytes);
+    } finally {
+      await raf.close();
+    }
   }
 }
 

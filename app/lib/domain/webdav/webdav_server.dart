@@ -107,8 +107,7 @@ class WebDavServer {
   }
 
   static Future<shelf.Response> _handleLock(shelf.Request request) async {
-    // "Fake Lock" strategy for Windows Explorer
-    final uuid = 'urn:uuid:12345678-1234-1234-1234-123456789abc'; // Static mock token
+    final uuid = 'urn:uuid:${DateTime.now().microsecondsSinceEpoch}-${_nextLockId++}';
     
     final xmlBody = '''<?xml version="1.0" encoding="utf-8" ?>
 <D:prop xmlns:D="DAV:">
@@ -130,6 +129,8 @@ class WebDavServer {
       'Lock-Token': '<$uuid>',
     });
   }
+
+  static int _nextLockId = 0;
 
   static Future<shelf.Response> _handleUnlock(shelf.Request request) async {
     return shelf.Response(204); // No Content

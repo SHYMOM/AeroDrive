@@ -3,7 +3,7 @@ import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/data/db/database.dart';
 
-/// Manages the current folder ID being viewed by the user. 
+/// Manages the current folder ID being viewed by the user.
 /// null = Root (Vault)
 final currentFolderIdProvider = StateProvider<String?>((ref) => null);
 
@@ -12,9 +12,8 @@ final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
   final currentId = ref.watch(currentFolderIdProvider);
   if (currentId == null) return [];
 
-  final folderRepo = ref.watch(folderRepositoryProvider);
   final db = ref.watch(databaseProvider);
-  
+
   List<FolderData> breadcrumbs = [];
   String? iterId = currentId;
 
@@ -23,20 +22,152 @@ final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
     final String safeId = iterId;
     final folder = await (db.select(db.folders)..where((f) => f.id.equals(safeId))).getSingleOrNull();
     if (folder == null) break;
-    
+
     breadcrumbs.insert(0, folder);
     iterId = folder.parentId;
   }
   return breadcrumbs;
 });
 
-/// Fetches the contents of the current folder.
-final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final folderRepo = ref.watch(folderRepositoryProvider);
-  final currentId = ref.watch(currentFolderIdProvider);
-  
-  return await folderRepo.getFolderContents(currentId);
-});
-
 /// Controls whether the UI is in Grid or List view.
 final isGridViewProvider = StateProvider<bool>((ref) => true);
+
+/// Synchronous navigation stack: tracks the parent folder ID before each navigation.
+/// Used by PopScope to navigate back without async DB calls.
+final navigationStackProvider = StateProvider<List<String?>>((ref) => []);
+
+/// Incremented after each rebuild/import to force DriveScreen to refetch.
+final dbRebuildVersionProvider = StateProvider<int>((ref) => 0);
+
+enum DriveSortCriteria { name, date, size, type }
+enum DriveSortOrder { ascending, descending }
+enum DriveSortCategory { none, images, videos, documents, programs, others }
+
+class DriveSortOption {
+  final DriveSortCriteria criteria;
+  final DriveSortOrder order;
+  final DriveSortCategory categoryPriority;
+
+  const DriveSortOption({
+    required this.criteria,
+    required this.order,
+    required this.categoryPriority,
+  });
+
+  DriveSortOption copyWith({
+    DriveSortCriteria? criteria,
+    DriveSortOrder? order,
+    DriveSortCategory? categoryPriority,
+  }) {
+    return DriveSortOption(
+      criteria: criteria ?? this.criteria,
+      order: order ?? this.order,
+      categoryPriority: categoryPriority ?? this.categoryPriority,
+    );
+  }
+}
+
+final driveSortOptionProvider = StateProvider<DriveSortOption>((ref) => const DriveSortOption(
+  criteria: DriveSortCriteria.name,
+  order: DriveSortOrder.ascending,
+  categoryPriority: DriveSortCategory.none,
+));
+
+/// Fetches the contents of the current folder, watches rebuild version, and applies sorting.
+final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  ref.watch(dbRebuildVersionProvider);
+  final folderRepo = ref.watch(folderRepositoryProvider);
+  final currentId = ref.watch(currentFolderIdProvider);
+  final contents = await folderRepo.getFolderContents(currentId);
+
+  final folders = List<FolderData>.from(contents['folders'] ?? []);
+  final files = List<FileData>.from(contents['files'] ?? []);
+
+  final sortOption = ref.watch(driveSortOptionProvider);
+
+  // Helper to categorize files
+  bool isImage(FileData f) => f.mimeType?.startsWith('image/') == true;
+  bool isVideo(FileData f) => f.mimeType?.startsWith('video/') == true;
+  bool isDoc(FileData f) {
+    final m = (f.mimeType ?? '').toLowerCase();
+    return m.contains('pdf') || m.startsWith('text/') || m.contains('document') || m.contains('msword') || m.contains('spreadsheet') || m.contains('presentation') || m.contains('excel') || m.contains('powerpoint') || m.contains('word');
+  }
+  bool isProgram(FileData f) {
+    final m = (f.mimeType ?? '').toLowerCase();
+    final name = f.name.toLowerCase();
+    return m.contains('x-msdownload') || m.contains('octet-stream') || name.endsWith('.exe') || name.endsWith('.msi') || name.endsWith('.apk') || name.endsWith('.bat') || name.endsWith('.sh');
+  }
+  bool isOther(FileData f) => !isImage(f) && !isVideo(f) && !isDoc(f) && !isProgram(f);
+
+  bool hasPriority(FileData f) {
+    switch (sortOption.categoryPriority) {
+      case DriveSortCategory.images: return isImage(f);
+      case DriveSortCategory.videos: return isVideo(f);
+      case DriveSortCategory.documents: return isDoc(f);
+      case DriveSortCategory.programs: return isProgram(f);
+      case DriveSortCategory.others: return isOther(f);
+      case DriveSortCategory.none: return false;
+    }
+  }
+
+  // Sort Folders
+  folders.sort((a, b) {
+    int cmp;
+    switch (sortOption.criteria) {
+      case DriveSortCriteria.name:
+        cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        break;
+      case DriveSortCriteria.date:
+        final da = a.createdAt ?? DateTime(0);
+        final db = b.createdAt ?? DateTime(0);
+        cmp = da.compareTo(db);
+        break;
+      default:
+        cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        break;
+    }
+    return sortOption.order == DriveSortOrder.ascending ? cmp : -cmp;
+  });
+
+  // Sort Files
+  files.sort((a, b) {
+    // 1. Category Priority
+    if (sortOption.categoryPriority != DriveSortCategory.none) {
+      final aPriority = hasPriority(a);
+      final bPriority = hasPriority(b);
+      if (aPriority && !bPriority) return -1;
+      if (!aPriority && bPriority) return 1;
+    }
+
+    // 2. Main Criteria
+    int cmp;
+    switch (sortOption.criteria) {
+      case DriveSortCriteria.name:
+        cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        break;
+      case DriveSortCriteria.date:
+        final da = a.createdAt ?? DateTime(0);
+        final db = b.createdAt ?? DateTime(0);
+        cmp = da.compareTo(db);
+        break;
+      case DriveSortCriteria.size:
+        cmp = (a.size ?? 0).compareTo(b.size ?? 0);
+        break;
+      case DriveSortCriteria.type:
+        final extA = a.name.contains('.') ? a.name.split('.').last.toLowerCase() : '';
+        final extB = b.name.contains('.') ? b.name.split('.').last.toLowerCase() : '';
+        cmp = extA.compareTo(extB);
+        if (cmp == 0) {
+          cmp = (a.mimeType ?? '').toLowerCase().compareTo((b.mimeType ?? '').toLowerCase());
+        }
+        break;
+    }
+
+    return sortOption.order == DriveSortOrder.ascending ? cmp : -cmp;
+  });
+
+  return {
+    'folders': folders,
+    'files': files,
+  };
+});

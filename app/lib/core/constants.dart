@@ -29,10 +29,12 @@ abstract final class AppConstants {
   /// AES-256-GCM nonce size in bytes.
   static const int gcmNonceBytes = 12;
 
-  /// Argon2id parameters (OWASP 2023 recommendations).
+  /// Argon2id parameters.
+  /// Native: 64MB memory, 3 iterations, 2 threads.
+  /// Web: 32MB memory (due to WASM limits).
   static const int argon2Memory = 65536; // 64 MB
   static const int argon2Iterations = 3;
-  static const int argon2Parallelism = 4;
+  static const int argon2Parallelism = 2;
 
   // ── Network / Telegram ────────────────────────────────────────────
   /// Base flood-wait backoff in milliseconds.

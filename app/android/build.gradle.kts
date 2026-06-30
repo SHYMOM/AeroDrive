@@ -29,6 +29,6 @@ subprojects {
         if (android.namespace == null) {
             android.namespace = "com.legacy." + project.name.replace("-", "_")
         }
-        android.compileSdk = 34
+        android.compileSdk = 36
     }
 }

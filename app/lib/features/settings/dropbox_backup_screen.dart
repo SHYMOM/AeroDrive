@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/domain/backup_service.dart';
 import 'package:aerodrive/features/settings/dropbox_service.dart';
+import 'package:aerodrive/features/settings/widgets/backup_folder_mapper.dart';
 
 class DropboxBackupScreen extends ConsumerStatefulWidget {
   const DropboxBackupScreen({super.key});
@@ -15,6 +18,7 @@ class DropboxBackupScreen extends ConsumerStatefulWidget {
 class _DropboxBackupScreenState extends ConsumerState<DropboxBackupScreen> {
   bool _isConnecting = false;
   bool _isBackingUp = false;
+  double _uploadProgress = 0.0;
   
   String _frequency = 'weekly';
   String _maxKeep = '5';
@@ -243,27 +247,83 @@ class _DropboxBackupScreenState extends ConsumerState<DropboxBackupScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 24),
+                
+                // Destination Folder Mapper
+                const BackupFolderMapper(),
+
                 const SizedBox(height: 32),
+                if (_isBackingUp)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: _uploadProgress > 0 ? _uploadProgress : null,
+                          backgroundColor: Colors.white12,
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                          minHeight: 4,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _uploadProgress > 0
+                              ? 'Uploading... ${(_uploadProgress * 100).toStringAsFixed(0)}%'
+                              : 'Preparing backup...',
+                          style: const TextStyle(color: Colors.white54, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
                     onPressed: _isBackingUp ? null : () async {
-                      setState(() => _isBackingUp = true);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Starting backup to Dropbox...')),
-                      );
+                      setState(() {
+                        _isBackingUp = true;
+                        _uploadProgress = 0.0;
+                      });
                       
-                      final success = await ref.read(dropboxServiceProvider.notifier).uploadBackup('mock_path');
-                      
-                      if (context.mounted) {
-                        setState(() => _isBackingUp = false);
-                        if (success) {
+                      try {
+                        final backupService = ref.read(backupServiceProvider);
+                        final settings = ref.read(settingsRepositoryProvider);
+                        final destFolder = await settings.getSetting('dropbox_backup_path') ?? '/AeroDrive';
+                        final backupPath = await backupService.exportBackup(
+                          exportDatabase: true,
+                          exportSettings: true,
+                        );
+                        
+                        setState(() => _uploadProgress = 0.01);
+                        
+                        final success = await ref.read(dropboxServiceProvider.notifier).uploadBackup(
+                          backupPath,
+                          destinationFolder: destFolder,
+                          onProgress: (p) {
+                            if (mounted) setState(() => _uploadProgress = p);
+                          },
+                        );
+                        
+                        final tempFile = File(backupPath);
+                        if (await tempFile.exists()) {
+                          await tempFile.delete();
+                        }
+                        
+                        if (context.mounted) {
+                          setState(() => _isBackingUp = false);
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Backup uploaded to Dropbox!'), backgroundColor: Colors.green),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Dropbox upload failed.'), backgroundColor: Colors.redAccent),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          setState(() => _isBackingUp = false);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Backup successful!'), backgroundColor: Colors.green),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Backup failed.'), backgroundColor: Colors.redAccent),
+                            SnackBar(content: Text('Backup failed: $e'), backgroundColor: Colors.redAccent),
                           );
                         }
                       }

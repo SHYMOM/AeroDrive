@@ -29,7 +29,7 @@ void main() {
       
       expect(
         () => folderRepo.createFolder(name: longName),
-        throwsA(isA<FolderPathTooLongException>()),
+        throwsA(isA<FolderNameTooLongException>()),
       );
     });
 
@@ -114,7 +114,7 @@ void main() {
       expect(fileBId, isNot(fileAId));
 
       // Verify Deduplication Magic: File B should instantly have isChunked == true
-      final fileB = await fileRepo.getFileByHash(mockHash); // Note: getFileByHash returns the first match.
+      // Note: getFileByHash returns the first match.
       // We should really query by ID to check isChunked.
       final allFiles = await fileRepo.getFilesInFolder(folderId);
       final fileBRecord = allFiles.firstWhere((f) => f.id == fileBId);

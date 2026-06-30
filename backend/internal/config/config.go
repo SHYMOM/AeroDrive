@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"path/filepath"
 )
@@ -15,7 +16,6 @@ type Config struct {
 
 const configFileName = "config.json"
 
-// LoadOrGenerate loads the configuration. If it doesn't exist, it generates a new API key.
 func LoadOrGenerate() (*Config, error) {
 	file, err := os.Open(configFileName)
 	if err != nil {
@@ -35,7 +35,10 @@ func LoadOrGenerate() (*Config, error) {
 }
 
 func generateNewConfig() (*Config, error) {
-	apiKey := generateRandomString(64)
+	apiKey, err := generateRandomString(64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate API key: %w", err)
+	}
 	cfg := &Config{
 		AdminAPIKey: apiKey,
 	}
@@ -54,21 +57,29 @@ func generateNewConfig() (*Config, error) {
 	log.Println("INITIAL SETUP DETECTED")
 	log.Println("A new Admin API Key has been generated and saved to:")
 	log.Println(absPath)
-	log.Println("API KEY:", apiKey)
+	log.Printf("API Key (last 4 chars): ...%s", safeLastN(apiKey, 4))
 	log.Println("Copy this key into the AeroDrive Flutter App Settings.")
 	log.Println("================================================================")
 
 	return cfg, nil
 }
 
-func generateRandomString(n int) string {
+func safeLastN(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
+}
+
+func generateRandomString(n int) (string, error) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		panic(err)
+	result := make([]byte, n)
+	for i := range result {
+		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			return "", fmt.Errorf("failed to generate random index: %w", err)
+		}
+		result[i] = letters[idx.Int64()]
 	}
-	for i, b := range bytes {
-		bytes[i] = letters[b%byte(len(letters))]
-	}
-	return string(bytes)
+	return string(result), nil
 }

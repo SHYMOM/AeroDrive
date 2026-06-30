@@ -7,6 +7,10 @@ import 'package:cryptography/cryptography.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/features/security/biometric_service.dart';
+import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/core/logger.dart';
+import 'package:aerodrive/data/crypto/key_hierarchy.dart';
+import 'package:aerodrive/domain/saved_messages_sync.dart';
 
 class SecuritySetupScreen extends ConsumerStatefulWidget {
   const SecuritySetupScreen({super.key});
@@ -52,16 +56,42 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
     try {
       final engine = ref.read(encryptionEngineProvider);
       final settings = ref.read(settingsRepositoryProvider);
+      final syncService = ref.read(savedMessagesSyncProvider);
 
-      // 1. Generate 32-byte Salt for Master Key Derivation
-      final random = Random.secure();
-      final saltBytes = List<int>.generate(32, (_) => random.nextInt(256));
-      final saltStr = base64Encode(saltBytes);
+      // 1. Scan for existing MK Manifest in Saved Messages FIRST
+      final existingManifest = await syncService.fetchWrappedMasterKey();
+      
+      List<int> saltBytes;
+      String saltStr;
+      List<int> mkBytes;
+      String wrappedMkStr;
+      List<int> kekBytes;
+      
+      if (existingManifest != null && existingManifest['wrappedMk'] != null && existingManifest['salt'] != null) {
+        // Attempt to unlock existing Vault
+        saltStr = existingManifest['salt']!;
+        saltBytes = base64Decode(saltStr);
+        kekBytes = await KeyHierarchy.deriveKEK(password, saltBytes);
+        wrappedMkStr = existingManifest['wrappedMk']!;
+        
+        try {
+          mkBytes = await KeyHierarchy.unwrapMasterKey(wrappedMkStr, kekBytes);
+          AppLogger.info('Successfully unwrapped existing Master Key from Saved Messages sync!');
+        } catch (e) {
+          setState(() => _error = "Existing vault found, but password was incorrect.");
+          return;
+        }
+      } else {
+        // Create NEW Vault
+        final random = Random.secure();
+        saltBytes = List<int>.generate(32, (_) => random.nextInt(256));
+        saltStr = base64Encode(saltBytes);
+        kekBytes = await KeyHierarchy.deriveKEK(password, saltBytes);
+        mkBytes = List<int>.generate(32, (_) => random.nextInt(256));
+        wrappedMkStr = await KeyHierarchy.wrapMasterKey(mkBytes, kekBytes);
+      }
 
-      // 2. Derive KEK (Master Key) using Argon2id
-      final kekBytes = await engine.deriveMasterKey(password, saltStr);
-
-      // 3. Encrypt verification payload "AERODRIVE_VALID" using KEK
+      // 5. Encrypt verification payload "AERODRIVE_VALID" using KEK
       final cipher = AesGcm.with256bits();
       final secretKey = await cipher.newSecretKeyFromBytes(kekBytes);
       final nonce = cipher.newNonce();
@@ -73,21 +103,28 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
         nonce: nonce,
       );
 
-      // 4. Save to Database
+      // 6. Save to Database
       await settings.setSetting('master_password_salt', saltStr);
       await settings.setSetting('verification_nonce', base64Encode(secretBox.nonce));
       await settings.setSetting('verification_mac', base64Encode(secretBox.mac.bytes));
       await settings.setSetting('verification_ciphertext', base64Encode(secretBox.cipherText));
+      await settings.setSetting('wrapped_master_key', wrappedMkStr); // Save the wrapped MK!
 
-      // 5. Save KEK to memory provider
-      ref.read(masterKeyProvider.notifier).state = kekBytes;
+      // 7. Save salt to active channel description for cross-device sync
+      await _storeSaltInActiveChannel(saltStr);
 
-      // 6. Handle Biometrics
+      // 7b. Backup Master Key Manifest to Telegram Saved Messages
+      await syncService.backupMasterKeyManifest(wrappedMkStr, saltStr);
+
+      // 8. Save MK to memory provider
+      ref.read(masterKeyProvider.notifier).state = mkBytes;
+
+      // 9. Handle Biometrics (save KEK so we can unwrap MK later, or save MK directly? Save MK directly is easier, but KEK allows password changes. Let's save MK directly for biometrics.)
       final biometric = ref.read(biometricServiceProvider);
       if (_useBiometrics && _isBiometricAvailable) {
         final authenticated = await biometric.authenticate('Enable Biometric Unlock');
         if (authenticated) {
-          await biometric.saveKek(kekBytes);
+          await biometric.saveKek(mkBytes); // Actually saving MK
         }
       } else {
         await biometric.clearKek();
@@ -183,5 +220,28 @@ class _SecuritySetupScreenState extends ConsumerState<SecuritySetupScreen> {
         ),
       ),
     );
+  }
+
+  /// Stores the newly created salt in the active channel description so other
+  /// devices discover it and derive the same KEK.
+  Future<void> _storeSaltInActiveChannel(String salt) async {
+    try {
+      final settings = ref.read(settingsRepositoryProvider);
+      final channelIdStr = await settings.getSetting('active_channel_id');
+      if (channelIdStr == null || channelIdStr.isEmpty) return;
+
+      final existing = await ref.read(telegramServiceProvider.notifier)
+          .getChannelDescription(int.parse(channelIdStr));
+      if (existing != null && existing.startsWith('AERODRIVE_SALT:')) {
+        AppLogger.info('Salt already present in channel — not overwriting');
+        return;
+      }
+
+      await ref.read(telegramServiceProvider.notifier)
+          .setChatDescription(int.parse(channelIdStr), 'AERODRIVE_SALT:$salt');
+      AppLogger.info('Stored salt in active channel description');
+    } catch (e) {
+      AppLogger.error('Failed to store salt in active channel', e);
+    }
   }
 }

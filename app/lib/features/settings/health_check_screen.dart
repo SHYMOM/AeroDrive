@@ -5,7 +5,6 @@ import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:drift/drift.dart' as drift;
 
 final activeChannelIdProvider = FutureProvider.autoDispose<String?>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);

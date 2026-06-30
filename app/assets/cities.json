@@ -1,0 +1,12 @@
+[
+  {"name": "New York", "admin": "New York", "country": "United States", "lat": 40.7128, "lon": -74.0060},
+  {"name": "London", "admin": "England", "country": "United Kingdom", "lat": 51.5074, "lon": -0.1278},
+  {"name": "Tokyo", "admin": "Tokyo", "country": "Japan", "lat": 35.6762, "lon": 139.6503},
+  {"name": "Paris", "admin": "Île-de-France", "country": "France", "lat": 48.8566, "lon": 2.3522},
+  {"name": "Sydney", "admin": "New South Wales", "country": "Australia", "lat": -33.8688, "lon": 151.2093},
+  {"name": "Los Angeles", "admin": "California", "country": "United States", "lat": 34.0522, "lon": -118.2437},
+  {"name": "Berlin", "admin": "Berlin", "country": "Germany", "lat": 52.5200, "lon": 13.4050},
+  {"name": "Rome", "admin": "Lazio", "country": "Italy", "lat": 41.9028, "lon": 12.4964},
+  {"name": "Toronto", "admin": "Ontario", "country": "Canada", "lat": 43.6510, "lon": -79.3470},
+  {"name": "São Paulo", "admin": "São Paulo", "country": "Brazil", "lat": -23.5505, "lon": -46.6333}
+]

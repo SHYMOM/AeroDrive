@@ -1,0 +1,7 @@
+# AeroDrive Android local.properties
+# Copy this file to local.properties and update paths for your machine.
+# sdk.dir=PATH_TO_ANDROID_SDK
+# flutter.sdk=PATH_TO_FLUTTER_SDK
+# flutter.buildMode=debug
+# flutter.versionName=0.1.0-alpha.1
+# flutter.versionCode=1

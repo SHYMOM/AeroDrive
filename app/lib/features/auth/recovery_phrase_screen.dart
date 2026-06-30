@@ -1,9 +1,15 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-// Note: Normally, this would proceed to derive the MK and save it securely via riverpod or a setup service.
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cryptography/cryptography.dart';
+import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/core/providers/security_providers.dart';
+import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/core/logger.dart';
 
-class RecoveryPhraseScreen extends StatelessWidget {
+class RecoveryPhraseScreen extends ConsumerWidget {
   final String recoveryPhrase;
   final String password;
 
@@ -14,13 +20,13 @@ class RecoveryPhraseScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final words = recoveryPhrase.split(' ');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recovery Phrase'),
-        automaticallyImplyLeading: false, // Force them to deal with it
+        automaticallyImplyLeading: false,
       ),
       body: Center(
         child: Container(
@@ -53,8 +59,6 @@ class RecoveryPhraseScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
-              // Grid of 24 words
               Expanded(
                 child: GridView.builder(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -79,7 +83,6 @@ class RecoveryPhraseScreen extends StatelessWidget {
                   },
                 ),
               ),
-              
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -101,17 +104,50 @@ class RecoveryPhraseScreen extends StatelessWidget {
                   const SizedBox(width: 16),
                   Expanded(
                     child: FilledButton(
-                      onPressed: () {
-                        // TODO: Implement actual MK derivation and secure storage
-                        // This would call `EncryptionEngine.deriveMasterKey` and save to KeyStore.
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Setup Complete!')),
-                        );
-                        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => DriveScreen()));
+                      onPressed: () async {
+                        // Derive and store the Master Key + recovery phrase hash
+                        try {
+                          final engine = ref.read(encryptionEngineProvider);
+                          final settings = ref.read(settingsRepositoryProvider);
+
+                          final random = Random.secure();
+                          final saltBytes = List<int>.generate(32, (_) => random.nextInt(256));
+                          final saltStr = base64Encode(saltBytes);
+
+                          final kekBytes = await engine.deriveMasterKey(password, saltStr);
+
+                          final cipher = AesGcm.with256bits();
+                          final secretKey = await cipher.newSecretKeyFromBytes(kekBytes);
+                          final nonce = cipher.newNonce();
+                          final payload = utf8.encode('AERODRIVE_VALID');
+                          final secretBox = await cipher.encrypt(payload, secretKey: secretKey, nonce: nonce);
+
+                          await settings.setSetting('master_password_salt', saltStr);
+                          await settings.setSetting('verification_nonce', base64Encode(secretBox.nonce));
+                          await settings.setSetting('verification_mac', base64Encode(secretBox.mac.bytes));
+                          await settings.setSetting('verification_ciphertext', base64Encode(secretBox.cipherText));
+                          await settings.setSetting('recovery_phrase_hash', _hashPhrase(recoveryPhrase));
+
+                          await _storeSaltInActiveChannel(ref, saltStr);
+
+                          ref.read(masterKeyProvider.notifier).state = kekBytes;
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Vault initialized! You can now use your files.')),
+                            );
+                            Navigator.of(context).popUntil((route) => route.isFirst);
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
+                            );
+                          }
+                        }
                       },
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: AppColors.primary,
                       ),
                       child: const Text('I Have Saved It'),
                     ),
@@ -123,5 +159,32 @@ class RecoveryPhraseScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _hashPhrase(String phrase) {
+    final bytes = utf8.encode(phrase);
+    final hashBytes = List<int>.generate(32, (i) => bytes[i % bytes.length] ^ (i * 31 + 7) & 0xFF);
+    return base64Encode(hashBytes);
+  }
+
+  Future<void> _storeSaltInActiveChannel(WidgetRef ref, String salt) async {
+    try {
+      final settings = ref.read(settingsRepositoryProvider);
+      final channelIdStr = await settings.getSetting('active_channel_id');
+      if (channelIdStr == null || channelIdStr.isEmpty) return;
+
+      final existing = await ref.read(telegramServiceProvider.notifier)
+          .getChannelDescription(int.parse(channelIdStr));
+      if (existing != null && existing.startsWith('AERODRIVE_SALT:')) {
+        AppLogger.info('Salt already present in channel — not overwriting');
+        return;
+      }
+
+      await ref.read(telegramServiceProvider.notifier)
+          .setChatDescription(int.parse(channelIdStr), 'AERODRIVE_SALT:$salt');
+      AppLogger.info('Stored salt in active channel description');
+    } catch (e) {
+      AppLogger.error('Failed to store salt in active channel', e);
+    }
   }
 }

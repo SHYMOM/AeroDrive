@@ -1,13 +1,58 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
 import 'package:aerodrive/data/db/database.dart';
+import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/core/logger.dart';
 import 'package:aerodrive/features/gallery/thumbnail_service.dart';
 import 'package:aerodrive/features/tags/tag_service.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as img;
+import 'package:uuid/uuid.dart';
+import 'package:drift/drift.dart' as drift;
+
+class CropTaskArgs {
+  final String imagePath;
+  final String outputPath;
+  final int left;
+  final int top;
+  final int width;
+  final int height;
+
+  CropTaskArgs({
+    required this.imagePath,
+    required this.outputPath,
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
+  });
+}
+
+Future<void> _cropFaceIsolate(CropTaskArgs args) async {
+  final imageBytes = await File(args.imagePath).readAsBytes();
+  final decodedImage = img.decodeImage(imageBytes);
+  if (decodedImage == null) return;
+
+  // Add 10% padding to the bounding box for a better crop
+  int padX = (args.width * 0.1).toInt();
+  int padY = (args.height * 0.1).toInt();
+
+  int x = (args.left - padX).clamp(0, decodedImage.width);
+  int y = (args.top - padY).clamp(0, decodedImage.height);
+  int w = (args.width + padX * 2).clamp(0, decodedImage.width - x);
+  int h = (args.height + padY * 2).clamp(0, decodedImage.height - y);
+
+  final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
+  final resized = img.copyResize(cropped, width: 256); // uniform size
+  final jpg = img.encodeJpg(resized, quality: 80);
+
+  final outFile = File(args.outputPath);
+  await outFile.parent.create(recursive: true);
+  await outFile.writeAsBytes(jpg);
+}
 
 class MLService {
   final Ref _ref;
@@ -15,45 +60,98 @@ class MLService {
   MLService(this._ref);
 
   Future<void> processImage(FileData file) async {
-    // Only process images
     if (file.mimeType == null || !file.mimeType!.startsWith('image/')) return;
 
-    // Gracefully skip on unsupported platforms
     if (!Platform.isAndroid && !Platform.isIOS) {
       AppLogger.info('ML Kit skipped: Not on Android/iOS');
       return;
     }
 
     try {
-      // 1. Get the local decrypted thumbnail (acts as our base image for ML)
       final thumbnailFile = await _ref.read(thumbnailServiceProvider).getThumbnail(file);
       if (thumbnailFile == null) return;
 
-      // 2. Initialize ML Kit
       final inputImage = InputImage.fromFile(thumbnailFile);
-      final ImageLabelerOptions options = ImageLabelerOptions(confidenceThreshold: 0.7);
-      final imageLabeler = ImageLabeler(options: options);
-
-      // 3. Process
-      final List<ImageLabel> labels = await imageLabeler.processImage(inputImage);
-
-      // 4. Clean up
+      
+      // 1. Image Labeling
+      final labelerOptions = ImageLabelerOptions(confidenceThreshold: 0.7);
+      final imageLabeler = ImageLabeler(options: labelerOptions);
+      final labels = await imageLabeler.processImage(inputImage);
       imageLabeler.close();
 
-      // 5. Save to Database using TagService
       final tagService = _ref.read(tagServiceProvider);
-      
       for (final label in labels) {
         final tagName = label.label.toLowerCase();
-        
         final tag = await tagService.getOrCreateTag(tagName);
         await tagService.attachTagToFile(file.id, tag.id);
       }
-      
       AppLogger.info('Successfully labeled ${file.name} with ${labels.length} tags.');
 
-    } catch (e) {
-      AppLogger.error('Failed to run ML Labeler', e);
+      // 2. Face Detection
+      final faceDetector = FaceDetector(
+        options: FaceDetectorOptions(
+          enableContours: false,
+          enableLandmarks: false,
+          enableTracking: false,
+          enableClassification: false,
+          performanceMode: FaceDetectorMode.fast,
+        ),
+      );
+      
+      final faces = await faceDetector.processImage(inputImage);
+      faceDetector.close();
+      
+      if (faces.isNotEmpty) {
+        AppLogger.info('Found ${faces.length} faces in ${file.name}');
+        
+        final cacheDir = await getApplicationSupportDirectory();
+        final facesDir = Directory('${cacheDir.path}/faces');
+        final db = _ref.read(databaseProvider);
+        const uuid = Uuid();
+
+        for (int i = 0; i < faces.length; i++) {
+          final face = faces[i];
+          final clusterId = uuid.v4();
+          final cropPath = '${facesDir.path}/${file.id}_$i.jpg';
+
+          // Crop in background
+          await compute(_cropFaceIsolate, CropTaskArgs(
+            imagePath: thumbnailFile.path,
+            outputPath: cropPath,
+            left: face.boundingBox.left.toInt(),
+            top: face.boundingBox.top.toInt(),
+            width: face.boundingBox.width.toInt(),
+            height: face.boundingBox.height.toInt(),
+          ));
+
+          // Save to DB
+          await db.into(db.faceClusters).insert(
+            FaceClustersCompanion.insert(
+              id: clusterId,
+              name: const drift.Value('Detected Face'),
+            ),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+
+          await db.into(db.photoFaces).insert(
+            PhotoFacesCompanion.insert(
+              fileId: file.id,
+              faceClusterId: clusterId,
+              confidence: drift.Value(0.9), // We just use 0.9 as a default for MLKit detected faces
+            ),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+        }
+      }
+
+    } catch (e, s) {
+      AppLogger.error('Failed to run ML processing', e, s);
+    }
+  }
+
+  Future<void> processImageBatch(List<FileData> files) async {
+    for (final file in files) {
+      await processImage(file);
     }
   }
 }

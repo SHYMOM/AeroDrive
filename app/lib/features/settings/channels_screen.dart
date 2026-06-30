@@ -18,6 +18,39 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   String? _activeChannelId;
   List<Map<String, dynamic>> _storageChannels = [];
   bool _isLoading = true;
+
+  /// Stores the local master password salt in the channel description so other
+  /// devices can discover it and derive the same encryption key.
+  /// Only writes if the channel does not already have an AERODRIVE_SALT,
+  /// preserving the first device's salt as canonical.
+  Future<void> _storeSaltInChannel(TelegramService telegram, int chatId) async {
+    try {
+      final settings = ref.read(settingsRepositoryProvider);
+      final localSalt = await settings.getSetting('master_password_salt');
+      if (localSalt == null || localSalt.isEmpty) return;
+
+      final existing = await telegram.getChannelDescription(chatId);
+      if (existing != null && existing.startsWith('AERODRIVE_SALT:')) {
+        final existingSalt = existing.substring('AERODRIVE_SALT:'.length).trim();
+        if (existingSalt == localSalt) {
+          AppLogger.info('Salt already matches in channel $chatId — no update needed');
+          return;
+        }
+        if (existingSalt.isNotEmpty) {
+          AppLogger.warning(
+            'Channel $chatId already has salt $existingSalt — not overwriting with local $localSalt. '
+            'Reinstall on this device to adopt the channel salt.',
+          );
+          return;
+        }
+      }
+
+      await telegram.setChatDescription(chatId, 'AERODRIVE_SALT:$localSalt');
+      AppLogger.info('Stored salt in channel $chatId description');
+    } catch (e) {
+      AppLogger.error('Failed to store salt in channel description', e);
+    }
+  }
   bool _isProcessingSetup = false;
 
   @override
@@ -135,6 +168,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
             _activeChannelId = chatId.toString();
           });
         }
+
+        // Store the master password salt in the channel description for cross-device sync.
+        await _storeSaltInChannel(telegram, chatId);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -455,6 +491,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                             _activeChannelId = chatId.toString();
                           });
                         }
+
+                        // Store the master password salt in the channel description.
+                        await _storeSaltInChannel(telegram, chatId);
                       }
                       
                       if (mounted) {
@@ -589,6 +628,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                                   await settings.setSetting('active_channel_name', title);
                                   await settings.setSetting('active_channel_account_id', boundAccount);
                                   setState(() => _activeChannelId = id);
+
+                                  // Store the master password salt in the channel description.
+                                  final chatId = int.tryParse(id);
+                                  if (chatId != null) {
+                                    final telegram = ref.read(telegramServiceProvider.notifier);
+                                    await _storeSaltInChannel(telegram, chatId);
+                                  }
 
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(

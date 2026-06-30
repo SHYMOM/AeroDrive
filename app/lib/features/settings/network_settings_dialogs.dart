@@ -35,7 +35,7 @@ class _ConnectionTimeoutDialogState extends ConsumerState<ConnectionTimeoutDialo
     }
     
     await ref.read(settingsRepositoryProvider).setSetting('network_connection_timeout', timeout.toString());
-    ref.invalidate(settingsRepositoryProvider);
+    ref.read(settingsUpdateProvider.notifier).state++;
     if (mounted) Navigator.pop(context);
   }
 

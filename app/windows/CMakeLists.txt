@@ -10,9 +10,17 @@ set(BINARY_NAME "aerodrive")
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.25)
 
-# HARD FIX: Explicitly include the ATL header directory for flutter_secure_storage_windows
-include_directories("D:/Apps-Softwares/VisualStudioCommunity/VC/Tools/MSVC/14.51.36231/atlmfc/include")
-link_directories("D:/Apps-Softwares/VisualStudioCommunity/VC/Tools/MSVC/14.51.36231/atlmfc/lib/x64")
+# ATL headers for flutter_secure_storage_windows
+# Set the ATL_INCLUDE_DIR and ATL_LIB_DIR environment variables to point to your VS ATL installation.
+# Example (VS 2022 Community):
+#   set "ATL_INCLUDE_DIR=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\atlmfc\include"
+#   set "ATL_LIB_DIR=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.40.33807\atlmfc\lib\x64"
+if(DEFINED ENV{ATL_INCLUDE_DIR})
+  include_directories($ENV{ATL_INCLUDE_DIR})
+endif()
+if(DEFINED ENV{ATL_LIB_DIR})
+  link_directories($ENV{ATL_LIB_DIR})
+endif()
 
 # Define build configuration option.
 get_property(IS_MULTICONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)

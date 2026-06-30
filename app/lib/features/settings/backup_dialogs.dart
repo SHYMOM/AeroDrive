@@ -16,6 +16,7 @@ import 'package:aerodrive/domain/ai/face_recognition_service.dart' show faceClus
 import 'package:aerodrive/features/drive/providers/drive_providers.dart';
 import 'package:aerodrive/features/gallery/gallery_screen.dart';
 import 'package:aerodrive/features/trash/trash_screen.dart';
+import 'package:aerodrive/domain/backup_service.dart';
 import 'package:aerodrive/features/telegram/telegram_manager.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
 
@@ -30,6 +31,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
   bool _exportDatabase = true;
   bool _exportSettings = true;
   bool _isLoading = false;
+  String? _successPath;
 
   Future<String?> _getSavePath() async {
     if (io.Platform.isAndroid || io.Platform.isIOS) {
@@ -65,19 +67,38 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
           Text('Export Backup', style: TextStyle(color: Colors.white)),
         ],
       ),
-      content: _isLoading
-          ? const Column(
+      content: _successPath != null
+          ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(color: AppColors.primary),
-                SizedBox(height: 16),
-                Text('Exporting backup data...', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                const Icon(Icons.check_circle, color: AppColors.success, size: 48),
+                const SizedBox(height: 16),
+                const Text('Backup exported successfully!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.outline),
+                  ),
+                  child: Text(_successPath!, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12), textAlign: TextAlign.center),
+                ),
               ],
             )
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          : _isLoading
+              ? const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: AppColors.primary),
+                    SizedBox(height: 16),
+                    Text('Exporting backup data...', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  ],
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 const Text(
                   'Select what you want to export to a secure backup file:',
                   style: TextStyle(color: AppColors.onSurface),
@@ -111,13 +132,21 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                 ),
               ],
             ),
-      actions: _isLoading
-          ? null
-          : [
-              TextButton(
+      actions: _successPath != null
+          ? [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                child: const Text('Close'),
               ),
+            ]
+          : _isLoading
+              ? null
+              : [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  ),
               FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: AppColors.primary,
@@ -138,44 +167,18 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                             return;
                           }
 
-                          final db = ref.read(databaseProvider);
-                          final Map<String, dynamic> backupData = {
-                            'version': 1,
-                            'createdAt': DateTime.now().toIso8601String(),
-                          };
-
-                          if (_exportDatabase) {
-                            backupData['database'] = {
-                              'folders': (await db.select(db.folders).get()).map((e) => e.toJson()).toList(),
-                              'files': (await db.select(db.files).get()).map((e) => e.toJson()).toList(),
-                              'chunks': (await db.select(db.chunks).get()).map((e) => e.toJson()).toList(),
-                              'channels': (await db.select(db.channels).get()).map((e) => e.toJson()).toList(),
-                              'accounts': (await db.select(db.accounts).get()).map((e) => e.toJson()).toList(),
-                              'tags': (await db.select(db.tags).get()).map((e) => e.toJson()).toList(),
-                              'file_tags': (await db.select(db.fileTags).get()).map((e) => e.toJson()).toList(),
-                              'shares': (await db.select(db.shares).get()).map((e) => e.toJson()).toList(),
-                              'transfer_queue': (await db.select(db.transferQueue).get()).map((e) => e.toJson()).toList(),
-                              'face_clusters': (await db.select(db.faceClusters).get()).map((e) => e.toJson()).toList(),
-                              'photo_faces': (await db.select(db.photoFaces).get()).map((e) => e.toJson()).toList(),
-                              'backup_history': (await db.select(db.backupHistory).get()).map((e) => e.toJson()).toList(),
-                            };
-                          }
-
-                          if (_exportSettings) {
-                            backupData['settings'] = (await db.select(db.settings).get()).map((e) => e.toJson()).toList();
-                          }
-
-                          final jsonString = jsonEncode(backupData);
-                          await io.File(path).writeAsString(jsonString);
+                          final backupService = ref.read(backupServiceProvider);
+                          await backupService.exportBackup(
+                            exportDatabase: _exportDatabase,
+                            exportSettings: _exportSettings,
+                            customPath: path,
+                          );
 
                           if (mounted) {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Backup successfully exported to ${p.basename(path)}'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
+                            setState(() {
+                              _isLoading = false;
+                              _successPath = path;
+                            });
                           }
                         } catch (e) {
                           if (mounted) {
@@ -311,7 +314,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
     final List<Account> importedAccounts = (data['accounts'] as List?)?.map((e) => Account.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     final List<Tag> importedTags = (data['tags'] as List?)?.map((e) => Tag.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     final List<FileTag> importedFileTags = (data['file_tags'] as List?)?.map((e) => FileTag.fromJson(e as Map<String, dynamic>)).toList() ?? [];
-    final List<Share> importedShares = (data['shares'] as List?)?.map((e) => Share.fromJson(e as Map<String, dynamic>)).toList() ?? [];
+    final List<ShareLinkData> importedShares = (data['shares'] as List?)?.map((e) => ShareLinkData.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     final List<TransferQueueData> importedTransferQueue = (data['transfer_queue'] as List?)?.map((e) => TransferQueueData.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     final List<FaceCluster> importedFaceClusters = (data['face_clusters'] as List?)?.map((e) => FaceCluster.fromJson(e as Map<String, dynamic>)).toList() ?? [];
     final List<PhotoFace> importedPhotoFaces = (data['photo_faces'] as List?)?.map((e) => PhotoFace.fromJson(e as Map<String, dynamic>)).toList() ?? [];
@@ -412,7 +415,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
             await db.delete(db.backupHistory).go();
             await db.delete(db.transferQueue).go();
             await db.delete(db.photoFaces).go();
-            await db.delete(db.shares).go();
+            await db.delete(db.shareLinks).go();
             await db.delete(db.fileTags).go();
             await db.delete(db.chunks).go();
             await db.delete(db.files).go();
@@ -464,9 +467,9 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
               batch.insertAll(db.fileTags, fileTags, mode: InsertMode.insertOrReplace);
             }
 
-            final shares = sanitized['shares'] as List<Share>;
+            final shares = sanitized['shares'] as List<ShareLinkData>;
             if (shares.isNotEmpty) {
-              batch.insertAll(db.shares, shares, mode: InsertMode.insertOrReplace);
+              batch.insertAll(db.shareLinks, shares, mode: InsertMode.insertOrReplace);
             }
 
             final photoFaces = sanitized['photo_faces'] as List<PhotoFace>;
@@ -501,7 +504,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         });
       }
 
-      ref.invalidate(settingsRepositoryProvider);
+      ref.read(settingsUpdateProvider.notifier).state++;
       ref.invalidate(folderContentsProvider);
       ref.invalidate(breadcrumbsProvider);
       ref.invalidate(mediaFilesProvider);
@@ -677,7 +680,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.errorContainer,
+                      color: AppColors.error,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
@@ -689,7 +692,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                         Expanded(
                           child: Text(
                             'WARNING: Overwriting will permanently delete all your current local directories, file pointers, shares, and faces. This action is irreversible.',
-                            style: TextStyle(color: AppColors.onError, fontSize: 11),
+                            style: TextStyle(color: AppColors.error, fontSize: 11),
                           ),
                         ),
                       ],

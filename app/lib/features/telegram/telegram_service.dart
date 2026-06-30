@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tdlib/td_api.dart' as td_api;
 import 'package:tdlib/tdlib.dart';
 import 'package:uuid/uuid.dart';
 import 'package:path_provider/path_provider.dart';
@@ -31,8 +29,11 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   final String accountId;
   final bool isHeadless;
   int _clientId = 0;
+  int get clientId => _clientId;
   
   static bool _globalLoopStarted = false;
+  static bool _tdlibInitialized = false;
+  static final Completer<void> _tdlibInitCompleter = Completer<void>();
   static final Map<int, TelegramService> _instances = {};
   
   late final int _apiId;
@@ -45,9 +46,12 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   String? phoneNumber;
   String? photoPath;
   String? username;
+  String? passwordHint;
+  bool hasRecoveryEmail = false;
   int? _photoFileId;
   
   VoidCallback? onProfileUpdated;
+  VoidCallback? onReady;
 
   String get displayName {
     final name = '${firstName ?? ''} ${lastName ?? ''}'.trim();
@@ -60,32 +64,87 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     final apiIdStr = dotenv.env['TELEGRAM_API_ID'];
     final apiHash = dotenv.env['TELEGRAM_API_HASH'];
 
-    if (apiIdStr == null || apiHash == null) {
-      AppLogger.error('Missing TELEGRAM_API_ID or TELEGRAM_API_HASH');
+    if (apiIdStr == null || apiIdStr.isEmpty) {
+      AppLogger.error('Missing or empty TELEGRAM_API_ID in .env');
+      state = TelegramAuthState.error;
+      return;
+    }
+    if (apiHash == null || apiHash.isEmpty) {
+      AppLogger.error('Missing or empty TELEGRAM_API_HASH in .env');
       state = TelegramAuthState.error;
       return;
     }
 
-    _apiId = int.parse(apiIdStr);
+    final parsedId = int.tryParse(apiIdStr);
+    if (parsedId == null) {
+      AppLogger.error('TELEGRAM_API_ID is not a valid integer: $apiIdStr');
+      state = TelegramAuthState.error;
+      return;
+    }
+    _apiId = parsedId;
     _apiHash = apiHash;
 
     try {
       final docDir = await getApplicationDocumentsDirectory();
       _dbPath = '${docDir.path}/AeroDrive/tdlib/$accountId';
 
-      if (Platform.isWindows) {
-        await TdPlugin.initialize('tdjson.dll');
-      } else if (Platform.isAndroid || Platform.isLinux) {
-        await TdPlugin.initialize('libtdjson.so');
+      // Ensure TDLib database directory exists before any TDLib calls
+      final dbDirectory = Directory(_dbPath);
+      if (!await dbDirectory.exists()) {
+        await dbDirectory.create(recursive: true);
+      }
+      AppLogger.info('TDLib db path ($accountId): $_dbPath');
+
+      if (!_tdlibInitialized) {
+        if (_tdlibInitCompleter.isCompleted) {
+          _tdlibInitialized = true;
+        } else {
+          try {
+            if (Platform.isWindows) {
+              await TdPlugin.initialize('tdjson.dll');
+            } else if (Platform.isAndroid) {
+              await TdPlugin.initialize('libtdjson.so');
+            } else if (Platform.isLinux) {
+              await TdPlugin.initialize('libtdjson.so');
+            } else if (Platform.isIOS) {
+              await TdPlugin.initialize();
+            } else if (Platform.isMacOS) {
+              await TdPlugin.initialize();
+            } else {
+              await TdPlugin.initialize();
+            }
+            _tdlibInitialized = true;
+            if (!_tdlibInitCompleter.isCompleted) {
+              _tdlibInitCompleter.complete();
+            }
+            AppLogger.info('TdPlugin initialized successfully');
+          } catch (e, s) {
+            if (!_tdlibInitCompleter.isCompleted) {
+              _tdlibInitCompleter.completeError(e, s);
+            }
+            AppLogger.error('TdPlugin.initialize failed', e, s);
+            state = TelegramAuthState.error;
+            return;
+          }
+        }
       } else {
-        await TdPlugin.initialize();
+        // Wait for any concurrent initialization to finish
+        if (!_tdlibInitCompleter.isCompleted) {
+          await _tdlibInitCompleter.future;
+        }
       }
 
-      _clientId = tdCreate();
-      _instances[_clientId] = this;
+      try {
+        _clientId = TdPlugin.instance.tdCreate();
+        _instances[_clientId] = this;
+        AppLogger.info('TDLib client created for $accountId (clientId: $_clientId)');
+      } catch (e, s) {
+        AppLogger.error('tdCreate failed for $accountId', e, s);
+        state = TelegramAuthState.error;
+        return;
+      }
 
       if (isHeadless) {
-        // Headless options
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
           "@type": "setOption",
           "name": "online",
@@ -101,9 +160,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
           "name": "disable_contact_registered_notifications",
           "value": {"@type": "optionValueBoolean", "value": true}
         }));
+        AppLogger.info('Headless options set for $accountId');
       }
 
-      // Disable TDLib console logs
       TdPlugin.instance.tdSend(_clientId, jsonEncode({
         "@type": "setLogVerbosityLevel",
         "new_verbosity_level": 1
@@ -113,6 +172,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         _startGlobalLoop();
       }
 
+      AppLogger.info('_initClient completed for $accountId');
     } catch (e, s) {
       AppLogger.error('Failed to initialize TDLib for $accountId', e, s);
       state = TelegramAuthState.error;
@@ -121,10 +181,12 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   static void _startGlobalLoop() async {
     _globalLoopStarted = true;
+    int idleCycles = 0;
     while (true) {
       final rawStr = TdPlugin.instance.tdReceive(0.01);
       
       if (rawStr != null) {
+        idleCycles = 0;
         try {
           final json = jsonDecode(rawStr);
           final clientId = json['@client_id'];
@@ -134,8 +196,22 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         } catch (e) {
           AppLogger.error('Failed to parse TDLib JSON', e);
         }
+        await Future.delayed(const Duration(milliseconds: 5));
+      } else {
+        idleCycles++;
+        // Exponential backoff when idle: 10ms -> 50ms -> 100ms -> 200ms -> 500ms max
+        final int delayMs;
+        if (idleCycles <= 1) {
+          delayMs = 10;
+        } else if (idleCycles <= 5) {
+          delayMs = 50;
+        } else if (idleCycles <= 20) {
+          delayMs = 100;
+        } else {
+          delayMs = 500;
+        }
+        await Future.delayed(Duration(milliseconds: delayMs));
       }
-      await Future.delayed(const Duration(milliseconds: 10));
     }
   }
 
@@ -186,10 +262,14 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       } else if (authState == 'authorizationStateWaitCode') {
         state = TelegramAuthState.waitCode;
       } else if (authState == 'authorizationStateWaitPassword') {
+        final authStateData = json['authorization_state'] as Map<String, dynamic>?;
+        passwordHint = authStateData?['password_hint'] as String?;
+        hasRecoveryEmail = authStateData?['has_recovery_email_address'] == true;
         state = TelegramAuthState.waitPassword;
       } else if (authState == 'authorizationStateReady') {
         state = TelegramAuthState.ready;
         _fetchMe();
+        onReady?.call();
       } else if (authState == 'authorizationStateLoggingOut') {
         state = TelegramAuthState.loggingOut;
       } else if (authState == 'authorizationStateClosed') {
@@ -274,15 +354,49 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   final _eventController = StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get tdlibEvents => _eventController.stream;
 
-  Future<Map<String, dynamic>> sendRequest(Map<String, dynamic> request) async {
-    final requestId = const Uuid().v4();
-    final completer = Completer<Map<String, dynamic>>();
-    _pendingRequests[requestId] = completer;
+  Future<Map<String, dynamic>> sendRequest(Map<String, dynamic> request, {Duration timeout = const Duration(seconds: 30), int maxRetries = 3}) async {
+    for (int attempt = 0; attempt < maxRetries; attempt++) {
+      final requestId = const Uuid().v4();
+      final completer = Completer<Map<String, dynamic>>();
+      _pendingRequests[requestId] = completer;
 
-    request['@extra'] = requestId;
-    TdPlugin.instance.tdSend(_clientId, jsonEncode(request));
+      request['@extra'] = requestId;
+      TdPlugin.instance.tdSend(_clientId, jsonEncode(request));
 
-    return completer.future;
+      try {
+        return await completer.future.timeout(timeout, onTimeout: () {
+          _pendingRequests.remove(requestId);
+          throw TimeoutException('TDLib request timed out: ${request['@type']}');
+        });
+      } catch (e) {
+        _pendingRequests.remove(requestId);
+
+        // Check if this is a 429 FloodWait error
+        if (e is Map && e['@type'] == 'error') {
+          final code = e['code'] as int?;
+          if (code == 429) {
+            final retryAfter = (e['retry_after'] as num?)?.toInt() ?? 5;
+            final backoff = retryAfter * (attempt + 1);
+            AppLogger.warning('FloodWait 429 for ${request['@type']}, retrying in ${backoff}s (attempt ${attempt + 1}/$maxRetries)');
+            await Future.delayed(Duration(seconds: backoff));
+            continue;
+          }
+        }
+
+        // For TimeoutException, retry with exponential backoff
+        if (e is TimeoutException) {
+          if (attempt < maxRetries - 1) {
+            final backoff = Duration(seconds: 2 * (attempt + 1));
+            AppLogger.warning('Timeout for ${request['@type']}, retrying in ${backoff.inSeconds}s (attempt ${attempt + 1}/$maxRetries)');
+            await Future.delayed(backoff);
+            continue;
+          }
+        }
+
+        rethrow;
+      }
+    }
+    throw TimeoutException('TDLib request failed after $maxRetries retries: ${request['@type']}');
   }
 
   Future<Map<String, dynamic>> getMe() async {
@@ -320,6 +434,32 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       return {"is_admin": isAdmin, "chat_id": id};
     } catch (e) {
       return {"is_admin": false, "error": e.toString()};
+    }
+  }
+
+  /// Sets the description of a chat (used for cross-device salt sharing).
+  Future<void> setChatDescription(int chatId, String description) async {
+    await sendRequest({
+      '@type': 'setChatDescription',
+      'chat_id': chatId,
+      'description': description,
+    });
+  }
+
+  /// Reads the description of a supergroup or channel.
+  Future<String?> getChannelDescription(int chatId) async {
+    try {
+      final chat = await sendRequest({'@type': 'getChat', 'chat_id': chatId});
+      if (chat['type']?['@type'] != 'chatTypeSupergroup') return null;
+      final supergroupId = chat['type']['supergroup_id'] as int;
+      final info = await sendRequest({
+        '@type': 'getSupergroupFullInfo',
+        'supergroup_id': supergroupId,
+      });
+      return info['description'] as String?;
+    } catch (e) {
+      AppLogger.error('getChannelDescription failed', e);
+      return null;
     }
   }
 
@@ -386,34 +526,79 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<void> downloadFile(int fileId) async {
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+    await sendRequest({
       "@type": "downloadFile",
       "file_id": fileId,
       "priority": 1,
       "offset": 0,
       "limit": 0,
       "synchronous": false
-    }));
+    });
   }
 
-  Future<void> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+  Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
+    final inputContent = <String, dynamic>{
+      "@type": "inputMessageDocument",
+      "document": {
+        "@type": "inputFileLocal",
+        "path": localFilePath,
+      },
+      "disable_content_type_detection": true,
+    };
+
+    if (caption != null) {
+      inputContent["caption"] = {
+        "@type": "formattedText",
+        "text": caption,
+        "entities": <dynamic>[],
+      };
+    }
+
+    final payload = <String, dynamic>{
       "@type": "sendMessage",
       "chat_id": chatId,
-      "input_message_content": {
-        "@type": "inputMessageDocument",
-        "document": {
-          "@type": "inputFileLocal",
-          "path": localFilePath
-        },
-        if (caption != null)
-          "caption": {
-            "@type": "formattedText",
-            "text": caption,
-            "entities": []
-          }
-      }
-    }));
+      "input_message_content": inputContent,
+    };
+
+    final payloadJson = jsonEncode(payload);
+    AppLogger.info('=== TDLib sendMessage PAYLOAD ===');
+    AppLogger.info('ChatId: $chatId');
+    AppLogger.info('LocalFile: $localFilePath');
+    AppLogger.info('HasCaption: ${caption != null}');
+    if (caption != null) {
+      AppLogger.info('Caption length: ${caption.length} chars');
+    } else {
+      AppLogger.warning('>>> CAPTION IS NULL - Manifest will be MISSING from Telegram message!');
+    }
+    AppLogger.info('Full Payload JSON: $payloadJson');
+
+    return sendRequest(payload);
+  }
+
+  Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
+    final inputContent = <String, dynamic>{
+      "@type": "inputMessagePhoto",
+      "photo": {
+        "@type": "inputFileLocal",
+        "path": localFilePath,
+      },
+    };
+
+    if (caption != null) {
+      inputContent["caption"] = {
+        "@type": "formattedText",
+        "text": caption,
+        "entities": <dynamic>[],
+      };
+    }
+
+    final payload = <String, dynamic>{
+      "@type": "sendMessage",
+      "chat_id": chatId,
+      "input_message_content": inputContent,
+    };
+
+    return sendRequest(payload);
   }
 
   Future<void> addProxy({

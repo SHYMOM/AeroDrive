@@ -126,7 +126,7 @@ class SessionScreen extends ConsumerWidget {
     if (confirmed == true) {
       try {
         final manager = ref.read(telegramManagerProvider.notifier);
-        for (final client in manager.state) {
+        for (final client in manager.readyClients) {
           if (client.authState == TelegramAuthState.ready) {
             await client.terminateAllOtherSessions();
           }

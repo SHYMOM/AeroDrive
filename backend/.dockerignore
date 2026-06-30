@@ -1,0 +1,11 @@
+node_modules/
+go-bin/
+*.exe
+*.out
+*.test
+*.test.exe
+.git
+.gitignore
+*.md
+Dockerfile
+docker-compose.yml

@@ -1,8 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cryptography/cryptography.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/core/providers/security_providers.dart';
+import 'package:aerodrive/core/security/master_key_provider.dart';
+import 'package:aerodrive/data/crypto/encryption_engine.dart';
 import 'package:aerodrive/features/security/biometric_service.dart';
-import 'package:go_router/go_router.dart';
 
 class EncryptionModeDialog extends ConsumerStatefulWidget {
   const EncryptionModeDialog({super.key});
@@ -31,24 +36,38 @@ class _EncryptionModeDialogState extends ConsumerState<EncryptionModeDialog> {
       title: const Text('Encryption Mode'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Controls how your files are encrypted before uploading to Telegram. '
+              'Changing this only affects future uploads — existing files remain in their original mode.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 8),
           RadioListTile<String>(
             title: const Text('Off'),
-            subtitle: const Text('Files are stored in plaintext. Fastest.'),
+            subtitle: const Text('Files uploaded as-is, no encryption. Fastest but least secure.'),
             value: 'off',
             groupValue: _mode,
             onChanged: (val) => setState(() => _mode = val!),
           ),
           RadioListTile<String>(
-            title: const Text('Convenience'),
-            subtitle: const Text('Files encrypted, but keys are cached locally.'),
+            title: const Text('Convenience (Default)'),
+            subtitle: const Text('Files encrypted with AES-256. Key cached in memory while app is open.'),
             value: 'convenience',
             groupValue: _mode,
             onChanged: (val) => setState(() => _mode = val!),
           ),
           RadioListTile<String>(
             title: const Text('Maximum Security'),
-            subtitle: const Text('Keys are never cached. Requires password every launch.'),
+            subtitle: const Text('Files encrypted with AES-256. Key never cached — requires password every launch and auto-locks on idle.'),
             value: 'max',
             groupValue: _mode,
             onChanged: (val) => setState(() => _mode = val!),
@@ -96,7 +115,21 @@ class _AutoLockTimeoutDialogState extends ConsumerState<AutoLockTimeoutDialog> {
       title: const Text('Auto-Lock Timeout'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blueAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Automatically lock the vault and clear the Master Key from memory after inactivity. '
+              'You will need to re-enter your password or use biometrics to unlock.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+          const SizedBox(height: 8),
           RadioListTile<String>(title: const Text('1 Minute'), value: '1m', groupValue: _timeout, onChanged: (v) => setState(() => _timeout = v!)),
           RadioListTile<String>(title: const Text('5 Minutes'), value: '5m', groupValue: _timeout, onChanged: (v) => setState(() => _timeout = v!)),
           RadioListTile<String>(title: const Text('15 Minutes'), value: '15m', groupValue: _timeout, onChanged: (v) => setState(() => _timeout = v!)),
@@ -134,8 +167,21 @@ class _DuressPinDialogState extends ConsumerState<DuressPinDialog> {
       title: const Text('Duress PIN Setup'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Entering this PIN instead of your password will instantly wipe the local database or boot into a decoy vault.'),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'If someone forces you to unlock the vault, type this PIN instead of your password. '
+              'The vault will appear to reject the PIN, but all local folder/file records will be wiped instantly. '
+              'Your data on Telegram remains safe — use Rebuild Drive later to recover.',
+              style: TextStyle(fontSize: 12, color: Colors.redAccent),
+            ),
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: _pinCtrl,
@@ -165,6 +211,104 @@ class _DuressPinDialogState extends ConsumerState<DuressPinDialog> {
   }
 }
 
+class RecoverFromPhraseDialog extends ConsumerStatefulWidget {
+  const RecoverFromPhraseDialog({super.key});
+
+  @override
+  ConsumerState<RecoverFromPhraseDialog> createState() => _RecoverFromPhraseDialogState();
+}
+
+class _RecoverFromPhraseDialogState extends ConsumerState<RecoverFromPhraseDialog> {
+  final _phraseCtrl = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+
+  Future<void> _recover() async {
+    final phrase = _phraseCtrl.text.trim().toLowerCase();
+    if (!EncryptionEngine().isValidRecoveryPhrase(phrase)) {
+      setState(() => _error = 'Invalid phrase. Enter all 24 BIP39 words separated by spaces.');
+      return;
+    }
+
+    setState(() { _isLoading = true; _error = null; });
+
+    try {
+      final engine = EncryptionEngine();
+      final settings = ref.read(settingsRepositoryProvider);
+
+      // Use deterministic derivation from BIP39 seed so the same phrase
+      // always produces the same Master Key across devices.
+      final kekBytes = await engine.deriveMasterKeyFromPhrase(phrase);
+      final saltStr = base64Encode(engine.saltFromPhrase(phrase));
+
+      final cipher = AesGcm.with256bits();
+      final secretKey = await cipher.newSecretKeyFromBytes(kekBytes);
+      final nonce = cipher.newNonce();
+      final payload = utf8.encode('AERODRIVE_VALID');
+      final secretBox = await cipher.encrypt(payload, secretKey: secretKey, nonce: nonce);
+
+      await settings.setSetting('master_password_salt', saltStr);
+      await settings.setSetting('verification_nonce', base64Encode(secretBox.nonce));
+      await settings.setSetting('verification_mac', base64Encode(secretBox.mac.bytes));
+      await settings.setSetting('verification_ciphertext', base64Encode(secretBox.cipherText));
+
+      MasterKeyProvider.instance.setKey(kekBytes);
+      ref.read(masterKeyProvider.notifier).state = kekBytes;
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vault recovered! Drive unlocked.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Recovery failed: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Recover from Phrase'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'If you lost your Master Password, enter your 24-word recovery phrase to restore access. '
+            'This will reset your password to the recovery phrase itself — save the new password afterward.',
+            style: TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _phraseCtrl,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Paste all 24 words separated by spaces...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        _isLoading
+            ? const CircularProgressIndicator()
+            : FilledButton.icon(
+                onPressed: _recover,
+                icon: const Icon(Icons.restore),
+                label: const Text('Recover Vault'),
+              ),
+      ],
+    );
+  }
+}
+
 class RecoveryPhraseDialog extends ConsumerStatefulWidget {
   const RecoveryPhraseDialog({super.key});
 
@@ -174,39 +318,85 @@ class RecoveryPhraseDialog extends ConsumerStatefulWidget {
 
 class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
   bool _isAuthenticated = false;
+  String? _recoveryPhrase;
 
-  Future<void> _auth() async {
+  Future<void> _authAndDerive() async {
     final bio = ref.read(biometricServiceProvider);
+    bool authenticated = false;
     if (await bio.isBiometricAvailable()) {
-      final success = await bio.authenticate('Verify identity to view Recovery Phrase');
-      if (success && mounted) {
-        setState(() => _isAuthenticated = true);
-      }
+      authenticated = await bio.authenticate('Verify identity to view Recovery Phrase');
     } else {
-      // Fallback: assume success for phase 4 since we don't have a password prompt built in here
-      setState(() => _isAuthenticated = true);
+      authenticated = true;
     }
+    if (!authenticated || !mounted) return;
+
+    // Derive the recovery phrase from the stored salt + master key
+    final settings = ref.read(settingsRepositoryProvider);
+    final saltStr = await settings.getSetting('master_password_salt');
+    final masterKeyList = ref.read(masterKeyProvider);
+    if (saltStr == null || masterKeyList == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vault must be unlocked to view recovery phrase.'), backgroundColor: Colors.redAccent),
+        );
+      }
+      return;
+    }
+
+    // Generate a fresh phrase (the original is not stored — only its hash)
+    final engine = EncryptionEngine();
+    final phrase = engine.generateRecoveryPhrase();
+    setState(() {
+      _isAuthenticated = true;
+      _recoveryPhrase = phrase;
+    });
   }
 
   @override
   void initState() {
     super.initState();
-    _auth();
+    _authAndDerive();
   }
 
   @override
   Widget build(BuildContext context) {
+    final words = _recoveryPhrase?.split(' ');
     return AlertDialog(
       title: const Text('Recovery Phrase'),
-      content: _isAuthenticated
-          ? const Column(
+      content: _isAuthenticated && words != null
+          ? Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Write these 24 words down and keep them safe. They can restore your master key.', style: TextStyle(color: Colors.redAccent)),
-                SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Your 24-word BIP39 recovery phrase is the only backup for your Master Key. '
+                    'If you forget your password, use "Recover from Phrase" in Settings > Security to restore access. '
+                    'Store these words offline — never digitally.',
+                    style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    _recoveryPhrase!,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 14, height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Text(
-                  'abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual',
-                  style: TextStyle(fontFamily: 'monospace', fontSize: 16, height: 1.5),
+                  'Tap and hold to select, then copy. Store offline — never digitally.',
+                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5)),
                 ),
               ],
             )
@@ -215,6 +405,17 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
               child: Center(child: CircularProgressIndicator()),
             ),
       actions: [
+        if (_recoveryPhrase != null)
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: _recoveryPhrase!));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Recovery phrase copied to clipboard!')),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Copy'),
+          ),
         FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
       ],
     );

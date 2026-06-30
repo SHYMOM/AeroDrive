@@ -1,12 +1,12 @@
 {
   "name": "tdlib_npm",
   "version": "1.0.0",
-  "description": "",
+  "description": "Prebuilt TDLib binaries for AeroDrive (used via prebuilt-tdlib npm package)",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "postinstall": "node -e \"console.log('TDLib binaries installed. Use dl_tdlib.py or scripts/build_tdlib.sh for platform-specific builds.')\""
   },
-  "keywords": [],
+  "keywords": ["tdlib", "telegram", "aerodrive"],
   "author": "",
   "license": "ISC",
   "type": "commonjs",

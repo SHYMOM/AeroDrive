@@ -1,72 +1,73 @@
 import 'package:flutter/material.dart';
 
-/// AeroDrive design-system color tokens.
-///
-/// All colors used across the app should reference these constants
-/// rather than using raw hex values inline.
 abstract final class AppColors {
-  // ── Background & Surface ──────────────────────────────────────────
-  /// Deep space blue — primary background.
-  static const Color background = Color(0xFF0B0C24);
+  // ── Background & Surface (AeroDrive Deep Dark) ────────────────────
+  static const Color background = Color(0xFF040609); // Very deep dark blue/black
+  static const Color surface = Color(0xFF0B1018); // Slightly lighter for cards
+  static const Color surfaceElevated = Color(0xFF131A26); // Modals, menus
+  static const Color surfaceVariant = Color(0xFF161F2E); // Highest elevation
+  static const Color surfaceContainerHighest = Color(0xFF192436);
 
-  /// Slightly lighter surface for cards and panels.
-  static const Color surface = Color(0xFF12132B);
+  // ── Primary — Electric Cyan (AeroDrive brand) ──────────────────────
+  static const Color primary = Color(0xFF00E5FF); // neonCyan
+  static const Color primaryLight = Color(0xFF67E8F9); 
+  static const Color primaryDark = Color(0xFF0891B2);
+  static const Color primaryContainer = Color(0xFF0D3B4D); // Deep cyan tint
 
-  /// Elevated surface for modals and dialogs.
-  static const Color surfaceElevated = Color(0xFF1A1B3A);
-
-  /// Surface variant for subtle differentiation.
-  static const Color surfaceVariant = Color(0xFF1E1F42);
-
-  // ── Primary — Electric Violet ─────────────────────────────────────
-  static const Color primary = Color(0xFF7C3AED);
-  static const Color primaryLight = Color(0xFF8B5CF6);
-  static const Color primaryDark = Color(0xFF6D28D9);
-  static const Color primaryContainer = Color(0xFF2E1065);
-
-  // ── Secondary — Electric Cyan ─────────────────────────────────────
-  static const Color secondary = Color(0xFF06B6D4);
-  static const Color secondaryLight = Color(0xFF22D3EE);
-  static const Color secondaryDark = Color(0xFF0891B2);
-  static const Color secondaryContainer = Color(0xFF083344);
-
-  // ── Accent / Tertiary — Neon Pink ─────────────────────────────────
-  static const Color tertiary = Color(0xFFEC4899);
-  static const Color tertiaryLight = Color(0xFFF472B6);
-  static const Color tertiaryContainer = Color(0xFF4A0D2E);
+  // ── Secondary — Deep Violet (For contrasts) ────────────────────────
+  static const Color secondary = Color(0xFF7C3AED); // neonViolet
+  static const Color secondaryLight = Color(0xFF8B5CF6);
+  static const Color secondaryDark = Color(0xFF5B21B6);
 
   // ── Semantic ──────────────────────────────────────────────────────
+  static const Color tertiary = Color(0xFFF472B6);
   static const Color error = Color(0xFFEF4444);
-  static const Color errorContainer = Color(0xFF450A0A);
   static const Color success = Color(0xFF10B981);
-  static const Color successContainer = Color(0xFF052E16);
   static const Color warning = Color(0xFFF59E0B);
-  static const Color warningContainer = Color(0xFF451A03);
 
   // ── Text & Icons ──────────────────────────────────────────────────
-  static const Color onBackground = Color(0xFFE2E8F0);
-  static const Color onSurface = Color(0xFFE2E8F0);
-  static const Color onSurfaceVariant = Color(0xFF94A3B8);
-  static const Color onPrimary = Color(0xFFFFFFFF);
+  static const Color onBackground = Color(0xFFFFFFFF);
+  static const Color onSurface = Color(0xFFFFFFFF);
+  static const Color onSurfaceVariant = Color(0xFF94A3B8); // Slate for subtitles
+  static const Color onPrimary = Color(0xFF000000);
   static const Color onSecondary = Color(0xFFFFFFFF);
-  static const Color onError = Color(0xFFFFFFFF);
 
   // ── Borders & Dividers ────────────────────────────────────────────
-  static const Color outline = Color(0xFF2D2E55);
-  static const Color outlineVariant = Color(0xFF1E1F42);
+  static const Color outline = Color(0xFF1E293B); // Subtle border matching reference
+  static const Color outlineVariant = Color(0xFF0F172A);
 
-  // ── Misc ──────────────────────────────────────────────────────────
+  // ── Glassmorphism ─────────────────────────────────────────────────
+  static const Color glassBg = Color(0x08FFFFFF); 
+  static const Color glassBorder = Color(0x11FFFFFF); 
+  static const Color glassBgDark = Color(0x730B1018); // 45% surface color
+
+  // ── Glow (Shadows) ────────────────────────────────────────────────
+  static const Color glowCyan = Color(0x6600E5FF); 
+  static const Color shadow = Color(0x80000000);
   static const Color scrim = Color(0xCC000000);
-  static const Color shadow = Color(0xFF000000);
 
-  // ── File-type icon colors ─────────────────────────────────────────
-  static const Color fileFolder = Color(0xFFFBBF24);
-  static const Color fileImage = Color(0xFF34D399);
-  static const Color fileVideo = Color(0xFFF472B6);
-  static const Color fileAudio = Color(0xFF818CF8);
-  static const Color fileDocument = Color(0xFF60A5FA);
-  static const Color fileArchive = Color(0xFFFB923C);
-  static const Color fileCode = Color(0xFF2DD4BF);
-  static const Color fileEncrypted = Color(0xFFA78BFA);
-  static const Color fileUnknown = Color(0xFF64748B);
+  // ── Multi-Color Folder References (From Image 1) ──────────────────
+  static const Map<String, Color> folderColors = {
+    'Blue': Color(0xFF60A5FA),
+    'Pink': Color(0xFFF472B6),
+    'Cyan': Color(0xFF2DD4BF), // Teal-ish cyan
+    'Red': Color(0xFFF87171),
+    'Purple': Color(0xFFA78BFA),
+    'Orange': Color(0xFFFBBF24), // Amber/Orange
+    'Yellow': Color(0xFFFDE047),
+    'Slate': Color(0xFFCBD5E1),
+  };
+
+  static const Color folderDefault = Color(0xFF60A5FA);
+
+  // ── File-type icon colors (From Image 2/3) ────────────────────────
+  static const Color fileFolder = Color(0xFF00E5FF); 
+  static const Color fileImage = Color(0xFF10B981); // Emerald
+  static const Color fileVideo = Color(0xFF8B5CF6); // Violet
+  static const Color fileAudio = Color(0xFFEC4899); // Pink/Magenta
+  static const Color fileDocument = Color(0xFFF59E0B); // Amber
+  static const Color fileArchive = Color(0xFFF97316); // Orange
+  static const Color fileCode = Color(0xFF14B8A6); // Teal
+  static const Color filePdf = Color(0xFFEF4444); // Red
+  static const Color fileUnknown = Color(0xFF94A3B8); // Slate
 }

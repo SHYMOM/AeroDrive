@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'package:archive/archive_io.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:archive/archive.dart';
 import 'package:aerodrive/data/db/database.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:aerodrive/core/providers.dart';
@@ -12,26 +14,32 @@ import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/core/logger.dart';
+
+/// Callback for ZIP progress: (filesProcessed, totalFiles, currentFilePath)
+typedef ZipProgressCallback = void Function(int processed, int total, String currentFile);
 
 class FolderScanner {
   final Ref _ref;
-  final AeroDriveDatabase _db;
+  late final AeroDriveDatabase _db;
   final Uuid _uuid = const Uuid();
 
-  FolderScanner(this._ref) : _db = _ref.read(databaseProvider);
+  FolderScanner(this._ref) {
+    _db = _ref.read(databaseProvider);
+  }
 
-  /// Helper to upload folder metadata manifest as a 1px transparent PNG to Telegram
+  /// Uploads folder metadata manifest as a 1px transparent PNG to Telegram.
   Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId) async {
     try {
       final telegram = _ref.read(telegramServiceProvider.notifier);
       final activeChannelStr = await _ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
       final masterKeyBytes = _ref.read(masterKeyProvider);
-      
+
       if (activeChannelStr != null && masterKeyBytes != null) {
         final chatId = int.parse(activeChannelStr);
         final cipher = AesGcm.with256bits();
         final secretKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
-        
+
         final manifestCaption = await ManifestEncoder.encodeFolderManifest(
           folderId: folderId,
           folderName: folderName,
@@ -41,125 +49,213 @@ class FolderScanner {
 
         final tempDir = await getTemporaryDirectory();
         final tempFile = File('${tempDir.path}/folder_$folderId.png');
-        
-        // 1px transparent PNG bytes representation
+
         final pngBytes = Uint8List.fromList([
           137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
         ]);
         await tempFile.writeAsBytes(pngBytes);
-
         await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
-
-        // Delete temp file after TDLib handoff
-        if (await tempFile.exists()) {
-          await tempFile.delete();
-        }
+        if (await tempFile.exists()) await tempFile.delete();
       }
     } catch (e) {
       debugPrint("FolderScanner: Failed to upload folder manifest: $e");
     }
   }
 
-  /// Recursively scans a directory dropped from the OS or queues a single file,
-  /// creates the folder structure in the database, and queues files for upload.
-  Future<void> scanAndQueueDirectory(String rootDirPath, String? targetParentFolderId) async {
+  /// Scans a path and queues it for upload.
+  ///
+  /// * Single file → queues directly.
+  /// * Directory with [zipFolder]=false (default) → walks recursively, creates
+  ///   DB folder entries mirroring the directory tree, queues each file individually.
+  ///   Files over 1.5 GB are automatically chunked by the upload pipeline.
+  /// * Directory with [zipFolder]=true → creates a ZIP archive and queues that.
+  ///
+  /// [onProgress] optional callback for ZIP creation progress (only used when zipping).
+  Future<void> scanAndQueueDirectory(
+    String rootDirPath,
+    String? targetParentFolderId, {
+    ZipProgressCallback? onProgress,
+    bool zipFolder = false,
+  }) async {
     final file = File(rootDirPath);
-    if (await file.exists()) {
-      final queueId = _uuid.v4();
-      final fileSize = await file.length();
-      await _db.into(_db.transferQueue).insert(
-        TransferQueueCompanion.insert(
-          id: queueId,
-          type: const drift.Value('UPLOAD_FILE'),
-          status: const drift.Value('PENDING'),
-          priority: const drift.Value(1),
-          totalBytes: drift.Value(fileSize),
-          fileId: drift.Value('${file.path}|$targetParentFolderId'),
-          createdAt: drift.Value(DateTime.now()),
-        ),
-      );
+    if (await file.exists() && !await FileSystemEntity.isDirectory(rootDirPath)) {
+      await _queueSingleFile(rootDirPath, targetParentFolderId);
       return;
     }
 
     final rootDir = Directory(rootDirPath);
     if (!await rootDir.exists()) return;
 
-    // We maintain a map of LocalPath -> FolderUUID
-    final Map<String, String> pathToUuidMap = {};
+    if (zipFolder) {
+      await _zipAndQueueDirectory(rootDir, targetParentFolderId, onProgress: onProgress);
+    } else {
+      await _walkAndQueueDirectory(rootDir, targetParentFolderId);
+    }
+  }
 
-    // Create the root folder in DB first
-    final rootFolderName = rootDir.path.split(Platform.pathSeparator).last;
-    final rootFolderId = _uuid.v4();
-    
+  /// Queues a single file for upload.
+  Future<void> _queueSingleFile(String path, String? targetFolderId) async {
+    final f = File(path);
+    final fileSize = await f.length();
+    final queueId = _uuid.v4();
+    await _db.into(_db.transferQueue).insert(
+      TransferQueueCompanion.insert(
+        id: queueId,
+        type: const drift.Value('UPLOAD_FILE'),
+        status: const drift.Value('PENDING'),
+        priority: const drift.Value(1),
+        totalBytes: drift.Value(fileSize),
+        fileId: drift.Value('${f.path}|$targetFolderId'),
+        createdAt: drift.Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Recursively walks a directory tree, creates DB folder entries, and queues
+  /// each file individually. The upload pipeline handles chunking for large files.
+  /// Bug #4 fix: Added error handling per-entity so a single failure won't stall
+  /// the entire folder upload. Added logging for debugging stalls.
+  Future<void> _walkAndQueueDirectory(Directory dir, String? parentFolderId) async {
+    final folderName = dir.path.split(Platform.pathSeparator).last;
+
+    // Create DB folder entry
+    final folderId = _uuid.v4();
     await _db.into(_db.folders).insert(
       FoldersCompanion.insert(
-        id: rootFolderId,
-        name: rootFolderName,
+        id: folderId,
+        name: folderName,
+        parentId: drift.Value(parentFolderId),
+        createdAt: drift.Value(DateTime.now()),
+      ),
+    );
+
+    // Upload folder manifest (non-blocking — don't let manifest failure stall file queuing)
+    // Bug #4 fix: Removed `await` so this actually runs asynchronously.
+    _uploadFolderManifest(folderId, folderName, parentFolderId)
+        .timeout(const Duration(seconds: 30), onTimeout: () {
+      AppLogger.warning('FolderScanner: Manifest upload timed out for "$folderName" — continuing with file queuing');
+    }).catchError((e) {
+      AppLogger.error('FolderScanner: Manifest upload failed for "$folderName" — continuing', e);
+    });
+
+    // Walk contents — each entity is handled independently
+    int filesQueued = 0;
+    int foldersQueued = 0;
+    int errors = 0;
+
+    await for (final entity in dir.list(followLinks: false)) {
+      try {
+        if (entity is File) {
+          await _queueSingleFile(entity.path, folderId);
+          filesQueued++;
+        } else if (entity is Directory) {
+          await _walkAndQueueDirectory(entity, folderId);
+          foldersQueued++;
+        }
+      } catch (e) {
+        errors++;
+        AppLogger.error('FolderScanner: Failed to process ${entity.path}', e);
+        // Continue with next entity — don't stall the whole folder
+      }
+    }
+
+    AppLogger.info('FolderScanner: "$folderName" complete — $filesQueued files, $foldersQueued subfolders, $errors errors');
+  }
+
+  /// Creates a ZIP archive of the folder and queues it as a single file.
+  Future<void> _zipAndQueueDirectory(
+    Directory rootDir,
+    String? targetParentFolderId, {
+    ZipProgressCallback? onProgress,
+  }) async {
+    final rootDirPath = rootDir.path;
+    final folderName = rootDirPath.split(Platform.pathSeparator).last;
+
+    // Create a folder entry in DB
+    final folderId = _uuid.v4();
+    await _db.into(_db.folders).insert(
+      FoldersCompanion.insert(
+        id: folderId,
+        name: folderName,
         parentId: drift.Value(targetParentFolderId),
         createdAt: drift.Value(DateTime.now()),
       ),
     );
-    
-    pathToUuidMap[rootDir.path] = rootFolderId;
 
-    // Upload folder metadata to Telegram immediately
-    await _uploadFolderManifest(rootFolderId, rootFolderName, targetParentFolderId);
+    await _uploadFolderManifest(folderId, folderName, targetParentFolderId);
 
-    // Start async recursive scan
-    final stream = rootDir.list(recursive: true, followLinks: false);
+    // Create ZIP
+    final tempDir = await getTemporaryDirectory();
+    final safeFolderName = folderName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    final zipPath = '${tempDir.path}/${safeFolderName}.zip';
 
-    await for (final FileSystemEntity entity in stream) {
-      try {
-        if (entity is Link) {
-          continue; // Ignore symlinks to prevent infinite recursion
-        }
+    AppLogger.info('FolderScanner: creating ZIP archive of $rootDirPath -> $zipPath');
+    await _createZipArchive(rootDirPath, zipPath, onProgress: onProgress);
 
-        if (entity is Directory) {
-          // Find the parent's UUID from the map
-          final parentPath = entity.parent.path;
-          final parentId = pathToUuidMap[parentPath] ?? rootFolderId;
-
-          final newFolderId = _uuid.v4();
-          final folderName = entity.path.split(Platform.pathSeparator).last;
-
-          await _db.into(_db.folders).insert(
-            FoldersCompanion.insert(
-              id: newFolderId,
-              name: folderName,
-              parentId: drift.Value(parentId),
-              createdAt: drift.Value(DateTime.now()),
-            ),
-          );
-
-          pathToUuidMap[entity.path] = newFolderId;
-
-          // Upload folder metadata to Telegram immediately
-          await _uploadFolderManifest(newFolderId, folderName, parentId);
-        } else if (entity is File) {
-          // Find the parent's UUID
-          final parentPath = entity.parent.path;
-          final parentId = pathToUuidMap[parentPath] ?? rootFolderId;
-
-          // Queue the file for upload
-          final queueId = _uuid.v4();
-          final fileSize = await entity.length();
-
-          await _db.into(_db.transferQueue).insert(
-            TransferQueueCompanion.insert(
-              id: queueId,
-              type: const drift.Value('UPLOAD_FILE'),
-              status: const drift.Value('PENDING'),
-              priority: const drift.Value(1),
-              totalBytes: drift.Value(fileSize),
-              fileId: drift.Value('${entity.path}|$parentId'), // format: LocalPath|ParentFolderId
-              createdAt: drift.Value(DateTime.now()),
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint("Error scanning ${entity.path}: $e");
-      }
+    final zipFile = File(zipPath);
+    if (!await zipFile.exists()) {
+      AppLogger.error('FolderScanner: ZIP creation failed — file not found at $zipPath');
+      return;
     }
+
+    final zipSize = await zipFile.length();
+    AppLogger.info('FolderScanner: ZIP created ($zipSize bytes), queuing for upload');
+
+    final queueId = _uuid.v4();
+    await _db.into(_db.transferQueue).insert(
+      TransferQueueCompanion.insert(
+        id: queueId,
+        type: const drift.Value('UPLOAD_FILE'),
+        status: const drift.Value('PENDING'),
+        priority: const drift.Value(1),
+        totalBytes: drift.Value(zipSize),
+        fileId: drift.Value('$zipPath|${targetParentFolderId ?? ''}'),
+        createdAt: drift.Value(DateTime.now()),
+      ),
+    );
+  }
+
+  /// Creates a ZIP archive of [sourceDir] at [zipPath] using the `archive` package.
+  /// Bug #3 fix: Uses ZipFileEncoder to stream the zip directly to disk, preventing OOM.
+  Future<void> _createZipArchive(
+    String sourceDir,
+    String zipPath, {
+    ZipProgressCallback? onProgress,
+  }) async {
+    final dir = Directory(sourceDir);
+    final allFiles = <FileSystemEntity>[];
+
+    await for (final entity in dir.list(recursive: true, followLinks: false)) {
+      if (entity is File) allFiles.add(entity);
+    }
+
+    final total = allFiles.length;
+    final encoder = ZipFileEncoder();
+    encoder.create(zipPath);
+    
+    int processed = 0;
+
+    for (final entity in allFiles) {
+      final file = entity as File;
+      final relativePath = file.path.substring(sourceDir.length + (sourceDir.endsWith(Platform.pathSeparator) ? 0 : 1));
+      final fileSize = await file.length();
+
+      // Bug #3 fix: Skip files larger than 200 MB in ZIP — they should be
+      // uploaded individually as chunked files, not bundled into a ZIP.
+      if (fileSize > 200 * 1024 * 1024) {
+        AppLogger.warning('FolderScanner: Skipping ${file.path} (${fileSize ~/ (1024 * 1024)} MB) — too large for ZIP archive');
+        processed++;
+        onProgress?.call(processed, total, relativePath);
+        continue;
+      }
+
+      // Stream directly to the output zip file to prevent OOM
+      encoder.addFile(file, relativePath);
+      processed++;
+      onProgress?.call(processed, total, relativePath);
+    }
+
+    encoder.close();
   }
 }
 

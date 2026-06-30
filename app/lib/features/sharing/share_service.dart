@@ -13,7 +13,15 @@ class ShareService {
 
   ShareService(this._ref);
 
-  Future<String> generateShareLink(FileData file) async {
+  /// Generate a share link with optional [password] protection,
+  /// [expiresAt] date, [maxDownloads] limit, or [burnAfterReading].
+  Future<ShareLinkData> generateShareLink(
+    FileData file, {
+    String? password,
+    DateTime? expiresAt,
+    int? maxDownloads,
+    bool burnAfterReading = false,
+  }) async {
     final masterKey = _ref.read(masterKeyProvider);
     if (masterKey == null) throw Exception("Vault is locked");
 
@@ -21,7 +29,7 @@ class ShareService {
     if (file.manifestMessageId == null) throw Exception("File is not uploaded yet");
 
     final db = _ref.read(databaseProvider);
-    
+
     // Fetch channel ID from chunk mapping
     final dbChunk = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).getSingleOrNull();
     if (dbChunk == null || dbChunk.channelId == null) {
@@ -50,34 +58,98 @@ class ShareService {
     }
 
     final dekBase64 = base64Encode(dekBytes);
-    final nameEncoded = Uri.encodeComponent(file.name);
-    
-    // aerodrive://share?channelId=123&msgId=456&name=foo.mp4&size=1024&dek=BASE64
-    final uri = Uri(
-      scheme: 'aerodrive',
-      host: 'share',
-      queryParameters: {
-        'channelId': channelId.toString(),
-        'msgId': file.manifestMessageId.toString(),
-        'name': file.name,
-        'size': file.size?.toString() ?? '0',
-        'mimeType': file.mimeType ?? 'application/octet-stream',
-        'dek': dekBase64,
-      },
-    );
 
-    // Save to Shares table for local tracking
-    // Save to Shares table for local tracking
-    await db.into(db.shares).insert(
-      SharesCompanion.insert(
-        id: const Uuid().v4(),
+    final shareId = const Uuid().v4();
+    final token = const Uuid().v4().replaceAll('-', '').substring(0, 16);
+
+    // If password is set, hash it with SHA-256 for storage
+    String? passwordHash;
+    if (password != null && password.isNotEmpty) {
+      final pwBytes = utf8.encode(password);
+      final hashBytes = await Sha256().hash(pwBytes);
+      passwordHash = base64Encode(hashBytes.bytes);
+    }
+
+    // Build URI
+    final uriParams = <String, String>{
+      'shareId': shareId,
+      'channelId': channelId.toString(),
+      'msgId': file.manifestMessageId.toString(),
+      'name': file.name,
+      'size': file.size?.toString() ?? '0',
+      'mimeType': file.mimeType ?? 'application/octet-stream',
+      'dek': dekBase64,
+      'token': token,
+    };
+
+    if (password != null && password.isNotEmpty) {
+      uriParams['hasPassword'] = '1';
+    }
+    if (expiresAt != null) {
+      uriParams['expires'] = expiresAt.millisecondsSinceEpoch.toString();
+    }
+
+    // Insert into DB
+    final now = DateTime.now();
+    await db.into(db.shareLinks).insert(
+      ShareLinksCompanion.insert(
+        id: shareId,
         fileId: drift.Value(file.id),
-        createdAt: drift.Value(DateTime.now()),
-        isActive: const drift.Value(true),
-      )
+        token: drift.Value(token),
+        passwordHash: drift.Value(passwordHash),
+        expiresAt: drift.Value(expiresAt),
+        maxDownloads: drift.Value(maxDownloads),
+        downloadCount: const drift.Value(0),
+        burnAfterReading: drift.Value(burnAfterReading),
+        createdAt: drift.Value(now),
+      ),
     );
 
-    return uri.toString();
+    return await (db.select(db.shareLinks)..where((s) => s.id.equals(shareId))).getSingle();
+  }
+
+  /// Validate a password against the stored hash.
+  Future<bool> validatePassword(ShareLinkData link, String password) async {
+    if (link.passwordHash == null) return true;
+    final pwBytes = utf8.encode(password);
+    final hashBytes = await Sha256().hash(pwBytes);
+    final computed = base64Encode(hashBytes.bytes);
+    return computed == link.passwordHash;
+  }
+
+  /// Increment download count; returns true if still valid.
+  Future<bool> recordDownload(ShareLinkData link) async {
+    final db = _ref.read(databaseProvider);
+    final now = DateTime.now();
+
+    // Check expiration
+    if (link.expiresAt != null && now.isAfter(link.expiresAt!)) {
+      return false;
+    }
+    // Check max downloads
+    if (link.maxDownloads != null && link.downloadCount >= link.maxDownloads!) {
+      return false;
+    }
+
+    await (db.update(db.shareLinks)..where((s) => s.id.equals(link.id)))
+      .write(const ShareLinksCompanion(downloadCount: drift.Value(0)));
+
+    // Increment download_count via raw SQL
+    await db.customStatement(
+      'UPDATE share_links SET download_count = download_count + 1 WHERE id = ?',
+      [link.id],
+    );
+
+    // Burn after reading
+    if (link.burnAfterReading) {
+      await (db.update(db.shareLinks)..where((s) => s.id.equals(link.id)))
+        .write(ShareLinksCompanion(
+          expiresAt: drift.Value(now),
+          maxDownloads: drift.Value(0),
+        ));
+    }
+
+    return true;
   }
 
   Future<void> importShareLink(String url) async {
@@ -109,30 +181,26 @@ class ShareService {
     final cipher = AesGcm.with256bits();
     final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
     final encryptedDek = await cipher.encrypt(dekBytes, secretKey: secretKey);
-    
+
     final newHash = '${base64Encode(encryptedDek.nonce)}:${base64Encode(encryptedDek.mac.bytes)}:${base64Encode(encryptedDek.cipherText)}';
 
     final db = _ref.read(databaseProvider);
-    
-    // We create a new file entry in our database pointing to the shared remote message!
     final newFileId = const Uuid().v4();
-    
+
     await db.into(db.files).insert(
       FilesCompanion.insert(
         id: newFileId,
         name: name,
         size: drift.Value(size),
         mimeType: drift.Value(mimeType),
-        sha256Hash: drift.Value(newHash), // Store our wrapped DEK
+        sha256Hash: drift.Value(newHash),
         manifestMessageId: drift.Value(msgId),
         isEncrypted: const drift.Value(true),
         createdAt: drift.Value(DateTime.now()),
         updatedAt: drift.Value(DateTime.now()),
-        // Place it in the root or a special "Shared" folder. We'll leave folderId null for root.
-      )
+      ),
     );
 
-    // Create the chunk mapping so download queue can find it
     await db.into(db.chunks).insert(
       ChunksCompanion.insert(
         id: const Uuid().v4(),
@@ -141,7 +209,7 @@ class ShareService {
         channelId: drift.Value(channelId),
         messageId: drift.Value(msgId),
         size: drift.Value(size),
-      )
+      ),
     );
   }
 }

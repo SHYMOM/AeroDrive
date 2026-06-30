@@ -1,8 +1,8 @@
-version: '3.8'
 services:
-  backend:
+  aerodrive-server:
     build: .
     ports:
       - "8080:8080"
-    environment:
-      - PORT=8080
+    volumes:
+      - ./links.db:/app/links.db
+      - ./config.json:/app/config.json

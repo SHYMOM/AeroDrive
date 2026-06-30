@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'telegram_service.dart';
 
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/data/db/database.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:aerodrive/core/logger.dart';
 
 class TelegramManager extends StateNotifier<List<TelegramService>> {
@@ -13,14 +14,34 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
   Stream<Map<String, dynamic>> get allEvents => _eventController.stream;
 
   TelegramManager(this.ref) : super([]) {
-    // Add the primary client by default
-    final primary = ref.read(telegramServiceProvider.notifier);
-    _setupClientListener(primary);
-    state = [primary];
-    _loadSavedAccounts();
+    _initPrimaryAndRestore();
   }
 
   final Ref ref;
+
+  List<TelegramService> get readyClients =>
+      state.where((c) => c.authState == TelegramAuthState.ready).toList();
+
+  Future<void> _initPrimaryAndRestore() async {
+    // Create primary client
+    final primary = ref.read(telegramServiceProvider.notifier);
+    _setupClientListener(primary);
+    state = [primary];
+
+    // Wait for the primary client to at least have its TDLib client handle created.
+    // This ensures TdPlugin.initialize() has completed before secondary clients attempt it.
+    int attempts = 0;
+    while (primary.clientId == 0 && attempts < 100) {
+      await Future.delayed(const Duration(milliseconds: 50));
+      attempts++;
+    }
+
+    // Restore secondary accounts from Drift Accounts table
+    await _restoreAccountsFromDb();
+
+    // Listen for primary ready to save account
+    primary.onReady = () => _saveAccountToDb(primary);
+  }
 
   void _setupClientListener(TelegramService client) {
     client.tdlibEvents.listen((event) {
@@ -33,14 +54,16 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     client.onProfileUpdated = () {
       if (mounted) {
         state = [...state];
-        _saveAccounts();
+        _saveAccountToDb(client);
       }
     };
 
     client.addListener((authState) {
       if (mounted) {
         state = [...state];
-        _saveAccounts();
+        if (authState == TelegramAuthState.ready) {
+          _saveAccountToDb(client);
+        }
       }
     });
   }
@@ -49,55 +72,67 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     return state.firstWhere((c) => c.accountId == accountId, orElse: () => state.first);
   }
 
-  Future<void> _loadSavedAccounts() async {
-    final settings = ref.read(settingsRepositoryProvider);
-    final accountsStr = await settings.getSetting('telegram_accounts');
-    if (accountsStr != null) {
-      try {
-        final List<dynamic> loaded = jsonDecode(accountsStr);
-        for (final acc in loaded) {
-          if (acc is String) {
-            if (acc != 'primary') {
-              addClient(acc, isHeadless: true, save: false);
-            }
-          } else if (acc is Map) {
-            final id = acc['id'] as String;
-            if (id != 'primary') {
-              final client = addClient(id, isHeadless: true, save: false);
-              client.userId = acc['userId'] as int?;
-              client.firstName = acc['firstName'] as String?;
-              client.lastName = acc['lastName'] as String?;
-              client.phoneNumber = acc['phoneNumber'] as String?;
-              client.photoPath = acc['photoPath'] as String?;
-            } else {
-              // Populate primary client cache
-              final primary = getClient('primary');
-              primary.userId = acc['userId'] as int?;
-              primary.firstName = acc['firstName'] as String?;
-              primary.lastName = acc['lastName'] as String?;
-              primary.phoneNumber = acc['phoneNumber'] as String?;
-              primary.photoPath = acc['photoPath'] as String?;
-            }
-          }
+  Future<void> _restoreAccountsFromDb() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final accounts = await db.select(db.accounts).get();
+
+      for (final acc in accounts) {
+        if (acc.id == 'primary') {
+          // Populate primary client
+          final primary = getClient('primary');
+          primary.phoneNumber = acc.phoneNumber;
+          continue;
         }
-      } catch (_) {}
+        if (state.any((c) => c.accountId == acc.id)) continue;
+
+        final client = await _initSecondaryClient(acc.id);
+        client.phoneNumber = acc.phoneNumber;
+
+        // Set up onReady to mark session as persistent
+        client.onReady = () => _saveAccountToDb(client);
+      }
+
+      AppLogger.info('Restored ${accounts.length} accounts from DB');
+    } catch (e, s) {
+      AppLogger.error('Failed to restore accounts from DB', e, s);
     }
   }
 
-  Future<void> _saveAccounts() async {
-    final settings = ref.read(settingsRepositoryProvider);
-    final List<Map<String, dynamic>> data = [];
-    for (final client in state) {
-      data.add({
-        'id': client.accountId,
-        'userId': client.userId,
-        'firstName': client.firstName,
-        'lastName': client.lastName,
-        'phoneNumber': client.phoneNumber,
-        'photoPath': client.photoPath,
-      });
+  Future<TelegramService> _initSecondaryClient(String accountId) async {
+    final client = TelegramService(accountId: accountId, isHeadless: true);
+
+    // Ensure TDLib database directory exists
+    try {
+      final docDir = await getApplicationDocumentsDirectory();
+      final dbDir = Directory('${docDir.path}/AeroDrive/tdlib/$accountId');
+      if (!await dbDir.exists()) {
+        await dbDir.create(recursive: true);
+      }
+    } catch (e) {
+      AppLogger.error('Failed to create TDLib db dir for $accountId', e);
     }
-    await settings.setSetting('telegram_accounts', jsonEncode(data));
+
+    _setupClientListener(client);
+    state = [...state, client];
+    AppLogger.info('Secondary client initialized for account $accountId');
+    return client;
+  }
+
+  Future<void> _saveAccountToDb(TelegramService client) async {
+    try {
+      final db = ref.read(databaseProvider);
+      await db.into(db.accounts).insertOnConflictUpdate(
+        AccountsCompanion.insert(
+          id: client.accountId,
+          phoneNumber: drift.Value(client.phoneNumber),
+          isDefault: drift.Value(client.accountId == 'primary'),
+        ),
+      );
+      AppLogger.info('Account ${client.accountId} saved to DB');
+    } catch (e, s) {
+      AppLogger.error('Failed to save account to DB', e, s);
+    }
   }
 
   TelegramService addClient(String accountId, {bool isHeadless = true, bool save = true}) {
@@ -106,8 +141,13 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     }
     final client = TelegramService(accountId: accountId, isHeadless: isHeadless);
     _setupClientListener(client);
+
+    client.onReady = () {
+      _saveAccountToDb(client);
+    };
+
     state = [...state, client];
-    if (save) _saveAccounts();
+    if (save) _saveAccountToDb(client);
     return client;
   }
 
@@ -115,9 +155,9 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     if (accountId == 'primary') return;
     final clientIndex = state.indexWhere((c) => c.accountId == accountId);
     if (clientIndex == -1) return;
-    
+
     final client = state[clientIndex];
-    
+
     try {
       if (client.authState == TelegramAuthState.ready) {
         await client.logOut();
@@ -132,14 +172,21 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     } catch (e) {
       AppLogger.error('Error closing/logging out client $accountId', e);
     }
-    
+
     client.dispose();
     state = state.where((c) => c.accountId != accountId).toList();
-    await _saveAccounts();
-    
+
+    // Remove from Accounts table
+    try {
+      final db = ref.read(databaseProvider);
+      await (db.delete(db.accounts)..where((a) => a.id.equals(accountId))).go();
+    } catch (e) {
+      AppLogger.error('Failed to remove account from DB', e);
+    }
+
     // Brief delay to ensure OS file system releases all file handles
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     try {
       final docDir = await getApplicationDocumentsDirectory();
       final dbPath = Directory('${docDir.path}/AeroDrive/tdlib/$accountId');
@@ -160,7 +207,7 @@ final telegramManagerProvider = StateNotifierProvider<TelegramManager, List<Tele
 final adminChannelsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final accounts = ref.watch(telegramManagerProvider);
   List<Map<String, dynamic>> allAdminChannels = [];
-  
+
   for (final acc in accounts) {
     if (acc.authState == TelegramAuthState.ready) {
       try {
@@ -182,7 +229,7 @@ final adminChannelsProvider = FutureProvider.autoDispose<List<Map<String, dynami
 final activeSessionsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final accounts = ref.watch(telegramManagerProvider);
   List<Map<String, dynamic>> allSessions = [];
-  
+
   for (final client in accounts) {
     if (client.authState == TelegramAuthState.ready) {
       try {

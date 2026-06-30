@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:cryptography/cryptography.dart';
@@ -24,7 +25,6 @@ class EncryptionEngine {
   /// Derives the 256-bit Master Key using Argon2id.
   /// Falls back to low-end parameters if OutOfMemory occurs.
   Future<List<int>> deriveMasterKey(String password, String saltString) async {
-    final passwordBytes = password.codeUnits;
     final salt = saltString.codeUnits;
 
     try {
@@ -45,12 +45,29 @@ class EncryptionEngine {
 
   /// Generates a new 24-word BIP39 recovery phrase.
   String generateRecoveryPhrase() {
-    return bip39.generateMnemonic(strength: 256); // 256 bits of entropy = 24 words
+    return bip39.generateMnemonic(strength: 256);
   }
 
   /// Verifies if a given string is a valid BIP39 phrase.
   bool isValidRecoveryPhrase(String phrase) {
     return bip39.validateMnemonic(phrase);
+  }
+
+  /// Derives deterministic salt bytes from the BIP39 mnemonic seed.
+  /// The same phrase always produces the same salt, enabling deterministic
+  /// cross-device recovery without storing the salt separately.
+  List<int> saltFromPhrase(String phrase) {
+    final seed = bip39.mnemonicToSeed(phrase);
+    return seed.take(32).toList();
+  }
+
+  /// Derives the Master Key deterministically from a BIP39 recovery phrase.
+  /// Uses the phrase's BIP39 seed as the Argon2id salt so the same phrase
+  /// always produces the same key — essential for cross-device sync.
+  Future<List<int>> deriveMasterKeyFromPhrase(String phrase) async {
+    final salt = saltFromPhrase(phrase);
+    final saltStr = base64Encode(salt);
+    return deriveMasterKey(phrase, saltStr);
   }
 
   /// Generates a secure random 256-bit Data Encryption Key (DEK).
@@ -84,13 +101,14 @@ class EncryptionEngine {
     int? chunkLimit,
     List<int>? ctrIv,
   }) async {
-    final int bufferSize = 4 * 1024 * 1024; // EXACT 4 MB RAM Buffer
-    final int limit = chunkLimit ?? (1.5 * 1024 * 1024 * 1024).toInt(); // 1.5 GB logical limit
+    final int bufferSize = 4 * 1024 * 1024;
+    final int limit = chunkLimit ?? (1.5 * 1024 * 1024 * 1024).toInt();
 
     final file = await sourceFile.open(mode: FileMode.read);
     final fileLength = await file.length();
     
-    int currentBytesInLogicalChunk = 0;
+    int totalBytesProcessed = 0;
+    int currentChunkBytes = 0;
     int chunkIndex = 0;
     List<String> chunkPaths = [];
     
@@ -102,12 +120,13 @@ class EncryptionEngine {
       final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
       final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
 
-      int offset = 0;
-      while (offset < fileLength) {
-        final bytesToRead = (fileLength - offset < bufferSize) ? fileLength - offset : bufferSize;
+      while (totalBytesProcessed < fileLength) {
+        final bytesToRead = (fileLength - totalBytesProcessed < bufferSize)
+            ? fileLength - totalBytesProcessed
+            : bufferSize;
         final block = await file.read(bytesToRead);
 
-        final int startBlock = currentBytesInLogicalChunk ~/ 16;
+        final int startBlock = totalBytesProcessed ~/ 16;
         final incrementedNonce = incrementNonce(ctrIv, startBlock);
 
         final secretBox = await ctrAlgorithm.encrypt(
@@ -116,19 +135,17 @@ class EncryptionEngine {
           nonce: incrementedNonce,
         );
 
-        // Write ONLY ciphertext to disk (no prepended nonce or MAC)
         currentSink.add(secretBox.cipherText);
 
-        offset += bytesToRead;
-        currentBytesInLogicalChunk += block.length;
+        totalBytesProcessed += block.length;
+        currentChunkBytes += block.length;
 
-        // Split at limit
-        if (currentBytesInLogicalChunk >= limit && offset < fileLength) {
+        if (currentChunkBytes >= limit && totalBytesProcessed < fileLength) {
           await currentSink.flush();
           await currentSink.close();
 
           chunkIndex++;
-          currentBytesInLogicalChunk = 0;
+          currentChunkBytes = 0;
           
           currentTempFile = File('$outputDirectory/temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
@@ -138,9 +155,10 @@ class EncryptionEngine {
     } else {
       final secretKey = await _cipher.newSecretKeyFromBytes(dekBytes);
 
-      int offset = 0;
-      while (offset < fileLength) {
-        final bytesToRead = (fileLength - offset < bufferSize) ? fileLength - offset : bufferSize;
+      while (totalBytesProcessed < fileLength) {
+        final bytesToRead = (fileLength - totalBytesProcessed < bufferSize)
+            ? fileLength - totalBytesProcessed
+            : bufferSize;
         final block = await file.read(bytesToRead);
 
         final nonce = _cipher.newNonce();
@@ -150,21 +168,19 @@ class EncryptionEngine {
           nonce: nonce,
         );
 
-        // Write: [Nonce (12)] + [MAC (16)] + [Ciphertext (up to 4MB)]
         currentSink.add(secretBox.nonce);
         currentSink.add(secretBox.mac.bytes);
         currentSink.add(secretBox.cipherText);
 
-        offset += bytesToRead;
-        currentBytesInLogicalChunk += block.length;
+        totalBytesProcessed += block.length;
+        currentChunkBytes += block.length;
 
-        // Split at limit
-        if (currentBytesInLogicalChunk >= limit && offset < fileLength) {
+        if (currentChunkBytes >= limit && totalBytesProcessed < fileLength) {
           await currentSink.flush();
           await currentSink.close();
 
           chunkIndex++;
-          currentBytesInLogicalChunk = 0;
+          currentChunkBytes = 0;
           
           currentTempFile = File('$outputDirectory/temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
@@ -188,6 +204,7 @@ class EncryptionEngine {
     required List<int> dekBytes,
     bool append = false,
     List<int>? ctrIv,
+    int globalByteOffset = 0,
   }) async {
     final file = await encryptedChunkFile.open(mode: FileMode.read);
     final fileLength = await file.length();
@@ -198,14 +215,14 @@ class EncryptionEngine {
       final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
       final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
       final int bufferSize = 4 * 1024 * 1024;
-      int offset = 0;
+      int localOffset = 0;
 
-      while (offset < fileLength) {
-        final bytesToRead = (fileLength - offset < bufferSize) ? fileLength - offset : bufferSize;
+      while (localOffset < fileLength) {
+        final bytesToRead = (fileLength - localOffset < bufferSize) ? fileLength - localOffset : bufferSize;
         final block = await file.read(bytesToRead);
 
-        final int startBlock = offset ~/ 16;
-        final incrementedNonce = incrementNonce(ctrIv, startBlock);
+        final int globalBlock = (globalByteOffset + localOffset) ~/ 16;
+        final incrementedNonce = incrementNonce(ctrIv, globalBlock);
 
         final decryptedData = await ctrAlgorithm.decrypt(
           SecretBox(block, nonce: incrementedNonce, mac: Mac.empty),
@@ -213,7 +230,7 @@ class EncryptionEngine {
         );
 
         outputSink.add(decryptedData);
-        offset += bytesToRead;
+        localOffset += bytesToRead;
       }
     } else {
       final secretKey = await _cipher.newSecretKeyFromBytes(dekBytes);
@@ -243,4 +260,76 @@ class EncryptionEngine {
     await outputSink.close();
   }
 
+  /// Decrypts a complete encrypted byte array (single chunk or merged chunks).
+  /// Handles both AES-GCM (with prepended nonce+mac) and AES-CTR formats.
+  /// For GCM, iterates over each 4MB encrypted block (nonce+mac+ciphertext).
+  Future<List<int>> decryptBytes({
+    required List<int> data,
+    required List<int> dekBytes,
+    List<int>? ctrIv,
+    int globalByteOffset = 0,
+  }) async {
+    if (ctrIv != null) {
+      final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
+      final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
+      final int startBlock = globalByteOffset ~/ 16;
+      final incrementedNonce = incrementNonce(ctrIv, startBlock);
+      final decrypted = await ctrAlgorithm.decrypt(
+        SecretBox(Uint8List.fromList(data), nonce: incrementedNonce, mac: Mac.empty),
+        secretKey: secretKey,
+      );
+      return decrypted;
+    } else {
+      final gcmCipher = AesGcm.with256bits();
+      final secretKey = await gcmCipher.newSecretKeyFromBytes(dekBytes);
+      final encryptedBlockSize = (4 * 1024 * 1024) + 12 + 16;
+      final builder = BytesBuilder();
+      int offset = 0;
+
+      while (offset < data.length) {
+        final blockEnd = (offset + encryptedBlockSize < data.length) ? offset + encryptedBlockSize : data.length;
+        final block = data.sublist(offset, blockEnd);
+        final nonce = block.sublist(0, 12);
+        final macBytes = block.sublist(12, 28);
+        final cipherText = block.sublist(28);
+
+        final decrypted = await gcmCipher.decrypt(
+          SecretBox(Uint8List.fromList(cipherText), nonce: nonce, mac: Mac(macBytes)),
+          secretKey: secretKey,
+        );
+        builder.add(decrypted);
+        offset = blockEnd;
+      }
+
+      return builder.toBytes();
+    }
+  }
+
+  /// Unwraps a DEK (Data Encryption Key) from the sha256Hash field format.
+  /// The wrapped key format is: base64(nonce)|base64(mac)|base64(cipherText)[|base64(ctrIv)]
+  /// Returns [dekBytes, ctrIv] where ctrIv may be null.
+  Future<List<List<int>?>> unwrapDek(String sha256Hash, List<int> masterKeyBytes) async {
+    final parts = sha256Hash.contains('|')
+        ? sha256Hash.split('|')
+        : sha256Hash.split(':');
+    if (parts.length < 3) throw Exception('Invalid wrapped DEK format');
+
+    final nonce = base64Decode(parts[0]);
+    final mac = Mac(base64Decode(parts[1]));
+    final cipherText = base64Decode(parts[2]);
+
+    final cipher = AesGcm.with256bits();
+    final secretKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
+    final dekBytes = await cipher.decrypt(
+      SecretBox(cipherText, nonce: nonce, mac: mac),
+      secretKey: secretKey,
+    );
+
+    List<int>? ctrIv;
+    if (parts.length >= 4) {
+      ctrIv = base64Decode(parts[3]);
+    }
+
+    return [dekBytes, ctrIv];
+  }
 }

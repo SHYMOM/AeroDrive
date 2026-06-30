@@ -33,6 +33,17 @@ class ManifestEncoder {
     );
   }
 
+  /// Encodes and encrypts a Thumbnail Manifest for Telegram captions.
+  static Future<String> encodeThumbnailManifest({
+    required String fileId,
+    required SecretKey masterKey,
+  }) async {
+    return CaptionSerializer.serializeThumbnail(
+      fileId: fileId,
+      masterKey: masterKey,
+    );
+  }
+
   /// Encodes and encrypts a Folder Metadata Manifest for Telegram captions.
   static Future<String> encodeFolderManifest({
     required String folderId,

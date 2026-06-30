@@ -11,6 +11,7 @@ final mediaFilesProvider = FutureProvider<List<FileData>>((ref) async {
   final db = ref.watch(databaseProvider);
   final query = db.select(db.files)
     ..where((f) => f.mimeType.like('image/%') | f.mimeType.like('video/%'))
+    ..where((f) => f.deletedAt.isNull())
     ..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)]);
   return query.get();
 });
@@ -27,18 +28,23 @@ class GalleryScreenContent extends ConsumerWidget {
           if (mediaFiles.isEmpty) {
             return const Center(child: Text('No photos or videos yet.'));
           }
-          return GridView.builder(
-            padding: const EdgeInsets.all(4),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
-            ),
-            itemCount: mediaFiles.length,
-            itemBuilder: (context, index) {
-              final file = mediaFiles[index];
-              return _GalleryItem(file: file);
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(mediaFilesProvider);
             },
+            child: GridView.builder(
+              padding: const EdgeInsets.all(4),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
+              ),
+              itemCount: mediaFiles.length,
+              itemBuilder: (context, index) {
+                final file = mediaFiles[index];
+                return _GalleryItem(file: file);
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

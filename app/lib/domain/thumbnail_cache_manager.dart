@@ -4,6 +4,8 @@ import 'package:cryptography/cryptography.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:aerodrive/core/logger.dart';
+
 class ThumbnailCacheManager {
   static final _cipher = AesGcm.with256bits();
 
@@ -76,7 +78,8 @@ class ThumbnailCacheManager {
       final decrypted = await _cipher.decrypt(secretBox, secretKey: masterKey);
       
       return Uint8List.fromList(decrypted);
-    } catch (_) {
+    } catch (e) {
+      AppLogger.error('ThumbnailCache: failed to read thumbnail', e);
       return null;
     }
   }
@@ -88,6 +91,8 @@ class ThumbnailCacheManager {
       if (await dir.exists()) {
         await dir.delete(recursive: true);
       }
-    } catch (_) {}
+    } catch (e) {
+      AppLogger.error('ThumbnailCache: failed to clear cache', e);
+    }
   }
 }

@@ -4,9 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/domain/recovery/recovery_scanner.dart';
+import 'package:aerodrive/features/drive/providers/drive_providers.dart';
 import 'package:cryptography/cryptography.dart';
 
 class DatabaseStatsDialog extends ConsumerStatefulWidget {
@@ -153,7 +153,7 @@ class ResetSettingsDialog extends ConsumerWidget {
             // Delete the settings database file or wipe the table.
             final db = ref.read(databaseProvider);
             await db.customStatement("DELETE FROM settings");
-            ref.invalidate(settingsRepositoryProvider);
+            ref.read(settingsUpdateProvider.notifier).state++;
             if (context.mounted) {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings reset. Please restart the app.')));
@@ -177,6 +177,7 @@ class RebuildDriveDialog extends ConsumerStatefulWidget {
 class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
   bool _isRebuilding = false;
   double _progress = 0.0;
+  int _itemsRecovered = 0;
   String _status = "Ready to scan.";
 
   Future<void> _startRebuild() async {
@@ -229,6 +230,7 @@ class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
         onProgress: (messagesScanned, itemsRecovered) {
           if (mounted) {
             setState(() {
+              _itemsRecovered = itemsRecovered;
               _status = "Scanned $messagesScanned messages...\nRecovered $itemsRecovered items.";
             });
           }
@@ -237,11 +239,22 @@ class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
 
       if (mounted) {
         setState(() {
-          _status = "Rebuild complete!";
+          _status = _itemsRecovered > 0
+              ? "Rebuild complete — $_status"
+              : "Rebuild complete but 0 items recovered.\n"
+                "Possible causes:\n"
+                "• Wrong storage channel selected\n"
+                "• Files uploaded with vault locked\n"
+                "• Master key changed since upload";
         });
-        await Future.delayed(const Duration(seconds: 1));
+        if (_itemsRecovered > 0) {
+          ref.read(dbRebuildVersionProvider.notifier).state++;
+        }
+        await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Drive successfully rebuilt from Telegram!')));
+        if (_itemsRecovered > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Drive rebuilt from Telegram!')));
+        }
       }
     } catch (e) {
       if (mounted) {

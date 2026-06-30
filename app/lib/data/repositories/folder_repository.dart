@@ -43,8 +43,7 @@ class FolderRepository {
     return path.isEmpty ? '/' : path;
   }
 
-  /// Creates a folder, enforcing the 255 character total path limit and 200 char name limit.
-  Future<String> createFolder({required String name, String? parentId}) async {
+  Future<String> createFolder({required String name, String? parentId, String? color}) async {
     if (name.length > 200) {
       throw FolderNameTooLongException();
     }
@@ -62,11 +61,23 @@ class FolderRepository {
         id: id,
         name: name,
         parentId: Value(parentId),
+        color: Value(color),
         createdAt: Value(DateTime.now()),
         updatedAt: Value(DateTime.now()),
       ),
     );
     return id;
+  }
+  
+  Future<void> updateFolder(String folderId, {String? newName, String? newColor}) async {
+    final now = DateTime.now();
+    await (_db.update(_db.folders)..where((f) => f.id.equals(folderId))).write(
+      FoldersCompanion(
+        name: newName != null ? Value(newName) : const Value.absent(),
+        color: newColor != null ? Value(newColor) : const Value.absent(),
+        updatedAt: Value(now),
+      ),
+    );
   }
 
   /// Retrieves the immediate children (folders and files) of a given folder.

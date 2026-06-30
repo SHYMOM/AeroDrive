@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
 
 // Interface for Face Recognition
 abstract class FaceRecognitionService {

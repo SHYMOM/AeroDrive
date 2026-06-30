@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cryptography/cryptography.dart';
@@ -8,6 +9,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/domain/thumbnail_cache_manager.dart';
 import 'package:uuid/uuid.dart';
 
 class ZeroDBRecoveryService {
@@ -30,7 +32,7 @@ class ZeroDBRecoveryService {
     // 1. Resolve channel IDs to scan
     final settingsRepo = _ref.read(settingsRepositoryProvider);
     final savedChannelsJson = await settingsRepo.getSetting('storage_channels_list');
-    List<int> channelsToScan = [];
+    final Set<int> channelSet = {};
 
     if (savedChannelsJson != null && savedChannelsJson.isNotEmpty) {
       try {
@@ -38,20 +40,25 @@ class ZeroDBRecoveryService {
         for (final ch in decoded) {
           final id = ch['id'];
           if (id != null) {
-            channelsToScan.add(id is String ? int.parse(id) : id as int);
+            channelSet.add(id is String ? int.parse(id) : id as int);
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('ZeroDBRecovery: failed to parse storage_channels_list: $e');
+      }
     }
 
-    if (channelsToScan.isEmpty && channelId != null) {
-      channelsToScan.add(channelId);
+    // Always include the active channel (if provided) in addition to the list
+    if (channelId != null) {
+      channelSet.add(channelId);
     }
 
+    final List<int> channelsToScan = channelSet.toList();
     if (channelsToScan.isEmpty) {
       debugPrint("ZeroDBRecovery: No channels configured to scan.");
       return;
     }
+    debugPrint('ZeroDBRecovery: scanning channels $channelsToScan');
 
     final List<FoldersCompanion> recoveredFolders = [];
     final List<FilesCompanion> recoveredFiles = [];
@@ -94,7 +101,12 @@ class ZeroDBRecoveryService {
 
           // Decode caption
           final manifest = await ManifestEncoder.decodeManifest(caption, masterKey);
-          if (manifest == null) continue;
+          if (manifest == null) {
+            if (messagesScanned <= 5) {
+              debugPrint('ZeroDBRecovery: msg #$messagesScanned caption prefix=${caption.substring(0, caption.length > 40 ? 40 : caption.length)}... — not a valid manifest (wrong key or not a manifest)');
+            }
+            continue;
+          }
 
           itemsRecovered++;
 
@@ -111,6 +123,48 @@ class ZeroDBRecoveryService {
                 updatedAt: drift.Value(DateTime.now()),
               ),
             );
+          } else if (manifest['t'] == 'thumb') {
+            // ── Thumbnail recovery ────────────────────────────────
+            final thumbFileId = manifest['fid'] as String;
+            try {
+              final document = msg['content']?['document'];
+              if (document != null) {
+                final thumbFileObj = document['document'];
+                if (thumbFileObj != null) {
+                  final remoteFileId = thumbFileObj['id'] as int;
+                  // Download the encrypted thumbnail
+                  await _telegramService.downloadFile(remoteFileId);
+                  for (int i = 0; i < 30; i++) {
+                    final fileInfo = await _telegramService.sendRequest({
+                      '@type': 'getFile',
+                      'file_id': remoteFileId,
+                    });
+                    if (fileInfo['local']?['is_downloading_completed'] == true) {
+                      final encryptedBytes = await File(fileInfo['local']['path'] as String).readAsBytes();
+                      if (encryptedBytes.length >= 28) {
+                        final nonce = encryptedBytes.sublist(0, 12);
+                        final ct = encryptedBytes.sublist(12, encryptedBytes.length - 16);
+                        final mac = encryptedBytes.sublist(encryptedBytes.length - 16);
+                        final decrypted = await AesGcm.with256bits().decrypt(
+                          SecretBox(ct, nonce: nonce, mac: Mac(mac)),
+                          secretKey: masterKey,
+                        );
+                        await ThumbnailCacheManager.saveThumbnail(
+                          fileId: thumbFileId,
+                          plaintextBytes: Uint8List.fromList(decrypted),
+                          masterKey: masterKey,
+                        );
+                        debugPrint('Recovery: Thumbnail restored for $thumbFileId');
+                      }
+                      break;
+                    }
+                    await Future.delayed(const Duration(milliseconds: 200));
+                  }
+                }
+              }
+            } catch (e) {
+              debugPrint('Recovery: Failed to restore thumbnail for $thumbFileId: $e');
+            }
           } else {
             final fileId = manifest['id'] as String;
             recoveredFileIds.add(fileId);

@@ -9,8 +9,8 @@ import 'package:aerodrive/domain/upload_orchestrator.dart';
 import 'package:aerodrive/domain/upload_queue_service.dart';
 import 'package:aerodrive/domain/download_orchestrator.dart';
 import 'package:aerodrive/domain/download_queue_service.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/features/telegram/telegram_manager.dart';
+import 'package:aerodrive/features/api/api_service.dart';
 
 final folderRepositoryProvider = Provider<FolderRepository>((ref) {
   return FolderRepository(ref.watch(databaseProvider));
@@ -27,12 +27,15 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepository(ref.watch(databaseProvider));
 });
 
+// Bug #2 fix: track settings version instead of invalidating the repository
+final settingsUpdateProvider = StateProvider<int>((ref) => 0);
+
 final encryptionEngineProvider = Provider<EncryptionEngine>((ref) {
   return EncryptionEngine();
 });
 
 final uploadOrchestratorProvider = Provider<UploadOrchestrator>((ref) {
-  return UploadOrchestrator(ref.watch(encryptionEngineProvider));
+  return UploadOrchestrator();
 });
 
 final uploadQueueServiceProvider = Provider<UploadQueueService>((ref) {
@@ -46,7 +49,7 @@ final uploadQueueServiceProvider = Provider<UploadQueueService>((ref) {
 });
 
 final downloadOrchestratorProvider = Provider<DownloadOrchestrator>((ref) {
-  return DownloadOrchestrator(ref.watch(encryptionEngineProvider));
+  return DownloadOrchestrator();
 });
 
 final downloadQueueServiceProvider = Provider<DownloadQueueService>((ref) {
@@ -56,4 +59,9 @@ final downloadQueueServiceProvider = Provider<DownloadQueueService>((ref) {
     ref.watch(telegramManagerProvider.notifier),
     ref.watch(downloadOrchestratorProvider),
   );
+});
+
+final apiServiceProvider = Provider<ApiService>((ref) {
+  // ApiService is started/stopped explicitly; provider just exposes the instance.
+  return ApiService(container: ref.container);
 });

@@ -5,12 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aerodrive/core/routing/responsive_scaffold.dart';
 import 'package:aerodrive/features/auth/auth_screen.dart';
 import 'package:aerodrive/features/auth/auth_provider.dart';
+import 'package:aerodrive/features/splash/splash_screen.dart';
 import 'package:aerodrive/features/drive/drive_screen.dart';
 import 'package:aerodrive/features/search/search_screen.dart';
 import 'package:aerodrive/features/settings/settings_screen.dart';
 import 'package:aerodrive/features/settings/channels_screen.dart';
 import 'package:aerodrive/features/trash/trash_screen.dart';
 import 'package:aerodrive/features/media/media_screen.dart';
+import 'package:aerodrive/features/media/image_screen.dart';
+import 'package:aerodrive/features/media/video_screen.dart';
+import 'package:aerodrive/features/media/document_screen.dart';
+import 'package:aerodrive/features/media/audio_screen.dart';
 import 'package:aerodrive/features/transfers/transfers_screen.dart';
 import 'package:aerodrive/features/debug/debug_error_screen.dart';
 import 'package:aerodrive/core/logger.dart';
@@ -32,8 +37,8 @@ import 'package:aerodrive/features/settings/about_screen.dart';
 enum AppDestination {
   drive(
     label: 'Drive',
-    icon: Icons.cloud_outlined,
-    selectedIcon: Icons.cloud,
+    icon: Icons.folder_outlined,
+    selectedIcon: Icons.folder,
     path: '/drive',
   ),
   media(
@@ -44,8 +49,8 @@ enum AppDestination {
   ),
   transfers(
     label: 'Transfers',
-    icon: Icons.swap_vert_circle_outlined,
-    selectedIcon: Icons.swap_vert_circle,
+    icon: Icons.sync,
+    selectedIcon: Icons.sync,
     path: '/transfers',
   ),
   settings(
@@ -74,10 +79,15 @@ final routerProvider = Provider<GoRouter>((ref) {
   final hasPasswordAsync = ref.watch(isMasterPasswordSetupProvider);
 
   return GoRouter(
-    initialLocation: '/auth', // Always start at auth evaluation
+    initialLocation: '/splash',
     redirect: (context, state) {
+      final location = state.matchedLocation;
+
+      // Always allow the splash screen to proceed without redirect.
+      if (location == '/splash') return null;
+
       final isAuth = authState == AuthState.authenticated;
-      final isGoingToAuth = state.matchedLocation == '/auth';
+      final isGoingToAuth = location == '/auth';
       
       if (!isAuth && !isGoingToAuth) {
         return '/auth';
@@ -99,6 +109,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
@@ -132,6 +146,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: AppDestination.media.path,
             pageBuilder: (context, state) => const NoTransitionPage(
               child: MediaScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/images',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ImagesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/videos',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: VideosScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/documents',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: DocumentsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/audios',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: AudiosScreen(),
             ),
           ),
           GoRoute(

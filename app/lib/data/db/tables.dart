@@ -23,10 +23,14 @@ class Files extends Table {
   TextColumn get folderId => text().nullable().references(Folders, #id)();
   IntColumn get size => integer().nullable()();
   TextColumn get mimeType => text().nullable()();
-  TextColumn get sha256Hash => text().nullable()(); // SHA-256 for deduplication
+  TextColumn get sha256Hash => text().nullable()(); // SHA-256 for deduplication (non-unique — multiple files can share same hash)
   BoolColumn get isEncrypted => boolean().withDefault(const Constant(false))();
   BoolColumn get isChunked => boolean().withDefault(const Constant(false))();
   IntColumn get totalChunks => integer().withDefault(const Constant(1))();
+  TextColumn get encryptionNonce => text().nullable()(); // Base64 nonce
+  TextColumn get encryptionAlgo => text().nullable()(); // 'AES-256-GCM' | 'AES-256-CTR'
+  IntColumn get manifestVersion => integer().withDefault(const Constant(1))();
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   TextColumn get thumbnailPath => text().nullable()();
   IntColumn get thumbnailSize => integer().nullable()();
   DateTimeColumn get thumbnailLastAccess => dateTime().nullable()();
@@ -63,6 +67,7 @@ class Channels extends Table {
   IntColumn get messagesCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastUsed => dateTime().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  BoolColumn get isHidden => boolean().withDefault(const Constant(false))(); // Duress-mode hidden channels
 
   @override
   Set<Column> get primaryKey => {id};
@@ -71,8 +76,11 @@ class Channels extends Table {
 // 5. Accounts
 class Accounts extends Table {
   TextColumn get id => text()();
+  IntColumn get telegramUserId => integer().nullable()();
   TextColumn get phoneNumber => text().nullable()();
+  TextColumn get phoneNumberMasked => text().nullable()();
   BlobColumn get sessionData => blob().nullable()();
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   BoolColumn get isDefault => boolean().withDefault(const Constant(false))();
 
   @override
@@ -84,6 +92,7 @@ class Tags extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().unique()();
   TextColumn get color => text().nullable()();
+  TextColumn get source => text().withDefault(const Constant('USER'))(); // USER, ML_VISION, ML_EXIF
 
   @override
   Set<Column> get primaryKey => {id};
@@ -99,16 +108,18 @@ class FileTags extends Table {
 }
 
 // 8. Share Links
-class Shares extends Table {
+@DataClassName('ShareLinkData')
+class ShareLinks extends Table {
   TextColumn get id => text()();
   TextColumn get fileId => text().nullable().references(Files, #id)();
-  TextColumn get password => text().nullable()();
+  TextColumn get folderId => text().nullable().references(Folders, #id)();
+  TextColumn get token => text().nullable().unique()();
+  TextColumn get passwordHash => text().nullable()();
   DateTimeColumn get expiresAt => dateTime().nullable()();
   IntColumn get maxDownloads => integer().nullable()();
-  IntColumn get currentDownloads => integer().withDefault(const Constant(0))();
-  TextColumn get createdBy => text().nullable()();
+  IntColumn get downloadCount => integer().withDefault(const Constant(0))();
+  BoolColumn get burnAfterReading => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().nullable()();
-  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -172,4 +183,53 @@ class Settings extends Table {
 
   @override
   Set<Column> get primaryKey => {key};
+}
+
+// 14. Thumbnails
+@DataClassName('ThumbnailData')
+class Thumbnails extends Table {
+  TextColumn get fileId => text().references(Files, #id)();
+  BlobColumn get encryptedBlob => blob()();
+  IntColumn get width => integer().nullable()();
+  IntColumn get height => integer().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {fileId};
+}
+
+// 15. Manifest Messages (Zero-DB Recovery tracking)
+@DataClassName('ManifestMessageData')
+class ManifestMessages extends Table {
+  TextColumn get id => text()();
+  IntColumn get channelId => integer().nullable()();
+  IntColumn get telegramMessageId => integer().nullable()();
+  IntColumn get manifestVersion => integer().nullable()();
+  TextColumn get payloadJson => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+
+// 16. Places
+class Places extends Table {
+  TextColumn get id => text()();
+  TextColumn get country => text().nullable()();
+  TextColumn get adminArea => text().nullable()(); // State/Province
+  TextColumn get locality => text().nullable()(); // City
+  TextColumn get subLocality => text().nullable()();
+  RealColumn get latitude => real().nullable()();
+  RealColumn get longitude => real().nullable()();
+  
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// 17. File-Place Mapping
+class FilePlaces extends Table {
+  TextColumn get fileId => text().references(Files, #id)();
+  TextColumn get placeId => text().references(Places, #id)();
+
+  @override
+  Set<Column> get primaryKey => {fileId, placeId};
 }

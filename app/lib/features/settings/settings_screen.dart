@@ -380,6 +380,17 @@ class SettingsScreen extends ConsumerWidget {
             context.push('/settings/about');
           }),
           
+          _buildSectionHeader(context, 'AI Intelligence', Icons.psychology_outlined),
+          _buildSwitchTile(
+            context,
+            ref,
+            'Power User Mode',
+            'Run AI processing on battery (drains battery faster)',
+            Icons.battery_alert,
+            'ai_power_user',
+            defaultValue: false,
+          ),
+          
           const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),

@@ -64,6 +64,20 @@ class CaptionSerializer {
     return _encryptAndEncode(jsonStr, masterKey);
   }
 
+  /// Serializes and encrypts a Thumbnail Caption.
+  static Future<String> serializeThumbnail({
+    required String fileId,
+    required SecretKey masterKey,
+  }) async {
+    final jsonMap = {
+      "t": "thumb",
+      "fid": fileId,
+    };
+
+    final jsonStr = jsonEncode(jsonMap);
+    return _encryptAndEncode(jsonStr, masterKey);
+  }
+
   /// Serializes and encrypts a Folder Caption.
   static Future<String> serializeFolder({
     required String folderId,

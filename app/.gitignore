@@ -43,6 +43,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# NOTE: .env is NOT ignored — it contains non-secret Telegram API ID/hash
-# and must be bundled as a Flutter asset for the app to start.
-# Do NOT add .env to this file.
+# .env contains API credentials — NEVER commit this file
+.env
