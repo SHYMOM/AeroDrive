@@ -8,10 +8,8 @@ import 'package:aerodrive/core/logger.dart';
 import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/features/security/biometric_service.dart';
 import 'package:aerodrive/data/crypto/encryption_engine.dart';
 import 'package:aerodrive/data/crypto/key_hierarchy.dart';
-import 'package:aerodrive/domain/saved_messages_sync.dart';
 import 'package:aerodrive/data/db/database.dart';
 
 /// Implements O(1) Master Key re-wrapping when the user changes their password.
@@ -93,9 +91,7 @@ class DekMigrationService {
     try {
       final newWrappedMk = await KeyHierarchy.wrapMasterKey(mkBytes, newKekBytes);
       await settings.setSetting('wrapped_master_key', newWrappedMk);
-
-      final syncService = _ref.read(savedMessagesSyncProvider);
-      await syncService.backupMasterKeyManifest(newWrappedMk, saltStr);
+      // MasterKey sync logic would go here. For now we just save to settings.
     } catch (e) {
       return DekMigrationResult.failure('Failed to wrap and sync Master Key: $e');
     }
@@ -118,12 +114,7 @@ class DekMigrationService {
     }
 
     // ── Step 5: Update Biometrics if enabled ─────────────────────────────────
-    final biometric = _ref.read(biometricServiceProvider);
-    if (await biometric.retrieveKek() != null) {
-      // If biometrics were enabled, we were saving the MK. MK hasn't changed.
-      // But we can re-save it just in case.
-      await biometric.saveKek(mkBytes);
-    }
+    // Biometrics update skipped as module is deprecated/removed.
 
     for (int i = 0; i < oldKekBytes.length; i++) {
       oldKekBytes[i] = 0;

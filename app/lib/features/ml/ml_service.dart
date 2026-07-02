@@ -46,8 +46,15 @@ Future<void> _cropFaceIsolate(CropTaskArgs args) async {
   int h = (args.height + padY * 2).clamp(0, decodedImage.height - y);
 
   final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
-  final resized = img.copyResize(cropped, width: 256); // uniform size
-  final jpg = img.encodeJpg(resized, quality: 80);
+  // Enhance face profile with slight saturation, contrast, and brightness boost
+  final enhanced = img.adjustColor(
+    cropped,
+    contrast: 1.15,
+    brightness: 1.05,
+    saturation: 1.1,
+  );
+  final resized = img.copyResize(enhanced, width: 256, height: 256); // uniform size
+  final jpg = img.encodeJpg(resized, quality: 85);
 
   final outFile = File(args.outputPath);
   await outFile.parent.create(recursive: true);
@@ -112,7 +119,7 @@ class MLService {
         for (int i = 0; i < faces.length; i++) {
           final face = faces[i];
           final clusterId = uuid.v4();
-          final cropPath = '${facesDir.path}/${file.id}_$i.jpg';
+          final cropPath = '${facesDir.path}/${clusterId}_${file.id}.jpg';
 
           // Crop in background
           await compute(_cropFaceIsolate, CropTaskArgs(

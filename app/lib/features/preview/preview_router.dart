@@ -12,11 +12,13 @@ import 'package:aerodrive/features/preview/archive_viewer.dart';
 import 'package:aerodrive/features/preview/file_decryption_util.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:aerodrive/features/preview/image_gallery_screen.dart';
+import 'package:aerodrive/features/preview/video_gallery_screen.dart';
 import 'dart:io';
 
-class _PreviewDownloadButton extends ConsumerWidget {
+class PreviewDownloadButton extends ConsumerWidget {
   final String fileId;
-  const _PreviewDownloadButton({required this.fileId});
+  const PreviewDownloadButton({super.key, required this.fileId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,28 +48,28 @@ class _PreviewDownloadButton extends ConsumerWidget {
 }
 
 class PreviewRouter {
-  static void openPreview(BuildContext context, FileData file) {
+  static void openPreview(BuildContext context, FileData file, {List<FileData>? siblings}) {
     final mime = file.mimeType ?? '';
 
     if (mime.startsWith('video/')) {
+      final videoSiblings = siblings?.where((f) => f.mimeType?.startsWith('video/') == true).toList() ?? [file];
+      final initialIndex = videoSiblings.indexWhere((f) => f.id == file.id);
+      final startIndex = initialIndex >= 0 ? initialIndex : 0;
+
       Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => MediaPlayerScreen(file: file),
+        builder: (_) => VideoGalleryScreen(files: videoSiblings, initialIndex: startIndex),
       ));
     } else if (mime.startsWith('audio/')) {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => MediaPlayerScreen(file: file),
       ));
     } else if (mime.startsWith('image/')) {
+      final imageSiblings = siblings?.where((f) => f.mimeType?.startsWith('image/') == true).toList() ?? [file];
+      final initialIndex = imageSiblings.indexWhere((f) => f.id == file.id);
+      final startIndex = initialIndex >= 0 ? initialIndex : 0;
+
       Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(
-            title: Text(file.name),
-            actions: [
-              _PreviewDownloadButton(fileId: file.id),
-            ],
-          ),
-          body: DecryptedImageViewer(file: file),
-        ),
+        builder: (_) => ImageGalleryScreen(files: imageSiblings, initialIndex: startIndex),
       ));
     } else if (mime == 'application/pdf') {
       _openPdf(context, file);
@@ -82,7 +84,7 @@ class PreviewRouter {
           appBar: AppBar(
             title: Text(file.name),
             actions: [
-              _PreviewDownloadButton(fileId: file.id),
+              PreviewDownloadButton(fileId: file.id),
             ],
           ),
           body: DecryptedTextViewer(file: file),
@@ -100,7 +102,7 @@ class PreviewRouter {
           appBar: AppBar(
             title: Text(file.name),
             actions: [
-              _PreviewDownloadButton(fileId: file.id),
+              PreviewDownloadButton(fileId: file.id),
             ],
           ),
           body: ArchiveViewer(file: file),
@@ -142,7 +144,7 @@ class PreviewRouter {
         appBar: AppBar(
           title: Text(file.name),
           actions: [
-            _PreviewDownloadButton(fileId: file.id),
+            PreviewDownloadButton(fileId: file.id),
           ],
         ),
         body: Center(

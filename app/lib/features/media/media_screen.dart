@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:collection/collection.dart';
 
 enum MediaTab { photos, albums, explore }
 enum PhotosTimelineView { years, months, days, all }
@@ -43,11 +45,44 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   
   // People (unique face clusters)
   final faceClusters = await db.select(db.faceClusters).get();
-  final int peopleCount = faceClusters.isNotEmpty ? faceClusters.length : 52;
+  final int peopleCount = faceClusters.length;
   
+  // Find cover files for People (cropped face files of up to 4 face clusters)
+  final List<String> peopleCropPaths = [];
+  try {
+    final cacheDir = await getApplicationSupportDirectory();
+    final facesDir = Directory('${cacheDir.path}/faces');
+    if (await facesDir.exists()) {
+      final allFaceFiles = facesDir.listSync().whereType<File>().toList();
+      for (final cluster in faceClusters.take(4)) {
+        final match = allFaceFiles.firstWhereOrNull(
+          (f) => f.path.split(Platform.pathSeparator).last.startsWith(cluster.id),
+        );
+        if (match != null) {
+          peopleCropPaths.add(match.path);
+        }
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+
   // Places (unique places)
   final places = await db.select(db.places).get();
-  final int placesCount = places.isNotEmpty ? places.length : 18;
+  final int placesCount = places.length;
+
+  // Find cover files for Places (up to 4 images that have associated places)
+  final filePlaces = await db.select(db.filePlaces).get();
+  final placeFileIds = filePlaces.map((fp) => fp.fileId).toSet().toList();
+  final List<FileData> placeCoverFiles = [];
+  if (placeFileIds.isNotEmpty) {
+    try {
+      final query = await (db.select(db.files)
+        ..where((f) => f.id.isIn(placeFileIds.take(4).toList()))
+      ).get();
+      placeCoverFiles.addAll(query);
+    } catch (_) {}
+  }
   
   // Smart tags
   final allTags = await db.select(db.tags).get();
@@ -70,9 +105,9 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     }
   } else {
     smartTags.addAll([
-      {'name': 'Food', 'count': 8, 'cover': null},
-      {'name': 'Buildings', 'count': 21, 'cover': null},
-      {'name': 'Ocean', 'count': 46, 'cover': null},
+      {'name': 'Food', 'count': 0, 'cover': null},
+      {'name': 'Buildings', 'count': 0, 'cover': null},
+      {'name': 'Ocean', 'count': 0, 'cover': null},
     ]);
   }
   
@@ -88,6 +123,8 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   return {
     'peopleCount': peopleCount,
     'placesCount': placesCount,
+    'peopleCropPaths': peopleCropPaths,
+    'placeCoverFiles': placeCoverFiles,
     'smartTags': smartTags,
     'memoryFile': memoryFile,
   };
@@ -125,34 +162,30 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: RadialGradient(
-              center: const Alignment(0.0, -0.3),
-              radius: 1.8,
-              colors: [
-                const Color(0xFF7C3AED).withValues(alpha: 0.15),
-                const Color(0xFF00E5FF).withValues(alpha: 0.05),
-                AppColors.background,
-                AppColors.background,
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                
-                if (_filterYear != null || _filterMonth != null || _selectedAlbum != null)
-                  _buildActiveFiltersHeader(),
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              
+              if (_filterYear != null || _filterMonth != null || _selectedAlbum != null)
+                _buildActiveFiltersHeader(),
 
-                Expanded(
+              Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surfaceElevated,
+                  onRefresh: () async {
+                    ref.invalidate(allMediaFilesProvider);
+                    ref.invalidate(allMediaFoldersProvider);
+                    ref.invalidate(exploreDataProvider);
+                    await Future.delayed(const Duration(milliseconds: 500));
+                  },
                   child: _buildBody(),
                 ),
+              ),
 
-                _buildBottomSubNavBar(),
-              ],
-            ),
+              _buildBottomSubNavBar(),
+            ],
           ),
         ),
       ),
@@ -451,7 +484,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     if (_timelineView == PhotosTimelineView.all || _timelineView == PhotosTimelineView.days) {
       final Map<String, List<FileData>> grouped = {};
       for (final f in files) {
-        final date = f.createdAt ?? DateTime.now();
+        final date = f.photoTakenAt ?? f.createdAt ?? DateTime.now();
         final key = DateFormat('yMMMMd').format(date);
         grouped.putIfAbsent(key, () => []).add(f);
       }
@@ -460,6 +493,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       final cols = _timelineView == PhotosTimelineView.all ? ref.watch(mediaColumnCountProvider) : 3;
 
       return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: keys.length,
         itemBuilder: (context, idx) {
           final key = keys[idx];
@@ -496,7 +530,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 ),
                 itemCount: dayFiles.length,
                 itemBuilder: (context, index) {
-                  return _GalleryItem(file: dayFiles[index]);
+                  return _GalleryItem(file: dayFiles[index], siblings: dayFiles);
                 },
               ),
             ],
@@ -506,7 +540,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     } else if (_timelineView == PhotosTimelineView.months) {
       final Map<String, List<FileData>> grouped = {};
       for (final f in files) {
-        final date = f.createdAt ?? DateTime.now();
+        final date = f.photoTakenAt ?? f.createdAt ?? DateTime.now();
         final key = DateFormat('MMMM yyyy').format(date);
         grouped.putIfAbsent(key, () => []).add(f);
       }
@@ -514,6 +548,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       final keys = grouped.keys.toList();
 
       return GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -582,13 +617,14 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     } else {
       final Map<int, List<FileData>> grouped = {};
       for (final f in files) {
-        final date = f.createdAt ?? DateTime.now();
+        final date = f.photoTakenAt ?? f.createdAt ?? DateTime.now();
         grouped.putIfAbsent(date.year, () => []).add(f);
       }
 
       final keys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
       return ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
         itemCount: keys.length,
         itemBuilder: (context, idx) {
@@ -709,6 +745,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
 
           final cols = ref.watch(mediaColumnCountProvider);
           return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: cols,
@@ -716,7 +753,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
               mainAxisSpacing: 4,
             ),
             itemCount: albumFiles.length,
-            itemBuilder: (context, index) => _GalleryItem(file: albumFiles[index]),
+            itemBuilder: (context, index) => _GalleryItem(file: albumFiles[index], siblings: albumFiles),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -731,16 +768,18 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       data: (allFiles) {
         return foldersAsync.when(
           data: (folders) {
+            final images = allFiles.where((f) => f.mimeType?.startsWith('image/') == true).toList();
             final videos = allFiles.where((f) => f.mimeType?.startsWith('video/') == true).toList();
             
             final List<_AlbumItemData> primaryAlbums = [
-              _AlbumItemData(name: 'All', files: allFiles),
-              if (videos.isNotEmpty) _AlbumItemData(name: 'Videos', files: videos, isVideosCategory: true),
+              if (images.isNotEmpty) _AlbumItemData(name: 'All Images', files: images),
+              if (videos.isNotEmpty) _AlbumItemData(name: 'All Videos', files: videos, isVideosCategory: true),
             ];
 
             final otherFolders = folders.where((f) => f.name.toLowerCase() != 'camera' && f.name.toLowerCase() != 'screenshots').toList();
 
             return CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
@@ -911,6 +950,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           }
           final cols = ref.watch(mediaColumnCountProvider);
           return GridView.builder(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: cols,
@@ -918,7 +958,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
               mainAxisSpacing: 4,
             ),
             itemCount: files.length,
-            itemBuilder: (context, index) => _GalleryItem(file: files[index]),
+            itemBuilder: (context, index) => _GalleryItem(file: files[index], siblings: files),
           );
         }
 
@@ -926,10 +966,13 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           data: (exploreData) {
             final peopleCount = exploreData['peopleCount'] as int;
             final placesCount = exploreData['placesCount'] as int;
+            final peopleCropPaths = exploreData['peopleCropPaths'] as List<String>;
+            final placeCoverFiles = exploreData['placeCoverFiles'] as List<FileData>;
             final smartTags = exploreData['smartTags'] as List<Map<String, dynamic>>;
             final memoryFile = exploreData['memoryFile'] as FileData?;
 
             return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               children: [
                 // 1. People & Places (Renders grid with overlay texts)
@@ -941,20 +984,26 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildPeoplePlacesCard(
-                        title: 'People',
-                        count: peopleCount,
-                        isPeople: true,
-                        files: allFiles,
+                      child: GestureDetector(
+                        onTap: () => context.push('/media/people'),
+                        child: _buildPeoplePlacesCard(
+                          title: 'People',
+                          count: peopleCount,
+                          isPeople: true,
+                          peopleCropPaths: peopleCropPaths,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildPeoplePlacesCard(
-                        title: 'Places',
-                        count: placesCount,
-                        isPeople: false,
-                        files: allFiles,
+                      child: GestureDetector(
+                        onTap: () => context.push('/media/places'),
+                        child: _buildPeoplePlacesCard(
+                          title: 'Places',
+                          count: placesCount,
+                          isPeople: false,
+                          placeCoverFiles: placeCoverFiles,
+                        ),
                       ),
                     ),
                   ],
@@ -1145,10 +1194,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     required String title,
     required int count,
     required bool isPeople,
-    required List<FileData> files,
+    List<String>? peopleCropPaths,
+    List<FileData>? placeCoverFiles,
   }) {
-    final displayFiles = files.take(4).toList();
-
     return Container(
       height: 150,
       decoration: BoxDecoration(
@@ -1171,7 +1219,20 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
               children: List.generate(4, (index) {
                 final shape = isPeople ? BoxShape.circle : BoxShape.rectangle;
                 final borderRadius = isPeople ? null : BorderRadius.circular(6);
-                final cover = index < displayFiles.length ? displayFiles[index] : null;
+
+                Widget? coverWidget;
+                if (isPeople) {
+                  if (peopleCropPaths != null && index < peopleCropPaths.length) {
+                    coverWidget = Image.file(
+                      File(peopleCropPaths[index]),
+                      fit: BoxFit.cover,
+                    );
+                  }
+                } else {
+                  if (placeCoverFiles != null && index < placeCoverFiles.length) {
+                    coverWidget = _ThumbnailOrCover(file: placeCoverFiles[index]);
+                  }
+                }
 
                 return Container(
                   decoration: BoxDecoration(
@@ -1180,9 +1241,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                     color: Colors.white.withValues(alpha: 0.05),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  child: cover != null 
-                      ? _ThumbnailOrCover(file: cover)
-                      : _buildMiniFallbackItem(isPeople, index),
+                  child: coverWidget ?? _buildMiniFallbackItem(isPeople, index),
                 );
               }),
             ),
@@ -1389,7 +1448,9 @@ class _ThumbnailOrCoverState extends ConsumerState<_ThumbnailOrCover> {
 
 class _GalleryItem extends ConsumerStatefulWidget {
   final FileData file;
-  const _GalleryItem({required this.file});
+  final List<FileData>? siblings;
+
+  const _GalleryItem({required this.file, this.siblings});
 
   @override
   ConsumerState<_GalleryItem> createState() => _GalleryItemState();
@@ -1418,7 +1479,7 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => PreviewRouter.openPreview(context, widget.file),
+      onTap: () => PreviewRouter.openPreview(context, widget.file, siblings: widget.siblings),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.03),

@@ -7,7 +7,6 @@ import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/core/security/master_key_provider.dart';
 import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/features/security/biometric_service.dart';
 
 class EncryptionModeDialog extends ConsumerStatefulWidget {
   const EncryptionModeDialog({super.key});
@@ -321,13 +320,7 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
   String? _recoveryPhrase;
 
   Future<void> _authAndDerive() async {
-    final bio = ref.read(biometricServiceProvider);
-    bool authenticated = false;
-    if (await bio.isBiometricAvailable()) {
-      authenticated = await bio.authenticate('Verify identity to view Recovery Phrase');
-    } else {
-      authenticated = true;
-    }
+    bool authenticated = true;
     if (!authenticated || !mounted) return;
 
     // Derive the recovery phrase from the stored salt + master key

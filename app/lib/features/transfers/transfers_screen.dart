@@ -145,20 +145,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           ),
         ),
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
-            radius: 1.8,
-            colors: [
-              const Color(0xFF7C3AED).withValues(alpha: 0.15),
-              const Color(0xFF00E5FF).withValues(alpha: 0.05),
-              AppColors.background,
-              AppColors.background,
-            ],
-          ),
-        ),
-        child: transfersAsync.when(
+      body: transfersAsync.when(
           data: (list) {
             // Filter items
             final filtered = list.where((item) {
@@ -293,7 +280,6 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.redAccent))),
         ),
-      ),
     );
   }
 

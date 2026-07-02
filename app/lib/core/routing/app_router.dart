@@ -19,14 +19,13 @@ import 'package:aerodrive/features/media/audio_screen.dart';
 import 'package:aerodrive/features/transfers/transfers_screen.dart';
 import 'package:aerodrive/features/debug/debug_error_screen.dart';
 import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/features/security/security_setup_screen.dart';
-import 'package:aerodrive/features/security/lock_screen.dart';
 import 'package:aerodrive/features/settings/proxy_settings_screen.dart';
 import 'package:aerodrive/features/settings/appearance_settings_screen.dart';
 import 'package:aerodrive/features/drive/quick_access_tools_screen.dart';
 import 'package:aerodrive/features/media/smart_tags_screen.dart';
 import 'package:aerodrive/features/media/memories_screen.dart';
+import 'package:aerodrive/features/faces/faces_screen.dart';
+import 'package:aerodrive/features/places/places_screen.dart';
 
 import 'package:aerodrive/features/settings/accounts_screen.dart';
 import 'package:aerodrive/features/settings/session_screen.dart';
@@ -78,8 +77,6 @@ enum AppDestination {
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
-  final isUnlocked = ref.watch(isAppUnlockedProvider);
-  final hasPasswordAsync = ref.watch(isMasterPasswordSetupProvider);
 
   return GoRouter(
     initialLocation: '/splash',
@@ -96,17 +93,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/auth';
       }
 
-      // If authenticated, check security lock
-      if (isAuth) {
-        final hasPassword = hasPasswordAsync.valueOrNull ?? false;
-        final isGoingToLock = state.matchedLocation == '/lock';
-
-        if (hasPassword && !isUnlocked && !isGoingToLock) {
-          return '/lock';
-        }
-        if (isGoingToAuth && (!hasPassword || isUnlocked)) {
-          return AppDestination.drive.path;
-        }
+      // If authenticated, allow them to pass to Drive
+      if (isAuth && isGoingToAuth) {
+        return AppDestination.drive.path;
       }
 
       return null;
@@ -119,14 +108,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
-      ),
-      GoRoute(
-        path: '/lock',
-        builder: (context, state) => const LockScreen(),
-      ),
-      GoRoute(
-        path: '/security_setup',
-        builder: (context, state) => const SecuritySetupScreen(),
       ),
       GoRoute(
         path: '/diagnostics',
@@ -191,6 +172,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/media/memories',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: MemoriesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/people',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: FacesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/media/places',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: PlacesScreen(),
             ),
           ),
           GoRoute(

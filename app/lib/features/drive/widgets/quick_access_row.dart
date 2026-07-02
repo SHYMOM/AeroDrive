@@ -16,7 +16,7 @@ class QuickAccessRow extends ConsumerWidget {
   QuickAccessRow({super.key});
 
   final List<QuickAccessCategory> categories = [
-    QuickAccessCategory('My Files', Icons.folder, AppColors.fileFolder),
+    QuickAccessCategory('Favorites', Icons.star, Colors.amber),
     QuickAccessCategory('Images', Icons.image, AppColors.fileImage),
     QuickAccessCategory('Videos', Icons.play_circle_fill, AppColors.fileVideo),
     QuickAccessCategory('Documents', Icons.description, AppColors.fileDocument),
@@ -81,9 +81,10 @@ class QuickAccessRow extends ConsumerWidget {
                     ),
                     child: InkWell(
                       onTap: () {
-                        if (cat.title == 'My Files') {
+                        if (cat.title == 'Favorites') {
                           ref.read(currentFolderIdProvider.notifier).state = null;
                           ref.read(navigationStackProvider.notifier).state = [];
+                          ref.read(isFavoriteOnlyProvider.notifier).state = true;
                         } else if (cat.title == 'Images') {
                           context.push('/media/images');
                         } else if (cat.title == 'Videos') {

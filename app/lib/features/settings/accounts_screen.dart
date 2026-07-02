@@ -7,6 +7,7 @@ import 'package:aerodrive/core/widgets/otp_input.dart';
 import 'package:aerodrive/core/widgets/premium_button.dart';
 import 'package:aerodrive/features/telegram/telegram_manager.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
+import 'package:aerodrive/core/utils/phone_validator.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -96,16 +97,35 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
   }
 
   Future<void> _sendCode() async {
-    final phone = _phoneController.text.trim();
-    if (phone.isEmpty) return;
+    final rawPhone = _phoneController.text.trim();
+    final validation = PhoneValidator.validate(rawPhone);
+    if (!validation.isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(validation.errorMessage ?? 'Invalid phone number.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    final phone = validation.formattedNumber!;
     setState(() => _isSendingCode = true);
     try {
       await widget.client.setAuthenticationPhoneNumber(phone);
       await Future.delayed(const Duration(seconds: 1));
     } catch (e) {
       if (mounted) {
+        String errorMsg = 'Error sending code';
+        if (e is Map && e['message'] != null) {
+          errorMsg = e['message'];
+        } else {
+          errorMsg = e.toString();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending code: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppColors.error),
         );
       }
     } finally {
@@ -113,9 +133,25 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
     }
   }
 
-  void _verifyCode(String code) {
+  Future<void> _verifyCode(String code) async {
     setState(() => _isVerifyingCode = true);
-    widget.client.checkAuthenticationCode(code);
+    try {
+      await widget.client.checkAuthenticationCode(code);
+    } catch (e) {
+      if (mounted) {
+        String errorMsg = 'Invalid verification code';
+        if (e is Map && e['message'] != null) {
+          errorMsg = e['message'];
+        } else {
+          errorMsg = e.toString();
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMsg), backgroundColor: AppColors.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isVerifyingCode = false);
+    }
   }
 
   Future<void> _submitPassword() async {
@@ -127,8 +163,14 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
       await Future.delayed(const Duration(seconds: 1));
     } catch (e) {
       if (mounted) {
+        String errorMsg = 'Password verification failed';
+        if (e is Map && e['message'] != null) {
+          errorMsg = e['message'];
+        } else {
+          errorMsg = e.toString();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Password verification failed: $e'), backgroundColor: AppColors.error),
+          SnackBar(content: Text(errorMsg), backgroundColor: AppColors.error),
         );
       }
     } finally {

@@ -18,8 +18,9 @@ import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
 
 class FileListItem extends ConsumerWidget {
   final FileData file;
+  final List<FileData>? siblings;
   
-  const FileListItem({super.key, required this.file});
+  const FileListItem({super.key, required this.file, this.siblings});
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -165,7 +166,7 @@ class FileListItem extends ConsumerWidget {
           if (isSelectionMode) {
             _toggleSelection(ref);
           } else {
-            PreviewRouter.openPreview(context, file);
+            PreviewRouter.openPreview(context, file, siblings: siblings);
           }
         },
         onLongPress: () {

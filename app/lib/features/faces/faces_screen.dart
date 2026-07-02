@@ -77,8 +77,20 @@ class FacesScreen extends ConsumerWidget {
                           child: InkWell(
                             onTap: () {
                               // Extract file ID from face image filename (format: fileId_index.jpg)
+                              // Extract file ID from face image filename
+                              // Supports both legacy (fileId_index.jpg) and new (clusterId_fileId.jpg) formats.
                               final filename = file.path.split(Platform.pathSeparator).last;
-                              final fileId = filename.split('_').first;
+                              final parts = filename.split('_');
+                              String fileId = filename.split('.').first;
+                              if (parts.length >= 2) {
+                                final secondPart = parts[1].split('.').first;
+                                // Legacy index is short (e.g. 0, 1), new fileId is a UUID (length > 5)
+                                if (secondPart.length > 5) {
+                                  fileId = secondPart;
+                                } else {
+                                  fileId = parts[0];
+                                }
+                              }
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Tapped face from file: $fileId')),
                               );

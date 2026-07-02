@@ -8,6 +8,7 @@ import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/features/drive/providers/drive_providers.dart';
 import 'package:aerodrive/domain/folder_scanner.dart';
 import 'package:aerodrive/core/providers.dart';
+import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/data/db/database.dart';
 import 'package:go_router/go_router.dart';
 import 'package:aerodrive/features/sharing/share_service.dart';
@@ -23,28 +24,72 @@ import 'package:aerodrive/core/constants.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
 
-class DriveScreen extends ConsumerWidget {
+class DriveScreen extends ConsumerStatefulWidget {
   const DriveScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DriveScreen> createState() => _DriveScreenState();
+}
+
+class _DriveScreenState extends ConsumerState<DriveScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      final settings = ref.read(settingsRepositoryProvider);
+      
+      // Load view mode preference
+      final isGrid = await settings.getBoolSetting('is_grid_view', defaultValue: true);
+      ref.read(isGridViewProvider.notifier).state = isGrid;
+
+      // Load sort options preference
+      final criteriaStr = await settings.getSetting('sort_criteria') ?? 'name';
+      final orderStr = await settings.getSetting('sort_order') ?? 'ascending';
+      final categoryStr = await settings.getSetting('sort_category') ?? 'none';
+
+      final criteria = DriveSortCriteria.values.firstWhere((e) => e.name == criteriaStr, orElse: () => DriveSortCriteria.name);
+      final order = DriveSortOrder.values.firstWhere((e) => e.name == orderStr, orElse: () => DriveSortOrder.ascending);
+      final category = DriveSortCategory.values.firstWhere((e) => e.name == categoryStr, orElse: () => DriveSortCategory.none);
+
+      ref.read(driveSortOptionProvider.notifier).state = DriveSortOption(
+        criteria: criteria,
+        order: order,
+        categoryPriority: category,
+      );
+    });
+  }
+
+  bool _checkSecurityAndChannel(BuildContext context, String? activeChannel, List<int>? masterKey) {
+    if (activeChannel == null) {
+      _showNoChannelDialog(context);
+      return false;
+    }
+    if (masterKey == null) {
+      _showUnlockOrCreatePasswordDialog(context);
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final contentsAsync = ref.watch(folderContentsProvider);
     final currentFolderId = ref.watch(currentFolderIdProvider);
     final breadcrumbsAsync = ref.watch(breadcrumbsProvider);
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
     final isMobile = MediaQuery.of(context).size.width < AppConstants.mobileBreakpoint;
     final isGridView = ref.watch(isGridViewProvider);
+    final isFavoriteOnly = ref.watch(isFavoriteOnlyProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context, ref),
+      appBar: _buildAppBar(context),
       body: DropTarget(
         onDragDone: (detail) async {
           final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
-          if (activeChannel == null && context.mounted) {
-            _showNoChannelDialog(context);
-            return;
-          }
+          final masterKey = ref.read(masterKeyProvider);
+          if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
+          
           final scanner = ref.read(folderScannerProvider);
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Processing ${detail.files.length} dropped items...')));
@@ -64,9 +109,18 @@ class DriveScreen extends ConsumerWidget {
             
             final isRoot = ref.watch(navigationStackProvider).isEmpty && currentFolderId == null;
 
-            return CustomScrollView(
-              slivers: [
-                if (isRoot) ...[
+            return RefreshIndicator(
+              color: AppColors.primary,
+              backgroundColor: AppColors.surfaceElevated,
+              onRefresh: () async {
+                ref.invalidate(folderContentsProvider);
+                // Artificial delay to show the refresh animation
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                if (isRoot && !isFavoriteOnly) ...[
                   SliverToBoxAdapter(child: QuickAccessRow()),
                 ],
                 // Header (My Drive or Breadcrumb Path overview)
@@ -77,27 +131,40 @@ class DriveScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: isRoot
-                              ? const Text(
-                                  'My Drive',
-                                  style: TextStyle(
-                                    color: AppColors.onSurface,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          child: isFavoriteOnly
+                              ? Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+                                      onPressed: () => ref.read(isFavoriteOnlyProvider.notifier).state = false,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                                  ],
                                 )
-                              : breadcrumbsAsync.when(
-                                  data: (breadcrumbs) => _buildPathOverview(context, ref, breadcrumbs, currentFolderId),
-                                  loading: () => const SizedBox.shrink(),
-                                  error: (_, __) => const SizedBox.shrink(),
-                                ),
+                              : isRoot
+                                  ? const Text(
+                                      'My Drive',
+                                      style: TextStyle(
+                                        color: AppColors.onSurface,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    )
+                                  : breadcrumbsAsync.when(
+                                      data: (breadcrumbs) => _buildPathOverview(context, breadcrumbs, currentFolderId),
+                                      loading: () => const SizedBox.shrink(),
+                                      error: (_, __) => const SizedBox.shrink(),
+                                    ),
                         ),
                         Row(
                           children: [
-                            _buildLayoutSelector(context, ref, isGridView),
+                            _buildLayoutSelector(context, isGridView),
                             const SizedBox(width: 8),
                             IconButton(
-                              onPressed: () => _showSortBottomSheet(context, ref),
+                              onPressed: () => _showSortBottomSheet(context),
                               icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
                             ),
                           ],
@@ -139,7 +206,7 @@ class DriveScreen extends ConsumerWidget {
                           childAspectRatio: 0.82,
                         ),
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => FileGridItem(file: files[index]),
+                          (context, index) => FileGridItem(file: files[index], siblings: files),
                           childCount: files.length,
                         ),
                       ),
@@ -163,7 +230,7 @@ class DriveScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
-                          (context, index) => FileListItem(file: files[index]),
+                          (context, index) => FileListItem(file: files[index], siblings: files),
                           childCount: files.length,
                         ),
                       ),
@@ -185,7 +252,8 @@ class DriveScreen extends ConsumerWidget {
                   ),
                 const SliverToBoxAdapter(child: SizedBox(height: 100)), // Padding for FAB
               ],
-            );
+            ),
+          );
           },
         ),
       ),
@@ -206,7 +274,7 @@ class DriveScreen extends ConsumerWidget {
         child: FloatingActionButton.extended(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          onPressed: () => _showNewOptionsBottomSheet(context, ref, currentFolderId),
+          onPressed: () => _showNewOptionsBottomSheet(context, currentFolderId),
           icon: const Icon(Icons.add, color: Colors.white),
           label: const Text('New', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
@@ -217,7 +285,7 @@ class DriveScreen extends ConsumerWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, WidgetRef ref) {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     final isSelectionMode = ref.watch(isSelectionModeProvider);
     final selectedItems = ref.watch(selectedItemsProvider);
 
@@ -240,17 +308,17 @@ class DriveScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.copy_rounded, color: Colors.white),
             tooltip: 'Copy',
-            onPressed: () => _handleCopySelected(context, ref, selectedItems),
+            onPressed: () => _handleCopySelected(context, selectedItems),
           ),
           IconButton(
             icon: const Icon(Icons.drive_file_move_rounded, color: Colors.white),
             tooltip: 'Move',
-            onPressed: () => _handleMoveSelected(context, ref, selectedItems),
+            onPressed: () => _handleMoveSelected(context, selectedItems),
           ),
           IconButton(
             icon: const Icon(Icons.delete_rounded, color: Colors.redAccent),
             tooltip: 'Delete',
-            onPressed: () => _handleDeleteSelected(context, ref, selectedItems),
+            onPressed: () => _handleDeleteSelected(context, selectedItems),
           ),
         ],
       );
@@ -290,7 +358,7 @@ class DriveScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPathOverview(BuildContext context, WidgetRef ref, List<FolderData> breadcrumbs, String? currentFolderId) {
+  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -336,7 +404,7 @@ class DriveScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleDeleteSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+  Future<void> _handleDeleteSelected(BuildContext context, Set<String> selectedIds) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -382,8 +450,7 @@ class DriveScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleMoveSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
-    // Open FolderPickerDialog
+  Future<void> _handleMoveSelected(BuildContext context, Set<String> selectedIds) async {
     final targetFolderId = await showDialog<String?>(
       context: context,
       builder: (context) => FolderPickerDialog(
@@ -420,7 +487,7 @@ class DriveScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleCopySelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+  Future<void> _handleCopySelected(BuildContext context, Set<String> selectedIds) async {
     final targetFolderId = await showDialog<String?>(
       context: context,
       builder: (context) => const FolderPickerDialog(title: 'Copy Items to...'),
@@ -511,7 +578,7 @@ class DriveScreen extends ConsumerWidget {
     }
   }
 
-  void _showNewOptionsBottomSheet(BuildContext context, WidgetRef ref, String? currentFolderId) {
+  void _showNewOptionsBottomSheet(BuildContext context, String? currentFolderId) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -561,9 +628,15 @@ class DriveScreen extends ConsumerWidget {
                     child: Icon(Icons.create_new_folder, color: AppColors.primary),
                   ),
                   title: const Text('New Folder', style: TextStyle(color: Colors.white)),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
-                    showDialog(context: context, builder: (context) => const CreateFolderDialog());
+                    final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+                    final masterKey = ref.read(masterKeyProvider);
+                    if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
+                    
+                    if (context.mounted) {
+                      showDialog(context: context, builder: (context) => const CreateFolderDialog());
+                    }
                   },
                 ),
                 ListTile(
@@ -575,10 +648,9 @@ class DriveScreen extends ConsumerWidget {
                   onTap: () async {
                     Navigator.pop(context);
                     final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
-                    if (activeChannel == null && context.mounted) {
-                      _showNoChannelDialog(context);
-                      return;
-                    }
+                    final masterKey = ref.read(masterKeyProvider);
+                    if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
+                    
                     final List<XFile> result = await openFiles();
                     if (result.isNotEmpty) {
                       final scanner = ref.read(folderScannerProvider);
@@ -598,10 +670,9 @@ class DriveScreen extends ConsumerWidget {
                   onTap: () async {
                     Navigator.pop(context);
                     final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
-                    if (activeChannel == null && context.mounted) {
-                      _showNoChannelDialog(context);
-                      return;
-                    }
+                    final masterKey = ref.read(masterKeyProvider);
+                    if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
+                    
                     final String? directoryPath = await getDirectoryPath();
                     if (directoryPath != null) {
                       final scanner = ref.read(folderScannerProvider);
@@ -619,7 +690,7 @@ class DriveScreen extends ConsumerWidget {
     );
   }
 
-  void _showSortBottomSheet(BuildContext context, WidgetRef ref) {
+  void _showSortBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -668,10 +739,10 @@ class DriveScreen extends ConsumerWidget {
                         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Sort By', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
-                      _buildSortCriteriaItem(context, ref, 'Name', DriveSortCriteria.name, activeSort, setModalState),
-                      _buildSortCriteriaItem(context, ref, 'Date Modified', DriveSortCriteria.date, activeSort, setModalState),
-                      _buildSortCriteriaItem(context, ref, 'Size', DriveSortCriteria.size, activeSort, setModalState),
-                      _buildSortCriteriaItem(context, ref, 'Type', DriveSortCriteria.type, activeSort, setModalState),
+                      _buildSortCriteriaItem(context, 'Name', DriveSortCriteria.name, activeSort, setModalState),
+                      _buildSortCriteriaItem(context, 'Date Modified', DriveSortCriteria.date, activeSort, setModalState),
+                      _buildSortCriteriaItem(context, 'Size', DriveSortCriteria.size, activeSort, setModalState),
+                      _buildSortCriteriaItem(context, 'Type', DriveSortCriteria.type, activeSort, setModalState),
                       
                       const Divider(color: Colors.white10),
                       // Sort Order
@@ -679,8 +750,8 @@ class DriveScreen extends ConsumerWidget {
                         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Order', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
-                      _buildSortOrderItem(context, ref, 'Ascending', DriveSortOrder.ascending, activeSort, setModalState),
-                      _buildSortOrderItem(context, ref, 'Descending', DriveSortOrder.descending, activeSort, setModalState),
+                      _buildSortOrderItem(context, 'Ascending', DriveSortOrder.ascending, activeSort, setModalState),
+                      _buildSortOrderItem(context, 'Descending', DriveSortOrder.descending, activeSort, setModalState),
                       
                       const Divider(color: Colors.white10),
                       // Prioritize Type
@@ -688,12 +759,12 @@ class DriveScreen extends ConsumerWidget {
                         padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Prioritize Category', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
-                      _buildSortCategoryItem(context, ref, 'None', DriveSortCategory.none, activeSort, setModalState),
-                      _buildSortCategoryItem(context, ref, 'Images First', DriveSortCategory.images, activeSort, setModalState),
-                      _buildSortCategoryItem(context, ref, 'Videos First', DriveSortCategory.videos, activeSort, setModalState),
-                      _buildSortCategoryItem(context, ref, 'Documents First', DriveSortCategory.documents, activeSort, setModalState),
-                      _buildSortCategoryItem(context, ref, 'Programs First', DriveSortCategory.programs, activeSort, setModalState),
-                      _buildSortCategoryItem(context, ref, 'Others First', DriveSortCategory.others, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'None', DriveSortCategory.none, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'Images First', DriveSortCategory.images, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'Videos First', DriveSortCategory.videos, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'Documents First', DriveSortCategory.documents, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'Programs First', DriveSortCategory.programs, activeSort, setModalState),
+                      _buildSortCategoryItem(context, 'Others First', DriveSortCategory.others, activeSort, setModalState),
                       
                       const SizedBox(height: 16),
                     ],
@@ -707,52 +778,58 @@ class DriveScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSortCriteriaItem(BuildContext context, WidgetRef ref, String label, DriveSortCriteria criteria, DriveSortOption activeSort, StateSetter setModalState) {
+  Widget _buildSortCriteriaItem(BuildContext context, String label, DriveSortCriteria criteria, DriveSortOption activeSort, StateSetter setModalState) {
     return RadioListTile<DriveSortCriteria>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: criteria,
       groupValue: activeSort.criteria,
       activeColor: AppColors.primary,
-      onChanged: (val) {
+      onChanged: (val) async {
         if (val != null) {
-          ref.read(driveSortOptionProvider.notifier).state = activeSort.copyWith(criteria: val);
+          final newSort = activeSort.copyWith(criteria: val);
+          ref.read(driveSortOptionProvider.notifier).state = newSort;
           setModalState(() {});
+          await ref.read(settingsRepositoryProvider).setSetting('sort_criteria', val.name);
         }
       },
     );
   }
 
-  Widget _buildSortOrderItem(BuildContext context, WidgetRef ref, String label, DriveSortOrder order, DriveSortOption activeSort, StateSetter setModalState) {
+  Widget _buildSortOrderItem(BuildContext context, String label, DriveSortOrder order, DriveSortOption activeSort, StateSetter setModalState) {
     return RadioListTile<DriveSortOrder>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: order,
       groupValue: activeSort.order,
       activeColor: AppColors.primary,
-      onChanged: (val) {
+      onChanged: (val) async {
         if (val != null) {
-          ref.read(driveSortOptionProvider.notifier).state = activeSort.copyWith(order: val);
+          final newSort = activeSort.copyWith(order: val);
+          ref.read(driveSortOptionProvider.notifier).state = newSort;
           setModalState(() {});
+          await ref.read(settingsRepositoryProvider).setSetting('sort_order', val.name);
         }
       },
     );
   }
 
-  Widget _buildSortCategoryItem(BuildContext context, WidgetRef ref, String label, DriveSortCategory category, DriveSortOption activeSort, StateSetter setModalState) {
+  Widget _buildSortCategoryItem(BuildContext context, String label, DriveSortCategory category, DriveSortOption activeSort, StateSetter setModalState) {
     return RadioListTile<DriveSortCategory>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: category,
       groupValue: activeSort.categoryPriority,
       activeColor: AppColors.primary,
-      onChanged: (val) {
+      onChanged: (val) async {
         if (val != null) {
-          ref.read(driveSortOptionProvider.notifier).state = activeSort.copyWith(categoryPriority: val);
+          final newSort = activeSort.copyWith(categoryPriority: val);
+          ref.read(driveSortOptionProvider.notifier).state = newSort;
           setModalState(() {});
+          await ref.read(settingsRepositoryProvider).setSetting('sort_category', val.name);
         }
       },
     );
   }
 
-  Widget _buildLayoutSelector(BuildContext context, WidgetRef ref, bool isGridView) {
+  Widget _buildLayoutSelector(BuildContext context, bool isGridView) {
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
@@ -764,7 +841,10 @@ class DriveScreen extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
-            onTap: () => ref.read(isGridViewProvider.notifier).state = true,
+            onTap: () async {
+              ref.read(isGridViewProvider.notifier).state = true;
+              await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', true);
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -801,7 +881,10 @@ class DriveScreen extends ConsumerWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => ref.read(isGridViewProvider.notifier).state = false,
+            onTap: () async {
+              ref.read(isGridViewProvider.notifier).state = false;
+              await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', false);
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
@@ -854,6 +937,33 @@ class DriveScreen extends ConsumerWidget {
             onPressed: () => Navigator.pop(context),
             child: const Text('OK', style: TextStyle(color: AppColors.primary)),
           )
+        ],
+      ),
+    );
+  }
+
+  void _showUnlockOrCreatePasswordDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Vault Locked', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Your security vault is locked. Please unlock it before creating folders or uploading files to ensure they are encrypted correctly.',
+          style: TextStyle(color: AppColors.onSurfaceVariant),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/lock');
+            },
+            child: const Text('Unlock', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
         ],
       ),
     );

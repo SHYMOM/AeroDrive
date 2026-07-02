@@ -21,6 +21,10 @@ import 'package:aerodrive/features/telegram/telegram_service.dart';
 import 'package:aerodrive/domain/upload_orchestrator.dart';
 import 'package:aerodrive/core/logger.dart';
 import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
+import 'package:aerodrive/features/places/places_service.dart';
+import 'package:exif/exif.dart';
+import 'package:aerodrive/domain/smart_analyzer.dart';
+import 'package:aerodrive/features/media/media_screen.dart';
 
 class ActiveUploadInfo {
   final String queueId;
@@ -499,6 +503,52 @@ class UploadQueueService {
 
     final masterKey = _ref.read(masterKeyProvider);
     final fileId = _uuid.v4();
+    final totalChunks = encryptedChunkPaths.length;
+
+    DateTime? photoTakenAt;
+    if (mimeType.startsWith('image/')) {
+      try {
+        final bytes = await sourceFile.readAsBytes();
+        final data = await readExifFromBytes(bytes);
+        final dateTag = data['Image DateTime'] ?? data['EXIF DateTimeOriginal'];
+        if (dateTag != null) {
+          final dateStr = dateTag.toString();
+          // EXIF format: "YYYY:MM:DD HH:MM:SS"
+          if (dateStr.length >= 19) {
+            final formattedStr = '${dateStr.substring(0, 4)}-${dateStr.substring(5, 7)}-${dateStr.substring(8, 10)} ${dateStr.substring(11)}';
+            photoTakenAt = DateTime.tryParse(formattedStr);
+          }
+        }
+      } catch (e) {
+        AppLogger.error('Failed to parse EXIF for $fileName', e);
+      }
+    }
+
+    // Pre-insert file record to satisfy SQLite foreign key constraints for chunk mapping
+    await _db.into(_db.files).insert(
+      FilesCompanion.insert(
+        id: fileId,
+        name: fileName,
+        folderId: drift.Value(targetFolderId),
+        size: drift.Value(fileLength),
+        mimeType: drift.Value(mimeType),
+        isEncrypted: const drift.Value(true),
+        isChunked: drift.Value(totalChunks > 1),
+        totalChunks: drift.Value(totalChunks),
+        sha256Hash: drift.Value(''), // updated on finalize
+        createdAt: drift.Value(DateTime.now()),
+        photoTakenAt: drift.Value(photoTakenAt),
+      )
+    );
+
+    if (mimeType.startsWith('image/')) {
+      final analyzer = SmartAnalyzer(_db);
+      // Run analysis concurrently so it doesn't block upload setup
+      analyzer.analyzeAndStore(sourceFile, fileId).then((_) {
+        // Invalidate explore data so the UI updates
+        _ref.invalidate(exploreDataProvider);
+      });
+    }
 
     final ivPart = ctrIv != null ? base64Encode(ctrIv) : '';
     final nonceBase64 = base64Encode(encryptionNonce);
@@ -514,7 +564,6 @@ class UploadQueueService {
       return;
     }
 
-    final totalChunks = encryptedChunkPaths.length;
     _uploadProgress[fileId] = {};
 
     final List<Future<void>> uploadFutures = [];
@@ -714,9 +763,20 @@ class UploadQueueService {
       final fileName = originalPath.split(Platform.pathSeparator).last;
       final mimeType = _getMimeType(fileName);
 
-      // Check if file already inserted (avoid duplicate)
+      // Check if file already inserted (placeholder) and update or fallback insert
       final existingFile = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
-      if (existingFile == null) {
+      if (existingFile != null) {
+        await (_db.update(_db.files)..where((f) => f.id.equals(fileId))).write(
+          FilesCompanion(
+            sha256Hash: drift.Value(wrappedDekString),
+            encryptionNonce: encryptionNonceBase64.isNotEmpty
+                ? drift.Value(encryptionNonceBase64)
+                : const drift.Value(null),
+            encryptionAlgo: drift.Value(encryptionAlgoStr),
+            updatedAt: drift.Value(DateTime.now()),
+          )
+        );
+      } else {
         await _db.into(_db.files).insert(
           FilesCompanion.insert(
             id: fileId,
@@ -735,9 +795,14 @@ class UploadQueueService {
             createdAt: drift.Value(DateTime.now()),
           )
         );
+      }
 
-        final fileData = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingle();
-        _ref.read(mlServiceProvider).processImage(fileData);
+      final fileData = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingle();
+      _ref.read(mlServiceProvider).processImage(fileData);
+      try {
+        await _ref.read(placesServiceProvider).processImageLocation(fileData);
+      } catch (e) {
+        AppLogger.error('Failed to process image location on sync/finalize', e);
       }
 
       // Mark transfer queue as COMPLETED

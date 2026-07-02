@@ -1,493 +1,489 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+
 import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/features/settings/webdav_settings_dialog.dart';
 import 'package:aerodrive/features/settings/backup_dialogs.dart';
-import 'package:aerodrive/features/settings/security_settings_dialogs.dart';
 import 'package:aerodrive/features/settings/transfer_settings_dialogs.dart';
 import 'package:aerodrive/features/settings/media_settings_dialogs.dart';
 import 'package:aerodrive/features/settings/auto_backup_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/integration_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/companion_server_dialogs.dart';
 import 'package:aerodrive/features/settings/network_settings_dialogs.dart';
 import 'package:aerodrive/features/settings/appearance_settings_screen.dart';
 import 'package:aerodrive/features/settings/advanced_settings_dialogs.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:aerodrive/features/security/biometric_service.dart';
 import 'package:aerodrive/core/providers/repository_providers.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/drive'),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        children: [
-          _buildSectionHeader(context, 'Account', Icons.person_outline),
-          _buildTile(context, 'Telegram Accounts', 'Add, remove, or switch accounts', Icons.switch_account, onTap: () {
-            context.push('/settings/accounts');
-          }),
-          _buildTile(context, 'Session Management', 'Active sessions, remote logout', Icons.devices, onTap: () {
-            context.push('/settings/session');
-          }),
-          _buildTile(context, 'Profile', 'Name, Avatar', Icons.badge_outlined, onTap: () {
-            context.push('/settings/profile');
-          }),
-          
-          _buildSectionHeader(context, 'Storage Channels', Icons.dns_outlined),
-          _buildTile(context, 'Storage Channels', 'Add, remove, or switch storage backends', Icons.dns_outlined, onTap: () {
-            context.push('/settings/channels');
-          }),
-          _buildTile(context, 'Load Balancing Strategy', 'Round Robin / Fill First / Random / Size-Based', Icons.balance, onTap: () {
-            context.push('/settings/channels/load_balancing');
-          }),
-          _buildTile(context, 'Channel Health Check', 'Verify integrity of channel messages', Icons.health_and_safety_outlined, onTap: () {
-            context.push('/settings/channels/health');
-          }),
-
-          _buildSectionHeader(context, 'Backup & Restore', Icons.settings_backup_restore),
-          _buildTile(context, 'Export Backup', 'Local .aerobackup file', Icons.download, onTap: () {
-            showDialog(context: context, builder: (context) => const BackupExportDialog());
-          }),
-          _buildTile(context, 'Import Backup', 'Restore from local storage', Icons.upload, onTap: () {
-            showDialog(context: context, builder: (context) => const BackupImportDialog());
-          }),
-          _buildTile(context, 'Auto-Backup Schedule', 'Daily / Weekly / Monthly', Icons.schedule, onTap: () {
-            showDialog(context: context, builder: (context) => const BackupScheduleDialog());
-          }),
-          _buildTile(context, 'Dropbox Backup', 'Connect / Frequency / Max Retained', Icons.cloud_done_outlined, onTap: () {
-            context.push('/settings/backup/dropbox');
-          }),
-          _buildTile(context, 'Telegram Self-Backup', 'Save to Saved Messages', Icons.telegram, onTap: () {
-            showDialog(context: context, builder: (context) => const TelegramSelfBackupDialog());
-          }),
-
-          _buildSectionHeader(context, 'Security', Icons.security),
-          _buildTile(context, 'Encryption Mode', 'Off / Convenience / Maximum Security', Icons.lock_outline, onTap: () {
-            showDialog(context: context, builder: (context) => const EncryptionModeDialog());
-          }),
-          _buildTile(context, 'Master Password Setup', 'Create or update password', Icons.password, onTap: () {
-            context.push('/security_setup');
-          }),
-          _buildTile(context, 'View Recovery Phrase', '24-word BIP39 phrase', Icons.vpn_key_outlined, onTap: () {
-            showDialog(context: context, builder: (context) => const RecoveryPhraseDialog());
-          }),
-          _buildTile(context, 'Duress PIN Setup', 'Configure hidden vault', Icons.pin_outlined, onTap: () {
-            showDialog(context: context, builder: (context) => const DuressPinDialog());
-          }),
-          _buildTile(context, 'Auto-Lock Timeout', '1m / 5m / 15m / 1h / Never', Icons.timer_outlined, onTap: () {
-            showDialog(context: context, builder: (context) => const AutoLockTimeoutDialog());
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('use_biometrics'),
-              builder: (context, snapshot) {
-                final isEnabled = snapshot.data == 'true';
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  secondary: const Icon(Icons.fingerprint, color: Colors.white70),
-                  title: const Text('Biometric Unlock', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: const Text('Fingerprint / Face ID', style: TextStyle(color: Colors.white54)),
-                  value: isEnabled,
-                  activeColor: Colors.blueAccent,
-                  onChanged: (val) async {
-                    if (val) {
-                      final auth = await ref.read(biometricServiceProvider).authenticate('Enable Biometrics');
-                      if (auth) {
-                        await ref.read(settingsRepositoryProvider).setSetting('use_biometrics', 'true');
-                      }
-                    } else {
-                      await ref.read(settingsRepositoryProvider).setSetting('use_biometrics', 'false');
-                    }
-                    ref.invalidate(settingsRepositoryProvider); // Force rebuild
-                  },
-                );
-              }
-            );
-          }),
-
-          _buildSectionHeader(context, 'Upload & Download', Icons.swap_vert),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('parallel_threads'),
-              builder: (context, snapshot) {
-                final threads = snapshot.data ?? '3';
-                return _buildTile(context, 'Parallel Threads', '$threads concurrent transfers', Icons.layers_outlined, onTap: () {
-                  showDialog(context: context, builder: (context) => const ParallelThreadsDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('bandwidth_limit'),
-              builder: (context, snapshot) {
-                final limit = snapshot.data ?? 'Uncapped';
-                final subtitle = limit == 'Uncapped' ? limit : '$limit MB/s';
-                return _buildTile(context, 'Bandwidth Limit', subtitle, Icons.speed, onTap: () {
-                  showDialog(context: context, builder: (context) => const BandwidthLimitDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('wifi_only_transfers'),
-              builder: (context, snapshot) {
-                final isEnabled = snapshot.data == 'true';
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  secondary: const Icon(Icons.wifi, color: Colors.white70),
-                  title: const Text('Wi-Fi Only Toggle', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: const Text('Save mobile data', style: TextStyle(color: Colors.white54)),
-                  value: isEnabled,
-                  activeColor: Colors.blueAccent,
-                  onChanged: (val) async {
-                    await ref.read(settingsRepositoryProvider).setSetting('wifi_only_transfers', val ? 'true' : 'false');
-                    ref.invalidate(settingsRepositoryProvider);
-                  },
-                );
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('auto_retry_count'),
-              builder: (context, snapshot) {
-                final retry = snapshot.data ?? '3';
-                return _buildTile(context, 'Auto-Retry Count', '$retry attempts before failing', Icons.replay, onTap: () {
-                  showDialog(context: context, builder: (context) => const AutoRetryCountDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('upload_quality'),
-              builder: (context, snapshot) {
-                final quality = snapshot.data ?? 'Original';
-                return _buildTile(context, 'Default Upload Quality', quality, Icons.image_outlined, onTap: () {
-                  showDialog(context: context, builder: (context) => const UploadQualityDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-
-          _buildSectionHeader(context, 'Media & Previews', Icons.perm_media_outlined),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('thumbnail_cache_size'),
-              builder: (context, snapshot) {
-                final size = snapshot.data ?? '1GB';
-                return _buildTile(context, 'Thumbnail Cache Size', size, Icons.sd_storage_outlined, onTap: () {
-                  showDialog(context: context, builder: (context) => const ThumbnailCacheSizeDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          _buildTile(context, 'Clear Thumbnail Cache', 'Free up local space', Icons.cleaning_services_outlined, onTap: () {
-            showDialog(context: context, builder: (context) => const ClearThumbnailCacheDialog());
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('video_player_quality'),
-              builder: (context, snapshot) {
-                final quality = snapshot.data ?? '1080p';
-                return _buildTile(context, 'Video Player Default Quality', quality, Icons.high_quality, onTap: () {
-                  showDialog(context: context, builder: (context) => const VideoPlayerQualityDialog()).then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('prefetch_folder_open'),
-              builder: (context, snapshot) {
-                final isEnabled = snapshot.data == 'true';
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  secondary: const Icon(Icons.bolt, color: Colors.white70),
-                  title: const Text('Pre-fetch on Folder Open', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: const Text('Load thumbnails immediately', style: TextStyle(color: Colors.white54)),
-                  value: isEnabled,
-                  activeColor: Colors.blueAccent,
-                  onChanged: (val) async {
-                    await ref.read(settingsRepositoryProvider).setSetting('prefetch_folder_open', val ? 'true' : 'false');
-                    ref.invalidate(settingsRepositoryProvider);
-                  },
-                );
-              }
-            );
-          }),
-
-          _buildSectionHeader(context, 'Advanced Auto-Backup', Icons.photo_camera_back),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('master_autobackup_enabled'),
-              builder: (context, snapshot) {
-                final isEnabled = snapshot.data == 'true';
-                return SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                  secondary: const Icon(Icons.backup_outlined, color: Colors.white70),
-                  title: const Text('Enable Auto-Backup', style: TextStyle(fontWeight: FontWeight.w500)),
-                  subtitle: const Text('Master switch for background uploads', style: TextStyle(color: Colors.white54)),
-                  value: isEnabled,
-                  activeColor: Colors.blueAccent,
-                  onChanged: (val) async {
-                    await ref.read(settingsRepositoryProvider).setSetting('master_autobackup_enabled', val ? 'true' : 'false');
-                    ref.invalidate(settingsRepositoryProvider);
-                  },
-                );
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('tracked_backup_folders'),
-              builder: (context, snapshot) {
-                int activeCount = 0;
-                if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
-                  try {
-                    final List<dynamic> decoded = jsonDecode(snapshot.data!);
-                    activeCount = decoded.length;
-                  } catch (_) {}
-                }
-                return _buildTile(
-                  context, 
-                  'Manage Tracked Folders', 
-                  '$activeCount active backup profiles', 
-                  Icons.folder_special_outlined, 
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageBackupFoldersScreen()))
-                        .then((_) => ref.invalidate(settingsRepositoryProvider));
-                  }
-                );
-              }
-            );
-          }),
-
-          _buildSectionHeader(context, 'Notifications', Icons.notifications_outlined),
-          _buildSwitchTile(context, ref, 'Upload Complete', 'Notify when files finish uploading', Icons.upload_file, 'notify_upload_complete', defaultValue: true),
-          _buildSwitchTile(context, ref, 'Download Complete', 'Notify when files finish downloading', Icons.download_done, 'notify_download_complete', defaultValue: true),
-          _buildSwitchTile(context, ref, 'Sync Status', 'Background sync updates', Icons.sync, 'notify_sync_status', defaultValue: false),
-          _buildSwitchTile(context, ref, 'Share Link Accessed', 'Notify when someone views your link', Icons.link, 'notify_share_accessed', defaultValue: true),
-          _buildSwitchTile(context, ref, 'Backup Complete', 'Notify when auto-backup finishes', Icons.backup, 'notify_backup_complete', defaultValue: true),
-
-          _buildSectionHeader(context, 'Integrations', Icons.integration_instructions_outlined),
-          _buildTile(
-            context, 
-            'WebDAV Server', 
-            'Enable / Port / Credentials', 
-            Icons.dns,
-            onTap: () {
-              showDialog(context: context, builder: (context) => const WebDavSettingsDialog());
-            },
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 1.5,
+            colors: [
+              Color(0xFF0D0E23), // deepSpace
+              Color(0xFF1A0850), // dark edge
+            ],
           ),
-          _buildSecureTile(context, 'Inline Bot Setup', 'integration_inline_bot_token', Icons.smart_button, () {
-            showDialog(context: context, builder: (context) => const InlineBotSetupDialog()).then((_) => (context as Element).markNeedsBuild());
-          }),
-          _buildSecureTile(context, 'Save to Drive Bot Setup', 'integration_savetodrive_bot_token', Icons.save_alt, () {
-            showDialog(context: context, builder: (context) => const SaveToDriveBotDialog()).then((_) => (context as Element).markNeedsBuild());
-          }),
-          _buildSecureTile(context, 'Webhook URL', 'integration_webhook_url', Icons.webhook, () {
-            showDialog(context: context, builder: (context) => const WebhookUrlDialog()).then((_) => (context as Element).markNeedsBuild());
-          }),
-          _buildSecureTile(context, 'API Key Management', 'integration_api_key', Icons.vpn_key, () {
-            showDialog(context: context, builder: (context) => const ApiKeyManagementDialog()).then((_) => (context as Element).markNeedsBuild());
-          }),
-
-          _buildSectionHeader(context, 'Companion Server', Icons.cloud_sync_outlined),
-          _buildSecureTile(context, 'Companion Server Setup', 'companion_server_url', Icons.cloud_upload_outlined, () {
-            showDialog(context: context, builder: (context) => const CompanionServerDialog()).then((_) => (context as Element).markNeedsBuild());
-          }),
-
-          _buildSectionHeader(context, 'Network', Icons.network_check),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('proxy_enabled'),
-              builder: (context, snapshot) {
-                final isEnabled = snapshot.data == 'true';
-                return _buildTile(context, 'Proxy Settings', isEnabled ? 'Enabled' : 'SOCKS5 / MTProto', Icons.router_outlined, onTap: () {
-                  context.push('/settings/proxy').then((_) => ref.invalidate(settingsRepositoryProvider));
-                });
-              }
-            );
-          }),
-          Consumer(builder: (context, ref, _) {
-            return FutureBuilder<String?>(
-              future: ref.read(settingsRepositoryProvider).getSetting('network_connection_timeout'),
-              builder: (context, snapshot) {
-                final timeout = snapshot.data ?? '30';
-                return _buildTile(context, 'Connection Timeout', '$timeout seconds', Icons.timer, onTap: () {
-                  showDialog(context: context, builder: (context) => const ConnectionTimeoutDialog());
-                });
-              }
-            );
-          }),
-          _buildSwitchTile(context, ref, 'Adaptive Chunking', 'Dynamic chunk sizing based on connection speed', Icons.dynamic_form_outlined, 'network_adaptive_chunking', defaultValue: true),
-
-          _buildSectionHeader(context, 'Appearance', Icons.palette),
-          _buildTile(context, 'Theme & Colors', 'Dark / Light, Accent, Icons', Icons.color_lens_outlined, onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()));
-          }),
-
-          _buildSectionHeader(context, 'Accessibility', Icons.accessibility_new),
-          _buildSwitchTile(context, ref, 'Screen Reader Optimizations', 'TalkBack / VoiceOver support', Icons.record_voice_over, 'accessibility_screen_reader', defaultValue: false),
-          _buildSwitchTile(context, ref, 'Reduce Motion', 'Disable animations', Icons.animation, 'accessibility_reduce_motion', defaultValue: false),
-          _buildSwitchTile(context, ref, 'Large Touch Targets', 'Easier navigation', Icons.touch_app, 'accessibility_large_targets', defaultValue: false),
-
-          _buildSectionHeader(context, 'Advanced', Icons.build_circle_outlined),
-          _buildTile(
-            context,
-            'Export Logs',
-            'Save debugging info',
-            Icons.bug_report_outlined,
-            onTap: () => context.push('/diagnostics'),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildSearchBar(),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildSettingsGroup(
+                      'Account',
+                      Icons.person_outline,
+                      [
+                        _SettingsItem('Telegram Accounts', 'Add, remove, or switch accounts', Icons.switch_account, onTap: () => context.push('/settings/accounts')),
+                        _SettingsItem('Session Management', 'Active sessions, remote logout', Icons.devices, onTap: () => context.push('/settings/session')),
+                        _SettingsItem('Profile', 'Name, Avatar', Icons.badge_outlined, onTap: () => context.push('/settings/profile')),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Storage Channels',
+                      Icons.dns_outlined,
+                      [
+                        _SettingsItem('Storage Channels', 'Manage storage backends', Icons.dns_outlined, onTap: () => context.push('/settings/channels')),
+                        _SettingsItem('Load Balancing Strategy', 'Round Robin / Fill First / Random', Icons.balance, onTap: () => context.push('/settings/channels/load_balancing')),
+                        _SettingsItem('Channel Health Check', 'Verify integrity of channel messages', Icons.health_and_safety_outlined, onTap: () => context.push('/settings/channels/health')),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Backup & Restore',
+                      Icons.settings_backup_restore,
+                      [
+                        _SettingsItem('Export Backup', 'Local .aerobackup file', Icons.download, onTap: () => showDialog(context: context, builder: (_) => const BackupExportDialog())),
+                        _SettingsItem('Import Backup', 'Restore from local storage', Icons.upload, onTap: () => showDialog(context: context, builder: (_) => const BackupImportDialog())),
+                        _SettingsItem('Auto-Backup Schedule', 'Daily / Weekly / Monthly', Icons.schedule, onTap: () => showDialog(context: context, builder: (_) => const BackupScheduleDialog())),
+                        _SettingsItem('Dropbox Backup', 'Connect / Frequency', Icons.cloud_done_outlined, onTap: () => context.push('/settings/backup/dropbox')),
+                        _SettingsItem('Telegram Self-Backup', 'Save to Saved Messages', Icons.telegram, onTap: () => showDialog(context: context, builder: (_) => const TelegramSelfBackupDialog())),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Upload & Download',
+                      Icons.swap_vert,
+                      [
+                        _buildDynamicItem('Parallel Threads', 'concurrent transfers', Icons.layers_outlined, 'parallel_threads', '3', () => showDialog(context: context, builder: (_) => const ParallelThreadsDialog())),
+                        _buildDynamicItem('Bandwidth Limit', 'MB/s', Icons.speed, 'bandwidth_limit', 'Uncapped', () => showDialog(context: context, builder: (_) => const BandwidthLimitDialog())),
+                        _buildDynamicItem('Auto-Retry Count', 'attempts before failing', Icons.replay, 'auto_retry_count', '3', () => showDialog(context: context, builder: (_) => const AutoRetryCountDialog())),
+                        _buildDynamicItem('Default Upload Quality', 'quality', Icons.image_outlined, 'upload_quality', 'Original', () => showDialog(context: context, builder: (_) => const UploadQualityDialog())),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Media & Previews',
+                      Icons.perm_media_outlined,
+                      [
+                        _buildDynamicItem('Thumbnail Cache Size', 'max storage limit', Icons.sd_storage_outlined, 'thumbnail_cache_size', '1GB', () => showDialog(context: context, builder: (_) => const ThumbnailCacheSizeDialog())),
+                        _SettingsItem('Clear Thumbnail Cache', 'Free up local space', Icons.cleaning_services_outlined, onTap: () => showDialog(context: context, builder: (_) => const ClearThumbnailCacheDialog())),
+                        _buildDynamicItem('Video Player Default Quality', 'resolution', Icons.high_quality, 'video_player_quality', '1080p', () => showDialog(context: context, builder: (_) => const VideoPlayerQualityDialog())),
+                        _SettingsSwitchItem('Pre-fetch on Folder Open', 'Load thumbnails immediately', Icons.bolt, 'prefetch_folder_open', false),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Advanced Auto-Backup',
+                      Icons.photo_camera_back,
+                      [
+                        _SettingsSwitchItem('Enable Auto-Backup', 'Master switch for background uploads', Icons.backup_outlined, 'master_autobackup_enabled', false),
+                        _SettingsItem('Manage Tracked Folders', 'Active backup profiles', Icons.folder_special_outlined, onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ManageBackupFoldersScreen())).then((_) => ref.invalidate(settingsRepositoryProvider));
+                        }),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Notifications',
+                      Icons.notifications_outlined,
+                      [
+                        _SettingsSwitchItem('Upload Complete', 'Notify when files finish uploading', Icons.upload_file, 'notify_upload_complete', true),
+                        _SettingsSwitchItem('Download Complete', 'Notify when files finish downloading', Icons.download_done, 'notify_download_complete', true),
+                        _SettingsSwitchItem('Share Link Accessed', 'Notify when someone views your link', Icons.link, 'notify_share_accessed', true),
+                        _SettingsSwitchItem('Backup Complete', 'Notify when auto-backup finishes', Icons.backup, 'notify_backup_complete', true),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Network',
+                      Icons.network_check,
+                      [
+                        _SettingsSwitchItem('Proxy Settings', 'SOCKS5 / MTProto', Icons.router_outlined, 'proxy_enabled', false), // Keeping it simple for UI mapping
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Appearance',
+                      Icons.palette,
+                      [
+                        _SettingsItem('Theme & Colors', 'Dark / Light, Accent, Icons', Icons.color_lens_outlined, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()))),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'Advanced',
+                      Icons.build_circle_outlined,
+                      [
+                        _SettingsItem('Export Logs', 'Save debugging info', Icons.bug_report_outlined, onTap: () => context.push('/diagnostics')),
+                        _SettingsItem('Database Stats', 'File count, DB size, Channel usage', Icons.data_usage, onTap: () => showDialog(context: context, builder: (_) => const DatabaseStatsDialog())),
+                        _SettingsItem('Rebuild Drive', 'Zero-DB Recovery from Telegram captions', Icons.build_outlined, onTap: () => showDialog(context: context, barrierDismissible: false, builder: (_) => const RebuildDriveDialog())),
+                        _SettingsItem('Clear Local Cache', 'Wipes all temporary files', Icons.delete_sweep_outlined, onTap: () => showDialog(context: context, builder: (_) => const ClearCacheDialog())),
+                        _SettingsItem('Reset All Settings', 'Revert to defaults', Icons.restore, onTap: () => showDialog(context: context, builder: (_) => const ResetSettingsDialog())),
+                        _SettingsItem('Open Source Licenses', 'View dependencies', Icons.policy, onTap: () => showLicensePage(context: context, applicationName: 'AeroDrive', applicationVersion: '1.0.0-alpha')),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'About',
+                      Icons.info_outline,
+                      [
+                        _SettingsItem('About AeroDrive', 'Version, Developer, Links', Icons.new_releases_outlined, onTap: () => context.push('/settings/about')),
+                      ],
+                    ),
+                    _buildSettingsGroup(
+                      'AI Intelligence',
+                      Icons.psychology_outlined,
+                      [
+                        _SettingsSwitchItem('Power User Mode', 'Run AI processing on battery (drains battery faster)', Icons.battery_alert, 'ai_power_user', false),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildLogoutButton(),
+                    const SizedBox(height: 48),
+                  ],
+                ),
+              ),
+            ],
           ),
-          _buildTile(context, 'Database Stats', 'File count, DB size, Channel usage', Icons.data_usage, onTap: () {
-            showDialog(context: context, builder: (_) => const DatabaseStatsDialog());
-          }),
-          _buildTile(
-            context,
-            'Rebuild Drive',
-            'Zero-DB Recovery from Telegram captions',
-            Icons.build_outlined,
-            onTap: () {
-              showDialog(context: context, barrierDismissible: false, builder: (_) => const RebuildDriveDialog());
-            },
-          ),
-          _buildTile(context, 'Clear Local Cache', 'Wipes all temporary files', Icons.delete_sweep_outlined, onTap: () {
-            showDialog(context: context, builder: (_) => const ClearCacheDialog());
-          }),
-          _buildTile(context, 'Reset All Settings', 'Revert to defaults', Icons.restore, onTap: () {
-            showDialog(context: context, builder: (_) => const ResetSettingsDialog());
-          }),
-          _buildTile(context, 'Open Source Licenses', 'View dependencies', Icons.policy, onTap: () {
-            showLicensePage(context: context, applicationName: 'AeroDrive', applicationVersion: '1.0.0-alpha');
-          }),
+        ),
+      ),
+    );
+  }
 
-          _buildSectionHeader(context, 'About', Icons.info_outline),
-          _buildTile(context, 'About AeroDrive', 'Version, Developer, Links', Icons.new_releases_outlined, onTap: () {
-            context.push('/settings/about');
-          }),
-          
-          _buildSectionHeader(context, 'AI Intelligence', Icons.psychology_outlined),
-          _buildSwitchTile(
-            context,
-            ref,
-            'Power User Mode',
-            'Run AI processing on battery (drains battery faster)',
-            Icons.battery_alert,
-            'ai_power_user',
-            defaultValue: false,
-          ),
-          
-          const SizedBox(height: 32),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: FilledButton.icon(
-              onPressed: () {
-                ref.read(telegramServiceProvider.notifier).logOut();
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+            ),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Search settings...',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                suffixIcon: _searchQuery.isNotEmpty 
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.white70),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              ),
+              onChanged: (val) {
+                setState(() => _searchQuery = val.toLowerCase());
               },
-              icon: const Icon(Icons.logout),
-              label: const Text('Logout'),
-              style: FilledButton.styleFrom(
-                backgroundColor: Colors.red.withValues(alpha: 0.2),
-                foregroundColor: Colors.redAccent,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+          ),
+        ),
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
+    );
+  }
+
+  Widget _buildSettingsGroup(String title, IconData icon, List<dynamic> items) {
+    // Filter items based on search query
+    final filteredItems = items.where((item) {
+      if (_searchQuery.isEmpty) return true;
+      if (item is _SettingsItem) {
+        return item.title.toLowerCase().contains(_searchQuery) || item.subtitle.toLowerCase().contains(_searchQuery);
+      } else if (item is _SettingsSwitchItem) {
+        return item.title.toLowerCase().contains(_searchQuery) || item.subtitle.toLowerCase().contains(_searchQuery);
+      } else if (item is _DynamicItemBuilder) {
+        return item.title.toLowerCase().contains(_searchQuery);
+      }
+      return false;
+    }).toList();
+
+    if (filteredItems.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 12.0, bottom: 12.0),
+            child: Row(
+              children: [
+                Icon(icon, size: 20, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title.toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Column(
+                  children: List.generate(filteredItems.length, (index) {
+                    final item = filteredItems[index];
+                    Widget child;
+                    if (item is _SettingsItem) {
+                      child = _buildTile(item.title, item.subtitle, item.icon, item.onTap);
+                    } else if (item is _SettingsSwitchItem) {
+                      child = _buildSwitchTile(item.title, item.subtitle, item.icon, item.settingKey, item.defaultValue);
+                    } else if (item is _DynamicItemBuilder) {
+                      child = item.build(context, ref);
+                    } else {
+                      child = const SizedBox.shrink();
+                    }
+
+                    return Column(
+                      children: [
+                        child,
+                        if (index < filteredItems.length - 1)
+                          Divider(height: 1, color: Colors.white.withOpacity(0.05), indent: 56),
+                      ],
+                    );
+                  }),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 32),
         ],
-      ),
+      ).animate().fadeIn(duration: 500.ms).slideX(begin: 0.1, end: 0),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 32, 24, 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.primary),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
+  Widget _buildTile(String title, String subtitle, IconData icon, VoidCallback? onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        highlightColor: Colors.white.withOpacity(0.05),
+        splashColor: Colors.white.withOpacity(0.1),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: Icon(icon, color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 20, color: Colors.white.withOpacity(0.3)),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildSwitchTile(BuildContext context, WidgetRef ref, String title, String subtitle, IconData icon, String settingKey, {bool defaultValue = true}) {
+  Widget _buildSwitchTile(String title, String subtitle, IconData icon, String settingKey, bool defaultValue) {
     return Consumer(builder: (context, ref, _) {
       return FutureBuilder<String?>(
-        future: ref.read(settingsRepositoryProvider).getSetting(settingKey),
+        future: ref.watch(settingsRepositoryProvider).getSetting(settingKey),
         builder: (context, snapshot) {
           final isEnabled = snapshot.data == null ? defaultValue : snapshot.data == 'true';
-          return SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-            secondary: Icon(icon, color: Colors.white70),
-            title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-            subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54)),
-            value: isEnabled,
-            activeColor: Colors.blueAccent,
-            onChanged: (val) async {
-              await ref.read(settingsRepositoryProvider).setSetting(settingKey, val ? 'true' : 'false');
-              ref.invalidate(settingsRepositoryProvider);
-            },
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                await ref.read(settingsRepositoryProvider).setSetting(settingKey, (!isEnabled) ? 'true' : 'false');
+                ref.invalidate(settingsRepositoryProvider);
+              },
+              highlightColor: Colors.white.withOpacity(0.05),
+              splashColor: Colors.white.withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(icon, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
+                          const SizedBox(height: 2),
+                          Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    CupertinoSwitch(
+                      value: isEnabled,
+                      activeColor: AppColors.primary,
+                      onChanged: (val) async {
+                        await ref.read(settingsRepositoryProvider).setSetting(settingKey, val ? 'true' : 'false');
+                        ref.invalidate(settingsRepositoryProvider);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
       );
     });
   }
 
-  Widget _buildSecureTile(BuildContext context, String title, String secureKey, IconData icon, VoidCallback onTap) {
-    const storage = FlutterSecureStorage();
-    return FutureBuilder<String?>(
-      future: storage.read(key: secureKey),
-      builder: (context, snapshot) {
-        final isConfigured = snapshot.data != null && snapshot.data!.isNotEmpty;
-        final subtitle = isConfigured ? 'Configured' : 'Not configured';
-        final color = isConfigured ? Colors.greenAccent : Colors.white54;
-        
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-          leading: Icon(icon, color: Colors.blueAccent),
-          title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-          subtitle: Text(subtitle, style: TextStyle(color: color)),
-          trailing: const Icon(Icons.chevron_right, color: Colors.white24),
-          onTap: onTap,
+  _DynamicItemBuilder _buildDynamicItem(String title, String subtitleSuffix, IconData icon, String settingKey, String defaultValue, VoidCallback action) {
+    return _DynamicItemBuilder(
+      title: title,
+      builder: (context, ref) {
+        return FutureBuilder<String?>(
+          future: ref.watch(settingsRepositoryProvider).getSetting(settingKey),
+          builder: (context, snapshot) {
+            final value = snapshot.data ?? defaultValue;
+            final subtitle = settingKey == 'bandwidth_limit' && value == 'Uncapped' 
+                ? 'Uncapped' 
+                : '$value $subtitleSuffix';
+            return _buildTile(title, subtitle, icon, () {
+              action();
+              ref.invalidate(settingsRepositoryProvider);
+            });
+          }
         );
       }
     );
   }
 
-  Widget _buildTile(BuildContext context, String title, String subtitle, IconData icon, {VoidCallback? onTap}) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-      leading: Icon(icon, color: Colors.white70),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54)),
-      trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.white24),
-      onTap: onTap ?? () {
-        // TODO: Navigate to specific settings sub-page
-      },
-    );
+  Widget _buildLogoutButton() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: InkWell(
+            onTap: () => ref.read(telegramServiceProvider.notifier).logOut(),
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.1),
+                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.logout, color: Colors.redAccent.shade100),
+                  const SizedBox(width: 8),
+                  Text('Sign Out', style: TextStyle(color: Colors.redAccent.shade100, fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(delay: 300.ms, duration: 400.ms);
   }
+}
 
+class _SettingsItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  _SettingsItem(this.title, this.subtitle, this.icon, {required this.onTap});
+}
+
+class _SettingsSwitchItem {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String settingKey;
+  final bool defaultValue;
+
+  _SettingsSwitchItem(this.title, this.subtitle, this.icon, this.settingKey, this.defaultValue);
+}
+
+class _DynamicItemBuilder {
+  final String title;
+  final Widget Function(BuildContext context, WidgetRef ref) builder;
+
+  _DynamicItemBuilder({required this.title, required this.builder});
+  
+  Widget build(BuildContext context, WidgetRef ref) => builder(context, ref);
 }

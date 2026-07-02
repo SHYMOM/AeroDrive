@@ -15,7 +15,6 @@ import 'package:aerodrive/core/providers.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/core/logger.dart';
 import 'package:aerodrive/features/settings/dropbox_service.dart';
-import 'package:aerodrive/domain/saved_messages_sync.dart';
 
 class BackupService {
   final Ref _ref;
@@ -238,13 +237,9 @@ class BackupService {
 
       final masterKeyList = _ref.read(masterKeyProvider);
       if (masterKeyList != null) {
-        final cipher = AesGcm.with256bits();
-        final masterKey = await cipher.newSecretKeyFromBytes(masterKeyList);
-        final sync = _ref.read(savedMessagesSyncProvider);
-        await sync.backupToSavedMessages(masterKey);
-        AppLogger.info('BackupService: Saved Messages backup completed');
+        AppLogger.info('BackupService: Ready to sync with external backups if configured');
       } else {
-        AppLogger.warning('BackupService: Skipping Saved Messages backup — vault locked');
+        AppLogger.warning('BackupService: Skipping external secure backups — vault locked');
       }
 
       await dropboxBackup(path);

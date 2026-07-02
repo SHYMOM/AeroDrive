@@ -534,6 +534,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       appBar: AppBar(
         title: const Text('Storage Channels'),
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add Channel',
+            onPressed: _showAddChannelOptions,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddChannelOptions,

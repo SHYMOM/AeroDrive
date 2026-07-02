@@ -40,6 +40,7 @@ class Files extends Table {
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get updatedAt => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
+  DateTimeColumn get photoTakenAt => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

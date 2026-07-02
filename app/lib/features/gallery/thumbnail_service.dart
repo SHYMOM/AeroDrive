@@ -166,8 +166,9 @@ class ThumbnailService {
             }
 
             final nonce = encryptedBytes.sublist(0, 12);
-            final macBytes = encryptedBytes.sublist(12, 28);
-            final cipherText = encryptedBytes.sublist(28);
+            final cipherTextAndMac = encryptedBytes.sublist(12);
+            final macBytes = cipherTextAndMac.sublist(cipherTextAndMac.length - 16);
+            final cipherText = cipherTextAndMac.sublist(0, cipherTextAndMac.length - 16);
 
             final cipher = AesGcm.with256bits();
             List<int> decryptedBytes;

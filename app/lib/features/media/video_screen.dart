@@ -45,7 +45,7 @@ class VideosScreen extends ConsumerWidget {
             itemCount: videos.length,
             itemBuilder: (context, index) {
               final file = videos[index];
-              return _VideoItem(file: file);
+              return _VideoItem(file: file, siblings: videos);
             },
           );
         },
@@ -58,8 +58,9 @@ class VideosScreen extends ConsumerWidget {
 
 class _VideoItem extends StatelessWidget {
   final FileData file;
+  final List<FileData> siblings;
 
-  const _VideoItem({required this.file});
+  const _VideoItem({required this.file, required this.siblings});
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +79,7 @@ class _VideoItem extends StatelessWidget {
         file.size != null ? '\${_formatFileSize(file.size!)}' : 'Unknown size',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
       ),
-      onTap: () => PreviewRouter.openPreview(context, file),
+      onTap: () => PreviewRouter.openPreview(context, file, siblings: siblings),
     );
   }
 

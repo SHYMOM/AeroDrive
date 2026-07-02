@@ -302,7 +302,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<void> setAuthenticationPhoneNumber(String phoneNumber) async {
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+    await sendRequest({
       "@type": "setAuthenticationPhoneNumber",
       "phone_number": phoneNumber,
       "settings": {
@@ -312,21 +312,21 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         "is_current_phone_number": false,
         "allow_sms_retriever_api": false
       }
-    }));
+    });
   }
 
   Future<void> checkAuthenticationCode(String code) async {
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+    await sendRequest({
       "@type": "checkAuthenticationCode",
       "code": code
-    }));
+    });
   }
 
   Future<void> checkAuthenticationPassword(String password) async {
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+    await sendRequest({
       "@type": "checkAuthenticationPassword",
       "password": password
-    }));
+    });
   }
 
   List<Map<String, dynamic>> chats = [];

@@ -46,7 +46,7 @@ class ImagesScreen extends ConsumerWidget {
             itemCount: images.length,
             itemBuilder: (context, index) {
               final file = images[index];
-              return _ImageItem(file: file);
+              return _ImageItem(file: file, siblings: images);
             },
           );
         },
@@ -59,8 +59,9 @@ class ImagesScreen extends ConsumerWidget {
 
 class _ImageItem extends StatelessWidget {
   final FileData file;
+  final List<FileData> siblings;
 
-  const _ImageItem({required this.file});
+  const _ImageItem({required this.file, required this.siblings});
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +80,7 @@ class _ImageItem extends StatelessWidget {
         file.size != null ? '\${_formatFileSize(file.size!)}' : 'Unknown size',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
       ),
-      onTap: () => PreviewRouter.openPreview(context, file),
+      onTap: () => PreviewRouter.openPreview(context, file, siblings: siblings),
     );
   }
 

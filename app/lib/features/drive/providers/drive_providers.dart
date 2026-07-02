@@ -8,6 +8,9 @@ import 'package:drift/drift.dart';
 /// null = Root (Vault)
 final currentFolderIdProvider = StateProvider<String?>((ref) => null);
 
+/// Filter Drive screen to only show favorites
+final isFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
+
 /// Manages the breadcrumb path to the current folder.
 final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
   final currentId = ref.watch(currentFolderIdProvider);
@@ -79,7 +82,20 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   ref.watch(dbRebuildVersionProvider);
   final folderRepo = ref.watch(folderRepositoryProvider);
   final currentId = ref.watch(currentFolderIdProvider);
-  final contents = await folderRepo.getFolderContents(currentId);
+  final isFavOnly = ref.watch(isFavoriteOnlyProvider);
+  
+  Map<String, dynamic> contents;
+  if (isFavOnly) {
+    final db = ref.read(databaseProvider);
+    final favFolders = await (db.select(db.folders)..where((f) => f.isFavorite.equals(true) & f.deletedAt.isNull())).get();
+    final favFiles = await (db.select(db.files)..where((f) => f.isFavorite.equals(true) & f.deletedAt.isNull())).get();
+    contents = {
+      'folders': favFolders,
+      'files': favFiles,
+    };
+  } else {
+    contents = await folderRepo.getFolderContents(currentId);
+  }
 
   final folders = List<FolderData>.from(contents['folders'] ?? []);
   final files = List<FileData>.from(contents['files'] ?? []);
@@ -229,8 +245,11 @@ final quickAccessStatsProvider = FutureProvider<Map<String, int>>((ref) async {
     }
   }
 
+  final favFilesCount = files.where((f) => f.isFavorite).length;
+  final favFoldersCount = folders.where((f) => f.isFavorite).length;
+
   return {
-    'My Files': files.length + folders.length,
+    'Favorites': favFilesCount + favFoldersCount,
     'Images': imageCount,
     'Videos': videoCount,
     'Documents': docCount,
@@ -286,4 +305,14 @@ final folderItemsCountProvider = FutureProvider.family<int, String>((ref, folder
   final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())).get();
   
   return files.length + subfolders.length;
+});
+
+/// Calculates total storage used based on Chunk size sum
+final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
+  final db = ref.watch(databaseProvider);
+  ref.watch(dbRebuildVersionProvider);
+  
+  return db.customSelect('SELECT SUM(size) AS total FROM chunks;').watchSingle().map((row) {
+    return row.read<int>('total') ?? 0;
+  });
 });

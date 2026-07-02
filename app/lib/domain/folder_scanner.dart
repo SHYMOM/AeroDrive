@@ -105,7 +105,7 @@ class FolderScanner {
         status: const drift.Value('PENDING'),
         priority: const drift.Value(1),
         totalBytes: drift.Value(fileSize),
-        fileId: drift.Value('${f.path}|$targetFolderId'),
+        fileId: drift.Value('${f.path}|${targetFolderId ?? ''}'),
         createdAt: drift.Value(DateTime.now()),
       ),
     );
@@ -143,20 +143,25 @@ class FolderScanner {
     int foldersQueued = 0;
     int errors = 0;
 
-    await for (final entity in dir.list(followLinks: false)) {
-      try {
-        if (entity is File) {
-          await _queueSingleFile(entity.path, folderId);
-          filesQueued++;
-        } else if (entity is Directory) {
-          await _walkAndQueueDirectory(entity, folderId);
-          foldersQueued++;
+    try {
+      await for (final entity in dir.list(followLinks: false)) {
+        try {
+          if (entity is File) {
+            await _queueSingleFile(entity.path, folderId);
+            filesQueued++;
+          } else if (entity is Directory) {
+            await _walkAndQueueDirectory(entity, folderId);
+            foldersQueued++;
+          }
+        } catch (e) {
+          errors++;
+          AppLogger.error('FolderScanner: Failed to process ${entity.path}', e);
+          // Continue with next entity — don't stall the whole folder
         }
-      } catch (e) {
-        errors++;
-        AppLogger.error('FolderScanner: Failed to process ${entity.path}', e);
-        // Continue with next entity — don't stall the whole folder
       }
+    } catch (e) {
+      errors++;
+      AppLogger.error('FolderScanner: Failed to list directory ${dir.path} - possible permission issue', e);
     }
 
     AppLogger.info('FolderScanner: "$folderName" complete — $filesQueued files, $foldersQueued subfolders, $errors errors');

@@ -8,10 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../constants.dart';
+import '../providers.dart';
 import 'app_router.dart';
 import '../../widgets/aerodrive_logo.dart';
 import '../../features/drive/providers/drive_providers.dart';
 import '../../features/sharing/import_link_dialog.dart';
+import '../../features/transfers/widgets/global_progress_bar.dart';
 
 class ResponsiveScaffold extends ConsumerStatefulWidget {
   const ResponsiveScaffold({super.key, required this.child});
@@ -74,6 +76,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
         if (didPop) return;
 
         if (location.startsWith(AppDestination.drive.path)) {
+          final isFavOnly = ref.read(isFavoriteOnlyProvider);
+          if (isFavOnly) {
+            ref.read(isFavoriteOnlyProvider.notifier).state = false;
+            return;
+          }
+
           final navStack = ref.read(navigationStackProvider);
           if (navStack.isNotEmpty) {
             final parentId = navStack.last;
@@ -163,7 +171,14 @@ final class _DesktopLayout extends StatelessWidget {
             selectedIndex: selectedIndex,
             onDestinationSelected: onDestinationSelected,
           ),
-          Expanded(child: child),
+          Expanded(
+            child: Column(
+              children: [
+                Expanded(child: child),
+                const GlobalProgressBar(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -205,6 +220,12 @@ final class _MobileLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    
+    // Hide bottom navigation bar when inside settings screens
+    final location = GoRouterState.of(context).uri.path;
+    final isSettings = location.startsWith('/settings');
+    final hideNavBar = isKeyboardVisible || isSettings;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       drawer: Drawer(
@@ -216,21 +237,31 @@ final class _MobileLayout extends StatelessWidget {
       ),
       body: child,
       extendBody: true, // Required for floating glassmorphic nav bar
-      bottomNavigationBar: isKeyboardVisible
-          ? null
-          : Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 1)),
-              ),
-              child: NavigationBar(
+      bottomNavigationBar: hideNavBar
+          ? const GlobalProgressBar() // still show progress bar even if nav is hidden
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const GlobalProgressBar(),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.background,
+                    border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 1)),
+                  ),
+                  child: NavigationBar(
                 backgroundColor: AppColors.background,
                 elevation: 0,
-                selectedIndex: selectedIndex,
-                onDestinationSelected: onDestinationSelected,
+                selectedIndex: selectedIndex >= AppDestination.values.where((d) => d != AppDestination.settings).length 
+                    ? 0 
+                    : selectedIndex,
+                onDestinationSelected: (i) {
+                  final items = AppDestination.values.where((d) => d != AppDestination.settings).toList();
+                  final dest = items[i];
+                  onDestinationSelected(AppDestination.values.indexOf(dest));
+                },
                 indicatorColor: Colors.transparent, // Disable default pill indicator
                 animationDuration: const Duration(milliseconds: 400),
-                destinations: AppDestination.values.map((d) {
+                destinations: AppDestination.values.where((d) => d != AppDestination.settings).map((d) {
                   final isSelected = selectedIndex == AppDestination.values.indexOf(d);
                   return NavigationDestination(
                     icon: Column(
@@ -273,11 +304,13 @@ final class _MobileLayout extends StatelessWidget {
                 }).toList(),
               ),
             ),
+          ],
+        ),
     );
   }
 }
 
-class SidebarContent extends StatelessWidget {
+class SidebarContent extends ConsumerWidget {
   const SidebarContent({
     super.key,
     required this.selectedIndex,
@@ -288,7 +321,7 @@ class SidebarContent extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       width: 280,
       decoration: BoxDecoration(
@@ -347,7 +380,7 @@ class SidebarContent extends StatelessWidget {
           // Storage Widget moved to top!
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: _buildStorageCard(context),
+            child: _buildStorageCard(context, ref),
           ),
           const SizedBox(height: 24),
           
@@ -481,7 +514,16 @@ class SidebarContent extends StatelessWidget {
     );
   }
 
-  Widget _buildStorageCard(BuildContext context) {
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  }
+
+  Widget _buildStorageCard(BuildContext context, WidgetRef ref) {
+    final storageUsedAsync = ref.watch(totalStorageProvider);
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -517,22 +559,38 @@ class SidebarContent extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Unlimited', style: TextStyle(color: Colors.white, fontSize: 13)),
-              Text('∞', style: TextStyle(color: AppColors.secondary, fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: const LinearProgressIndicator(
-              value: 1.0,
-              minHeight: 4,
-              backgroundColor: Colors.white12,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
-            ),
+          storageUsedAsync.when(
+            data: (bytes) {
+              // Just a visual representation since we have unlimited storage
+              // Fills up relative to 10GB tiers
+              final visualValue = bytes == 0 ? 0.0 : (bytes % (10 * 1024 * 1024 * 1024)) / (10 * 1024 * 1024 * 1024);
+              final boundedValue = visualValue < 0.05 && bytes > 0 ? 0.05 : visualValue;
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('${_formatBytes(bytes)} used', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                      const Text('∞', style: TextStyle(color: AppColors.secondary, fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: boundedValue,
+                      minHeight: 4,
+                      backgroundColor: Colors.white12,
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                    ),
+                  ),
+                ]
+              );
+            },
+            loading: () => const LinearProgressIndicator(minHeight: 4, color: AppColors.secondary),
+            error: (_, __) => const Text('Error loading storage', style: TextStyle(color: Colors.white54, fontSize: 12)),
           ),
           const SizedBox(height: 12),
           Container(

@@ -20,7 +20,6 @@ import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:aerodrive/core/providers/security_providers.dart';
 import 'package:aerodrive/features/drive/providers/drive_providers.dart';
 import 'package:aerodrive/domain/recovery/recovery_scanner.dart';
-import 'package:aerodrive/domain/saved_messages_sync.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:cryptography/cryptography.dart';
@@ -31,7 +30,6 @@ import 'features/debug/debug_error_screen.dart';
 import 'domain/boot_service.dart';
 import 'domain/backup_service.dart';
 import 'domain/auto_backup_watcher.dart';
-import 'domain/auto_lock_service.dart';
 import 'data/repositories/settings_repository.dart';
 import 'data/db/database.dart';
 
@@ -245,7 +243,6 @@ class AeroDriveApp extends ConsumerStatefulWidget {
 class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
-  AutoLockService? _autoLock;
 
   @override
   void initState() {
@@ -260,65 +257,12 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
       }
     });
 
-    // Start auto-lock service
-    _autoLock = AutoLockService(ref);
-    _autoLock!.start();
 
     // If launched from BOOT_COMPLETED, trigger immediate sync
     _handleBootLaunch();
   }
 
-  /// Runs sync operations after the user unlocks (master key becomes available).
-  void _syncAfterUnlock() {
-    _runSavedMessagesSync();
-    _runChannelCaptionSync();
-  }
 
-  Future<void> _runSavedMessagesSync() async {
-    try {
-      final masterKeyList = ref.read(masterKeyProvider);
-      if (masterKeyList == null) return;
-      final settings = ref.read(settingsRepositoryProvider);
-      final enabled = await settings.getSetting('saved_messages_sync_enabled');
-      if (enabled != 'true') return;
-
-      final cipher = AesGcm.with256bits();
-      final masterKey = await cipher.newSecretKeyFromBytes(masterKeyList);
-      final sync = ref.read(savedMessagesSyncProvider);
-      final restored = await sync.restoreFromSavedMessages(masterKey);
-      if (restored) {
-        ref.read(dbRebuildVersionProvider.notifier).state++;
-        AppLogger.info('Post-unlock sync: merged Saved Messages data');
-      }
-    } catch (e, s) {
-      AppLogger.error('Post-unlock Saved Messages sync failed', e, s);
-    }
-  }
-
-  Future<void> _runChannelCaptionSync() async {
-    try {
-      final masterKeyList = ref.read(masterKeyProvider);
-      if (masterKeyList == null) return;
-      final settings = ref.read(settingsRepositoryProvider);
-      final enabled = await settings.getSetting('channel_caption_sync_enabled');
-      if (enabled != 'true') return;
-
-      final activeChannelStr = await settings.getSetting('active_channel_id');
-      if (activeChannelStr == null) return;
-
-      final cipher = AesGcm.with256bits();
-      final masterKey = await cipher.newSecretKeyFromBytes(masterKeyList);
-      final scanner = ref.read(recoveryServiceProvider);
-      await scanner.runDisasterRecovery(
-        masterKey: masterKey,
-        channelId: int.parse(activeChannelStr),
-      );
-      ref.read(dbRebuildVersionProvider.notifier).state++;
-      AppLogger.info('Post-unlock sync: merged channel caption data');
-    } catch (e, s) {
-      AppLogger.error('Post-unlock channel caption sync failed', e, s);
-    }
-  }
 
   Future<void> _handleBootLaunch() async {
     try {
@@ -422,7 +366,6 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
-    _autoLock?.stop();
     super.dispose();
   }
 
@@ -430,13 +373,6 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
   Widget build(BuildContext context) {
     final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
-
-    // Trigger sync when the master key becomes available (user unlocks).
-    ref.listen(masterKeyProvider, (prev, next) {
-      if (prev == null && next != null) {
-        _syncAfterUnlock();
-      }
-    });
 
     // Initialize background services
     ref.watch(uploadQueueServiceProvider);

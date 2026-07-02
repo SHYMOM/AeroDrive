@@ -100,56 +100,82 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
         ElevatedButton(
           onPressed: () async {
             final name = _nameController.text.trim();
-            if (name.isNotEmpty) {
-              final folderRepo = ref.read(folderRepositoryProvider);
-              final currentId = ref.read(currentFolderIdProvider);
-              
-              final newFolderId = await folderRepo.createFolder(
-                name: name,
-                parentId: currentId,
-                color: _selectedColorHex,
-              );
-              ref.invalidate(folderContentsProvider);
-              
+            if (name.isEmpty) return;
+
+            final activeChannelStr = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+            if (activeChannelStr == null) {
               if (mounted) {
-                Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Folder created!')),
+                  const SnackBar(
+                    content: Text('Please select a Telegram channel in Settings before creating a folder.'),
+                    backgroundColor: Colors.redAccent,
+                  ),
                 );
+                Navigator.of(context).pop();
               }
+              return;
+            }
+
+            final masterKey = ref.read(masterKeyProvider);
+            if (masterKey == null) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Your vault is locked. Please unlock it before creating a folder.'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+                Navigator.of(context).pop();
+              }
+              return;
+            }
+
+            final folderRepo = ref.read(folderRepositoryProvider);
+            final currentId = ref.read(currentFolderIdProvider);
+            
+            final newFolderId = await folderRepo.createFolder(
+              name: name,
+              parentId: currentId,
+              color: _selectedColorHex,
+            );
+            ref.invalidate(folderContentsProvider);
+            
+            if (mounted) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Folder created!')),
+              );
+            }
               
-              // Background manifest sync
-              try {
-                final activeChannelStr = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
-                final masterKey = ref.read(masterKeyProvider);
-                if (activeChannelStr != null && masterKey != null) {
-                  final chatId = int.parse(activeChannelStr);
-                  final cipher = AesGcm.with256bits();
-                  final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
-                  final manifestCaption = await ManifestEncoder.encodeFolderManifest(
-                    folderId: newFolderId,
-                    folderName: name,
-                    parentFolderId: currentId,
-                    masterKey: secretKey,
-                  );
+            // Background manifest sync
+            try {
+              if (activeChannelStr != null && masterKey != null) {
+                final chatId = int.parse(activeChannelStr);
+                final cipher = AesGcm.with256bits();
+                final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+                final manifestCaption = await ManifestEncoder.encodeFolderManifest(
+                  folderId: newFolderId,
+                  folderName: name,
+                  parentFolderId: currentId,
+                  masterKey: secretKey,
+                );
 
-                  final tempDir = await getTemporaryDirectory();
-                  final tempFile = File('\${tempDir.path}/folder_$newFolderId.png');
-                  final pngBytes = Uint8List.fromList([
-                    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
-                  ]);
-                  await tempFile.writeAsBytes(pngBytes);
+                final tempDir = await getTemporaryDirectory();
+                final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
+                final pngBytes = Uint8List.fromList([
+                  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+                ]);
+                await tempFile.writeAsBytes(pngBytes);
 
-                  final telegram = ref.read(telegramServiceProvider.notifier);
-                  await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+                final telegram = ref.read(telegramServiceProvider.notifier);
+                await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
 
-                  if (await tempFile.exists()) {
-                    await tempFile.delete();
-                  }
+                if (await tempFile.exists()) {
+                  await tempFile.delete();
                 }
-              } catch (e) {
-                // Ignore sync errors here
               }
+            } catch (e) {
+              // Ignore sync errors here
             }
           },
           style: ElevatedButton.styleFrom(
