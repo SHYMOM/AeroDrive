@@ -14,6 +14,7 @@ class ManifestEncoder {
     String? wrappedDekBase64,
     String? ctrIvBase64,
     int? chunkIndex,
+    int? totalChunks,
     int isChunked = 0,
     int version = 1,
   }) async => CaptionSerializer.serializeFile(
@@ -27,6 +28,7 @@ class ManifestEncoder {
       wrappedDekBase64: wrappedDekBase64,
       ctrIvBase64: ctrIvBase64,
       chunkIndex: chunkIndex,
+      totalChunks: totalChunks,
       isChunked: isChunked,
       version: version,
     );

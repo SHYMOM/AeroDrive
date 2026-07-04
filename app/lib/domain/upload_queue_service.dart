@@ -499,7 +499,20 @@ class UploadQueueService {
         activeChannelId = ch['id'] is String ? int.parse(ch['id']) : ch['id'] as int;
       }
     } else {
-      final activeChannelStr = await _settings.getSetting('active_channel_id');
+      var activeChannelStr = await _settings.getSetting('active_channel_id');
+      if (activeChannelStr == null || activeChannelStr.isEmpty) {
+        final savedChannelsJson = await _settings.getSetting('storage_channels_list');
+        if (savedChannelsJson != null && savedChannelsJson.isNotEmpty) {
+          try {
+            final List<dynamic> decoded = jsonDecode(savedChannelsJson);
+            if (decoded.isNotEmpty) {
+              activeChannelStr = decoded.first['id'].toString();
+              await _settings.setSetting('active_channel_id', activeChannelStr);
+            }
+          } catch (_) {}
+        }
+      }
+
       if (activeChannelStr == null || activeChannelStr.isEmpty) {
         await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
           .write(const TransferQueueCompanion(status: drift.Value('FAILED'), errorMessage: drift.Value('No Storage Channels available.')));
@@ -705,6 +718,7 @@ class UploadQueueService {
           wrappedDekBase64: wrappedDekBase64,
           ctrIvBase64: ctrIv != null ? base64Encode(ctrIv) : null,
           chunkIndex: i,
+          totalChunks: totalChunks,
           isChunked: totalChunks > 1 ? 1 : 0,
         );
       }

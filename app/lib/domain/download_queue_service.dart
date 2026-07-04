@@ -221,7 +221,7 @@ class DownloadQueueService {
       return;
     }
 
-    final totalChunks = validChunks.length;
+    final totalChunks = dbFile.totalChunks ?? validChunks.length;
     _downloadedChunkPaths[item.fileId!] = {};
     _downloadProgress[item.fileId!] = {};
 

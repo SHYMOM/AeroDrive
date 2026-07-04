@@ -186,6 +186,8 @@ class ZeroDBRecoveryService {
             if (!existingFile) {
               final document = msg['content']?['document'];
               final size = manifest['size'] as int? ?? document?['document']?['size'] as int? ?? 0;
+              final isChunkedVal = manifest['chk'] == 1;
+              final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
               recoveredFiles.add(
                 FilesCompanion.insert(
                   id: fileId,
@@ -194,7 +196,8 @@ class ZeroDBRecoveryService {
                   size: drift.Value(size),
                   mimeType: drift.Value(manifest['mime'] as String?),
                   isEncrypted: drift.Value(manifest['enc'] == 1),
-                  isChunked: drift.Value(manifest['chk'] == 1),
+                  isChunked: drift.Value(isChunkedVal),
+                  totalChunks: drift.Value(totalChunksVal),
                   sha256Hash: drift.Value(wrappedDekString),
                   createdAt: drift.Value(DateTime.now()),
                 ),
@@ -227,14 +230,22 @@ class ZeroDBRecoveryService {
       // Upsert Folders
       if (recoveredFolders.isNotEmpty) {
         await _db.batch((batch) {
-          batch.insertAllOnConflictUpdate(_db.folders, recoveredFolders);
+          const chunkSize = 80;
+          for (var i = 0; i < recoveredFolders.length; i += chunkSize) {
+            final end = (i + chunkSize < recoveredFolders.length) ? i + chunkSize : recoveredFolders.length;
+            batch.insertAllOnConflictUpdate(_db.folders, recoveredFolders.sublist(i, end));
+          }
         });
       }
       
       // Upsert Files
       if (recoveredFiles.isNotEmpty) {
         await _db.batch((batch) {
-          batch.insertAllOnConflictUpdate(_db.files, recoveredFiles);
+          const chunkSize = 40;
+          for (var i = 0; i < recoveredFiles.length; i += chunkSize) {
+            final end = (i + chunkSize < recoveredFiles.length) ? i + chunkSize : recoveredFiles.length;
+            batch.insertAllOnConflictUpdate(_db.files, recoveredFiles.sublist(i, end));
+          }
         });
       }
 
@@ -245,7 +256,11 @@ class ZeroDBRecoveryService {
           await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fid))).go();
         }
         await _db.batch((batch) {
-          batch.insertAllOnConflictUpdate(_db.chunks, recoveredChunks);
+          const chunkSize = 100;
+          for (var i = 0; i < recoveredChunks.length; i += chunkSize) {
+            final end = (i + chunkSize < recoveredChunks.length) ? i + chunkSize : recoveredChunks.length;
+            batch.insertAllOnConflictUpdate(_db.chunks, recoveredChunks.sublist(i, end));
+          }
         });
       }
 

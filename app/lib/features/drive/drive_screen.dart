@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:cryptography/cryptography.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:drift/drift.dart' as drift;
@@ -193,6 +194,15 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 final jsonConfig = await configService.restoreConfigFromChannel();
                 if (jsonConfig != null) {
                   await ref.read(settingsRepositoryProvider).setSetting('storage_channels_list', jsonConfig);
+                  try {
+                    final List<dynamic> decoded = jsonDecode(jsonConfig);
+                    if (decoded.isNotEmpty) {
+                      final firstChannelId = decoded.first['id'].toString();
+                      await ref.read(settingsRepositoryProvider).setSetting('active_channel_id', firstChannelId);
+                    }
+                  } catch (e) {
+                    debugPrint('Failed to auto-set active channel: $e');
+                  }
                   // Trigger disaster recovery
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(

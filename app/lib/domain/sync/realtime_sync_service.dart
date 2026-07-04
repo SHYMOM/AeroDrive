@@ -195,6 +195,8 @@ class RealtimeSyncService {
 
           final document = msg['content']?['document'];
           final size = manifest['size'] as int? ?? document?['document']?['size'] as int? ?? 0;
+          final isChunkedVal = manifest['chk'] == 1;
+          final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
           
           await db.into(db.files).insertOnConflictUpdate(
             FilesCompanion.insert(
@@ -204,7 +206,8 @@ class RealtimeSyncService {
               size: drift.Value(size),
               mimeType: drift.Value(manifest['mime'] as String?),
               isEncrypted: drift.Value(manifest['enc'] == 1),
-              isChunked: drift.Value(manifest['chk'] == 1),
+              isChunked: drift.Value(isChunkedVal),
+              totalChunks: drift.Value(totalChunksVal),
               sha256Hash: drift.Value(wrappedDekString),
               createdAt: drift.Value(DateTime.now()),
             ),

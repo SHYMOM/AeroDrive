@@ -37,6 +37,7 @@ class CaptionSerializer {
     String? wrappedDekBase64,
     String? ctrIvBase64,
     int? chunkIndex,
+    int? totalChunks,
     int version = 1,
     int isEncrypted = 1,
     int isChunked = 0,
@@ -55,9 +56,10 @@ class CaptionSerializer {
       "ver": version,
       "enc": isEncrypted,
       "chk": isChunked,
-      "c": ?chunkIndex,
-      "k": ?wrappedDekBase64,
-      "iv": ?ctrIvBase64,
+      if (chunkIndex != null) "c": chunkIndex,
+      if (totalChunks != null) "tc": totalChunks,
+      if (wrappedDekBase64 != null) "k": wrappedDekBase64,
+      if (ctrIvBase64 != null) "iv": ctrIvBase64,
     };
 
     final jsonStr = jsonEncode(jsonMap);
