@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import '../../../core/providers/repository_providers.dart';
 
 class BackupFolderMapper extends ConsumerStatefulWidget {
   const BackupFolderMapper({super.key});

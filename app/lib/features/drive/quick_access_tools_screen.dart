@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
+import '../../core/theme/app_colors.dart';
+import 'providers/drive_providers.dart';
 
 class QuickAccessToolsScreen extends ConsumerWidget {
   const QuickAccessToolsScreen({super.key});
@@ -58,10 +58,10 @@ class QuickAccessToolsScreen extends ConsumerWidget {
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
               const Color(0xFF7C3AED).withValues(alpha: 0.15),
@@ -72,8 +72,7 @@ class QuickAccessToolsScreen extends ConsumerWidget {
           ),
         ),
         child: statsAsync.when(
-          data: (stats) {
-            return GridView.builder(
+          data: (stats) => GridView.builder(
               padding: const EdgeInsets.all(16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
@@ -87,7 +86,7 @@ class QuickAccessToolsScreen extends ConsumerWidget {
                 final count = stats[cat['title']] ?? 0;
                 final countText = count == 1 ? '1 item' : '$count items';
 
-                return Container(
+                return DecoratedBox(
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.03),
                     borderRadius: BorderRadius.circular(20),
@@ -105,7 +104,7 @@ class QuickAccessToolsScreen extends ConsumerWidget {
                     },
                     borderRadius: BorderRadius.circular(20),
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -140,8 +139,7 @@ class QuickAccessToolsScreen extends ConsumerWidget {
                   ),
                 );
               },
-            );
-          },
+            ),
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
         ),

@@ -1,13 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/media/media_screen.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
+
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../gallery/thumbnail_service.dart';
+import '../preview/preview_router.dart';
+import 'media_screen.dart';
 
 class MemoriesScreen extends ConsumerWidget {
   const MemoriesScreen({super.key});
@@ -30,10 +31,10 @@ class MemoriesScreen extends ConsumerWidget {
           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
               const Color(0xFF7C3AED).withValues(alpha: 0.15),
@@ -63,7 +64,7 @@ class MemoriesScreen extends ConsumerWidget {
                     : 'Some time ago';
                 
                 final int yearsAgo = DateTime.now().year - (file.createdAt?.year ?? DateTime.now().year);
-                final String memoryTitle = yearsAgo > 0 
+                final memoryTitle = yearsAgo > 0 
                     ? '$yearsAgo years ago today'
                     : 'Relive this moment';
 
@@ -123,12 +124,11 @@ class MemoriesScreen extends ConsumerWidget {
 }
 
 class _MemoryCover extends ConsumerWidget {
-  final FileData file;
   const _MemoryCover({required this.file});
+  final FileData file;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<File?>(
+  Widget build(BuildContext context, WidgetRef ref) => FutureBuilder<File?>(
       future: ref.read(thumbnailServiceProvider).getThumbnail(file),
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
@@ -137,5 +137,4 @@ class _MemoryCover extends ConsumerWidget {
         return Container(color: Colors.white.withValues(alpha: 0.05));
       },
     );
-  }
 }

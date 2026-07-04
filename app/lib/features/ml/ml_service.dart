@@ -1,25 +1,21 @@
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:aerodrive/features/tags/tag_service.dart';
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
+import '../gallery/thumbnail_service.dart';
+import '../tags/tag_service.dart';
 
 class CropTaskArgs {
-  final String imagePath;
-  final String outputPath;
-  final int left;
-  final int top;
-  final int width;
-  final int height;
 
   CropTaskArgs({
     required this.imagePath,
@@ -29,6 +25,12 @@ class CropTaskArgs {
     required this.width,
     required this.height,
   });
+  final String imagePath;
+  final String outputPath;
+  final int left;
+  final int top;
+  final int width;
+  final int height;
 }
 
 Future<void> _cropFaceIsolate(CropTaskArgs args) async {
@@ -37,13 +39,13 @@ Future<void> _cropFaceIsolate(CropTaskArgs args) async {
   if (decodedImage == null) return;
 
   // Add 10% padding to the bounding box for a better crop
-  int padX = (args.width * 0.1).toInt();
-  int padY = (args.height * 0.1).toInt();
+  final int padX = (args.width * 0.1).toInt();
+  final int padY = (args.height * 0.1).toInt();
 
-  int x = (args.left - padX).clamp(0, decodedImage.width);
-  int y = (args.top - padY).clamp(0, decodedImage.height);
-  int w = (args.width + padX * 2).clamp(0, decodedImage.width - x);
-  int h = (args.height + padY * 2).clamp(0, decodedImage.height - y);
+  final int x = (args.left - padX).clamp(0, decodedImage.width);
+  final int y = (args.top - padY).clamp(0, decodedImage.height);
+  final int w = (args.width + padX * 2).clamp(0, decodedImage.width - x);
+  final int h = (args.height + padY * 2).clamp(0, decodedImage.height - y);
 
   final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
   // Enhance face profile with slight saturation, contrast, and brightness boost
@@ -62,9 +64,9 @@ Future<void> _cropFaceIsolate(CropTaskArgs args) async {
 }
 
 class MLService {
-  final Ref _ref;
 
   MLService(this._ref);
+  final Ref _ref;
 
   Future<void> processImage(FileData file) async {
     if (file.mimeType == null || !file.mimeType!.startsWith('image/')) return;
@@ -97,11 +99,7 @@ class MLService {
       // 2. Face Detection
       final faceDetector = FaceDetector(
         options: FaceDetectorOptions(
-          enableContours: false,
-          enableLandmarks: false,
-          enableTracking: false,
-          enableClassification: false,
-          performanceMode: FaceDetectorMode.fast,
+          
         ),
       );
       
@@ -116,7 +114,7 @@ class MLService {
         final db = _ref.read(databaseProvider);
         const uuid = Uuid();
 
-        for (int i = 0; i < faces.length; i++) {
+        for (var i = 0; i < faces.length; i++) {
           final face = faces[i];
           final clusterId = uuid.v4();
           final cropPath = '${facesDir.path}/${clusterId}_${file.id}.jpg';
@@ -144,7 +142,7 @@ class MLService {
             PhotoFacesCompanion.insert(
               fileId: file.id,
               faceClusterId: clusterId,
-              confidence: drift.Value(0.9), // We just use 0.9 as a default for MLKit detected faces
+              confidence: const drift.Value(0.9), // We just use 0.9 as a default for MLKit detected faces
             ),
             mode: drift.InsertMode.insertOrIgnore,
           );
@@ -163,6 +161,4 @@ class MLService {
   }
 }
 
-final mlServiceProvider = Provider<MLService>((ref) {
-  return MLService(ref);
-});
+final mlServiceProvider = Provider<MLService>(MLService.new);

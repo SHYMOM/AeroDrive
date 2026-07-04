@@ -1,13 +1,15 @@
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/widgets/aerodrive_logo.dart';
-import 'package:aerodrive/core/widgets/otp_input.dart';
-import 'package:aerodrive/core/widgets/premium_button.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/utils/phone_validator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/phone_validator.dart';
+import '../../core/widgets/aerodrive_logo.dart';
+import '../../core/widgets/otp_input.dart';
+import '../../core/widgets/premium_button.dart';
+import '../telegram/telegram_service.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -30,7 +32,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   bool _isSubmittingPassword = false;
   bool _showPassword = false;
   bool _codeSent = false;
-  bool _isTelegramAuth = true; // Track if we're using Telegram auth (6-digit code)
+  final bool _isTelegramAuth = true; // Track if we're using Telegram auth (6-digit code)
 
   @override
   void initState() {
@@ -39,7 +41,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       vsync: this,
       duration: const Duration(seconds: 4),
     )..repeat(reverse: true);
-    _bgPulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _bgPulseAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _bgPulseController, curve: Curves.easeInOut),
     );
   }
@@ -89,7 +91,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         setState(() {
           _isSendingCode = false;
         });
-        String errorMsg = 'Failed to send verification code';
+        var errorMsg = 'Failed to send verification code';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         }
@@ -110,7 +112,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       await _service.checkAuthenticationCode(code);
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Invalid verification code';
+        var errorMsg = 'Invalid verification code';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         }
@@ -137,7 +139,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       await _service.checkAuthenticationPassword(pass);
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Incorrect password';
+        var errorMsg = 'Incorrect password';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         }
@@ -161,14 +163,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final service = ref.read(telegramServiceProvider.notifier);
 
     return Scaffold(
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF7C3AED).withOpacity(0.3), // neonViolet glow
-              const Color(0xFF00E5FF).withOpacity(0.1), // neonCyan glow
+              const Color(0xFF7C3AED).withValues(alpha: 0.3), // neonViolet glow
+              const Color(0xFF00E5FF).withValues(alpha: 0.1), // neonCyan glow
               const Color(0xFF0D0E23), // deepSpace
               const Color(0xFF0D0E23), // deepSpace
             ],
@@ -176,21 +178,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
         child: AnimatedBuilder(
           animation: _bgPulseAnimation,
-          builder: (context, child) {
-            return Container(
+          builder: (context, child) => DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: Alignment.center,
                   radius: 1.2,
                   colors: [
-                    AppColors.primary.withOpacity(0.08 * _bgPulseAnimation.value),
+                    AppColors.primary.withValues(alpha: 0.08 * _bgPulseAnimation.value),
                     Colors.transparent,
                   ],
                 ),
               ),
               child: child,
-            );
-          },
+            ),
           child: SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -216,23 +215,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
-  Widget _buildLogo() {
-    return Column(
+  Widget _buildLogo() => Column(
       children: [
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.2),
+                color: AppColors.primary.withValues(alpha: 0.2),
                 blurRadius: 20,
                 spreadRadius: 2,
               )
             ],
           ),
-          child: const AeroDriveLogo(size: 64),
+          child: const AeroDriveLogo(),
         ),
         const SizedBox(height: 24),
         Text(
@@ -240,7 +238,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w800,
-            color: Colors.white.withOpacity(0.95),
+            color: Colors.white.withValues(alpha: 0.95),
             letterSpacing: 1.5,
           ),
         ),
@@ -249,22 +247,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           'Zero-Knowledge. Encrypted. Decentralized.',
           style: TextStyle(
             fontSize: 12,
-            color: AppColors.secondary.withOpacity(0.9),
+            color: AppColors.secondary.withValues(alpha: 0.9),
             letterSpacing: 2,
             fontWeight: FontWeight.w500,
           ),
         ),
       ],
     ).animate().fadeIn(duration: 600.ms).slideY(begin: -20, end: 0);
-  }
 
-  Widget _buildAuthSection(TelegramAuthState tdState, TelegramService service) {
-    return AnimatedSwitcher(
+  Widget _buildAuthSection(TelegramAuthState tdState, TelegramService service) => AnimatedSwitcher(
       duration: const Duration(milliseconds: 400),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
+      transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
@@ -273,11 +268,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             ).animate(animation),
             child: child,
           ),
-        );
-      },
+        ),
       child: _buildCurrentView(tdState, service),
     );
-  }
 
   Widget _buildCurrentView(TelegramAuthState tdState, TelegramService service) {
     switch (tdState) {
@@ -296,8 +289,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
   }
 
-  Widget _buildInitializing() {
-    return _buildGlassCard(
+  Widget _buildInitializing() => _buildGlassCard(
       child: Column(
         children: [
           SizedBox(
@@ -306,7 +298,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             child: CircularProgressIndicator(
               strokeWidth: 3,
               valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.primary.withOpacity(0.8),
+                AppColors.primary.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -314,7 +306,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           Text(
             'Establishing secure connection...',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
               fontSize: 14,
             ),
           ),
@@ -322,12 +314,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       ),
     ).animate().fadeIn().shimmer(
       duration: 1200.ms,
-      color: AppColors.primary.withOpacity(0.05),
+      color: AppColors.primary.withValues(alpha: 0.05),
     );
-  }
 
-  Widget _buildPhoneEntry() {
-    return Column(
+  Widget _buildPhoneEntry() => Column(
       key: const ValueKey('phone'),
       children: [
         _buildGlassCard(
@@ -340,7 +330,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
-                          color: AppColors.primary.withOpacity(0.15),
+                          color: AppColors.primary.withValues(alpha: 0.15),
                         ),
                         child: const Icon(Icons.phone_android, color: AppColors.primary, size: 20),
                       ),
@@ -348,7 +338,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                       Text(
                         'Sign in to AeroDrive',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                         ),
@@ -359,7 +349,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               Text(
                 'Enter your phone number starting with your country code (e.g. +1 234 567 8900).',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -380,7 +370,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
       ],
     );
-  }
 
   Widget _buildSendCodeButton() {
     if (_isSendingCode) {
@@ -397,36 +386,33 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
-  Widget _buildNaughtySendingAnimation() {
-    return _buildGlassCard(
+  Widget _buildNaughtySendingAnimation() => _buildGlassCard(
       child: _NaughtySendingAnimation(),
     );
-  }
 
-  Widget _buildCodeSentAnimation() {
-    return Container(
+  Widget _buildCodeSentAnimation() => Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF4CAF50).withOpacity(0.15),
-            const Color(0xFF2196F3).withOpacity(0.08),
+            const Color(0xFF4CAF50).withValues(alpha: 0.15),
+            const Color(0xFF2196F3).withValues(alpha: 0.08),
           ],
         ),
         border: Border.all(
-          color: const Color(0xFF4CAF50).withOpacity(0.3),
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle, color: const Color(0xFF4CAF50).withOpacity(0.9), size: 22),
+          Icon(Icons.check_circle, color: const Color(0xFF4CAF50).withValues(alpha: 0.9), size: 22),
           const SizedBox(width: 10),
           Text(
             'Code sent successfully!',
             style: TextStyle(
-              color: const Color(0xFF4CAF50).withOpacity(0.9),
+              color: const Color(0xFF4CAF50).withValues(alpha: 0.9),
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -434,10 +420,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ],
       ),
     ).animate().scale(duration: 300.ms).then().shake(duration: 400.ms);
-  }
 
-  Widget _buildCodeEntry() {
-    return Column(
+  Widget _buildCodeEntry() => Column(
       key: const ValueKey('code'),
       children: [
         _buildGlassCard(
@@ -459,7 +443,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   Text(
                     'Verification Code',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -470,7 +454,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               Text(
                 'Enter the code sent to your Telegram devices.',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   fontSize: 13,
                 ),
               ),
@@ -490,7 +474,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               TextButton(
                 onPressed: () => _service.logOut(),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withOpacity(0.5),
+                  foregroundColor: Colors.white.withValues(alpha: 0.5),
                 ),
                 child: const Text('Change phone number'),
               ),
@@ -499,7 +483,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.05, end: 0),
       ],
     );
-  }
 
   Widget _buildPasswordEntry(TelegramService service) {
     final hint = service.passwordHint;
@@ -525,7 +508,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                   Text(
                     '2-Step Verification',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -536,7 +519,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               Text(
                 'This account has 2-step verification enabled.${hint != null && hint.isNotEmpty ? '\nHint: $hint' : ''}',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -546,7 +529,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 Text(
                   'Recovery email is set.',
                   style: TextStyle(
-                    color: AppColors.primary.withOpacity(0.6),
+                    color: AppColors.primary.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -561,7 +544,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
                 suffixIcon: IconButton(
                   icon: Icon(
                     _showPassword ? Icons.visibility : Icons.visibility_off,
-                    color: Colors.white.withOpacity(0.4),
+                    color: Colors.white.withValues(alpha: 0.4),
                     size: 20,
                   ),
                   onPressed: () => setState(() => _showPassword = !_showPassword),
@@ -579,7 +562,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               TextButton(
                 onPressed: () => _service.logOut(),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white.withOpacity(0.5),
+                  foregroundColor: Colors.white.withValues(alpha: 0.5),
                 ),
                 child: const Text('Try another number'),
               ),
@@ -590,8 +573,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     );
   }
 
-  Widget _buildProcessing() {
-    return _buildGlassCard(
+  Widget _buildProcessing() => _buildGlassCard(
       child: Column(
         children: [
           SizedBox(
@@ -600,7 +582,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             child: CircularProgressIndicator(
               strokeWidth: 3,
               valueColor: AlwaysStoppedAnimation<Color>(
-                AppColors.primary.withOpacity(0.8),
+                AppColors.primary.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -608,24 +590,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           Text(
             'Processing...',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
               fontSize: 14,
             ),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildErrorView() {
-    return _buildGlassCard(
+  Widget _buildErrorView() => _buildGlassCard(
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.redAccent.withOpacity(0.15),
+              color: Colors.redAccent.withValues(alpha: 0.15),
             ),
             child: const Icon(Icons.error_outline, color: Colors.redAccent, size: 32),
           ),
@@ -643,29 +623,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             'Failed to initialize. Check your API credentials.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
               fontSize: 13,
             ),
           ),
         ],
       ),
     );
-  }
 
-  Widget _buildFooter() {
-    return Text(
+  Widget _buildFooter() => Text(
       'By logging in, you agree to our Terms of Service and Privacy Policy.',
       textAlign: TextAlign.center,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.3),
+        color: Colors.white.withValues(alpha: 0.3),
         fontSize: 11,
         height: 1.4,
       ),
     ).animate().fadeIn(delay: 800.ms, duration: 500.ms);
-  }
 
-  Widget _buildGlassCard({required Widget child}) {
-    return RepaintBoundary(
+  Widget _buildGlassCard({required Widget child}) => RepaintBoundary(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
@@ -677,7 +653,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               color: AppColors.glassBgDark,
               border: Border.all(
                 color: AppColors.glassBorder,
-                width: 1,
               ),
             ),
             child: child,
@@ -685,7 +660,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
       ),
     );
-  }
 
 }
 
@@ -707,10 +681,10 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _bounceAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+    _bounceAnimation = Tween<double>(begin: 1, end: 1.2).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    _floatAnimation = Tween<double>(begin: 0.0, end: -8.0).animate(
+    _floatAnimation = Tween<double>(begin: 0, end: -8).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -722,18 +696,15 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
+      builder: (context, child) => Transform.translate(
           offset: Offset(0, _floatAnimation.value),
           child: Transform.scale(
             scale: _bounceAnimation.value,
             child: child,
           ),
-        );
-      },
+        ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -741,7 +712,7 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
           const SizedBox(width: 8),
           Icon(
             Icons.send_rounded,
-            color: AppColors.primary.withOpacity(0.9),
+            color: AppColors.primary.withValues(alpha: 0.9),
             size: 24,
           ),
           const SizedBox(width: 8),
@@ -750,7 +721,7 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
           Text(
             'Sending...',
             style: TextStyle(
-              color: AppColors.primary.withOpacity(0.7),
+              color: AppColors.primary.withValues(alpha: 0.7),
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -760,10 +731,8 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
         ],
       ),
     );
-  }
 
-  Widget _buildDot(int index) {
-    return AnimatedBuilder(
+  Widget _buildDot(int index) => AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
         final delay = (index * 0.15);
@@ -773,14 +742,13 @@ class _NaughtySendingAnimationState extends State<_NaughtySendingAnimation>
           height: 6,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: AppColors.primary.withOpacity(
-              0.3 + (t * 0.7),
+            color: AppColors.primary.withValues(
+              alpha: 0.3 + (t * 0.7),
             ),
           ),
         );
       },
     );
-  }
 }
 
 

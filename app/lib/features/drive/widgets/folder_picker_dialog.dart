@@ -1,14 +1,12 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:drift/drift.dart' hide Column;
 
-class FolderPickerDialog extends ConsumerStatefulWidget {
-  final String title;
-  final String? initialFolderId;
-  final String? excludeFolderId; // Don't allow picking a folder or its nested subfolders
+import '../../../core/providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/db/database.dart';
+
+class FolderPickerDialog extends ConsumerStatefulWidget { // Don't allow picking a folder or its nested subfolders
 
   const FolderPickerDialog({
     super.key,
@@ -16,6 +14,9 @@ class FolderPickerDialog extends ConsumerStatefulWidget {
     this.initialFolderId,
     this.excludeFolderId,
   });
+  final String title;
+  final String? initialFolderId;
+  final String? excludeFolderId;
 
   @override
   ConsumerState<FolderPickerDialog> createState() => _FolderPickerDialogState();
@@ -49,7 +50,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
     }
     
     // 2. Fetch subfolders
-    var subQuery = db.select(db.folders)..where((f) => f.deletedAt.isNull());
+    final subQuery = db.select(db.folders)..where((f) => f.deletedAt.isNull());
     if (_currentFolderId == null) {
       subQuery.where((f) => f.parentId.isNull());
     } else {
@@ -86,8 +87,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Dialog(
+  Widget build(BuildContext context) => Dialog(
       backgroundColor: AppColors.background,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -142,7 +142,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, null),
+                  onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
                 ),
                 const SizedBox(width: 8),
@@ -163,10 +163,8 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
         ),
       ),
     );
-  }
 
-  Widget _buildBreadcrumbs() {
-    return SingleChildScrollView(
+  Widget _buildBreadcrumbs() => SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
@@ -195,5 +193,4 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
         ],
       ),
     );
-  }
 }

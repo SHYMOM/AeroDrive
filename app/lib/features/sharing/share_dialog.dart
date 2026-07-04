@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/sharing/share_service.dart';
+import '../../data/db/database.dart';
+import 'share_service.dart';
 
 class ShareDialog extends ConsumerStatefulWidget {
-  final FileData file;
   const ShareDialog({super.key, required this.file});
+  final FileData file;
 
   @override
   ConsumerState<ShareDialog> createState() => _ShareDialogState();

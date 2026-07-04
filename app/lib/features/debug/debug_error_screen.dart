@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/main.dart' as app_main;
+import '../../core/theme/app_colors.dart';
+import '../../main.dart' as app_main;
 
 /// A premium, custom-designed screen for viewing system diagnostics or reporting crashes.
 ///
@@ -11,9 +11,6 @@ import 'package:aerodrive/main.dart' as app_main;
 /// allowing the user to view the critical error details and restart the app.
 /// Otherwise, it displays in "System Diagnostics" mode with cyan highlights.
 class DebugErrorScreen extends StatefulWidget {
-  final Object? error;
-  final StackTrace? stack;
-  final List<String> logs;
 
   const DebugErrorScreen({
     super.key,
@@ -21,6 +18,9 @@ class DebugErrorScreen extends StatefulWidget {
     this.stack,
     required this.logs,
   });
+  final Object? error;
+  final StackTrace? stack;
+  final List<String> logs;
 
   @override
   State<DebugErrorScreen> createState() => _DebugErrorScreenState();
@@ -63,16 +63,16 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle_outline, color: AppColors.success),
-            const SizedBox(width: 8),
-            const Text('Logs copied to clipboard'),
+            Icon(Icons.check_circle_outline, color: AppColors.success),
+            SizedBox(width: 8),
+            Text('Logs copied to clipboard'),
           ],
         ),
         backgroundColor: AppColors.surfaceElevated,
-        duration: const Duration(seconds: 2),
+        duration: Duration(seconds: 2),
       ),
     );
   }
@@ -143,7 +143,7 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,

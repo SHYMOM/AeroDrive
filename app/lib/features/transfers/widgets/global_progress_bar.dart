@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers.dart';
+
+import '../../../core/providers.dart';
+import '../../../core/theme/app_colors.dart';
 
 final aggregateTransferProgressProvider = StreamProvider<Map<String, dynamic>>((ref) {
   final db = ref.watch(databaseProvider);
   return db.select(db.transferQueue).watch().map((queues) {
-    int activeUploads = 0;
-    int activeDownloads = 0;
-    int totalBytes = 0;
-    int transferredBytes = 0;
+    var activeUploads = 0;
+    var activeDownloads = 0;
+    var totalBytes = 0;
+    var transferredBytes = 0;
 
     for (final q in queues) {
       if (q.status == 'PENDING' || q.status == 'PROCESSING') {
         if (q.type == 'UPLOAD_FILE') activeUploads++;
         if (q.type == 'DOWNLOAD_FILE') activeDownloads++;
-        totalBytes += (q.totalBytes ?? 0).toInt();
-        transferredBytes += (q.bytesTransferred ?? 0).toInt();
+        totalBytes += (q.totalBytes ?? 0);
+        transferredBytes += (q.bytesTransferred ?? 0);
       }
     }
 
@@ -47,7 +47,7 @@ class GlobalProgressBar extends ConsumerWidget {
         final upCount = data['uploads'] as int;
         final downCount = data['downloads'] as int;
 
-        String label = 'Transferring...';
+        var label = 'Transferring...';
         if (upCount > 0 && downCount > 0) {
           label = 'Uploading $upCount, Downloading $downCount items...';
         } else if (upCount > 0) {
@@ -65,7 +65,7 @@ class GlobalProgressBar extends ConsumerWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 blurRadius: 8,
                 offset: const Offset(0, -2),
               ),
@@ -113,7 +113,7 @@ class GlobalProgressBar extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

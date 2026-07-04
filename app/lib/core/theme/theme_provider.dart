@@ -1,14 +1,12 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/logger.dart';
+
+import '../logger.dart';
+import '../providers/repository_providers.dart';
 
 class AeroThemeState {
-  final ThemeMode themeMode;
-  final int accentColorValue;
-  final double fontScale;
-  final bool highContrast;
 
   const AeroThemeState({
     required this.themeMode,
@@ -16,20 +14,22 @@ class AeroThemeState {
     required this.fontScale,
     required this.highContrast,
   });
+  final ThemeMode themeMode;
+  final int accentColorValue;
+  final double fontScale;
+  final bool highContrast;
 
   AeroThemeState copyWith({
     ThemeMode? themeMode,
     int? accentColorValue,
     double? fontScale,
     bool? highContrast,
-  }) {
-    return AeroThemeState(
+  }) => AeroThemeState(
       themeMode: themeMode ?? this.themeMode,
       accentColorValue: accentColorValue ?? this.accentColorValue,
       fontScale: fontScale ?? this.fontScale,
       highContrast: highContrast ?? this.highContrast,
     );
-  }
 
   /// Value equality: Riverpod uses this to decide whether to notify listeners.
   /// Without this, every settings save triggers a MaterialApp rebuild even if
@@ -49,16 +49,16 @@ class AeroThemeState {
 }
 
 class ThemeNotifier extends StateNotifier<AeroThemeState> {
-  final Ref _ref;
 
   ThemeNotifier(this._ref) : super(const AeroThemeState(
     themeMode: ThemeMode.system,
     accentColorValue: 0xFF00B0FF, // default light blue accent
-    fontScale: 1.0,
+    fontScale: 1,
     highContrast: false,
   )) {
     _loadTheme();
   }
+  final Ref _ref;
 
   Future<void> _loadTheme() async {
     try {
@@ -72,21 +72,21 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
       // Load Accent
       final accentStr = await settings.getSetting('app_accent_color');
-      int accentValue = 0xFF00B0FF;
+      var accentValue = 0xFF00B0FF;
       if (accentStr != null) {
         accentValue = int.tryParse(accentStr) ?? 0xFF00B0FF;
       }
 
       // Load Font Scale
       final scaleStr = await settings.getSetting('app_font_scale');
-      double scale = 1.0;
+      var scale = 1.0;
       if (scaleStr != null) {
         scale = double.tryParse(scaleStr) ?? 1.0;
       }
 
       // Load Contrast
       final contrastStr = await settings.getSetting('app_high_contrast');
-      bool contrast = contrastStr == 'true';
+      final contrast = contrastStr == 'true';
 
       state = AeroThemeState(
         themeMode: mode,
@@ -101,15 +101,15 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = state.copyWith(themeMode: mode);
-    String themeStr = 'system';
+    var themeStr = 'system';
     if (mode == ThemeMode.light) themeStr = 'light';
     if (mode == ThemeMode.dark) themeStr = 'dark';
     await _ref.read(settingsRepositoryProvider).setSetting('app_theme', themeStr);
   }
 
   Future<void> setAccentColor(Color color) async {
-    state = state.copyWith(accentColorValue: color.value);
-    await _ref.read(settingsRepositoryProvider).setSetting('app_accent_color', color.value.toString());
+    state = state.copyWith(accentColorValue: color.toARGB32());
+    await _ref.read(settingsRepositoryProvider).setSetting('app_accent_color', color.toARGB32().toString());
   }
 
   Future<void> setFontScale(double scale) async {
@@ -124,7 +124,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 }
 
 final themeProvider = StateNotifierProvider<ThemeNotifier, AeroThemeState>(
-  (ref) => ThemeNotifier(ref),
+  ThemeNotifier.new,
   // keepAlive prevents unnecessary recreation when providers update, which
   // would itself trigger a spurious MaterialApp rebuild.
   name: 'themeProvider',

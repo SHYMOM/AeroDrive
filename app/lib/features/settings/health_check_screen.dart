@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../telegram/telegram_service.dart';
 
 final activeChannelIdProvider = FutureProvider.autoDispose<String?>((ref) async {
   final settings = ref.watch(settingsRepositoryProvider);
@@ -39,7 +40,7 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
   List<String> _compromisedFiles = [];
   bool _hasScanned = false;
 
-  void _startScan(int channelId) async {
+  Future<void> _startScan(int channelId) async {
     setState(() {
       _isScanning = true;
       _progress = 0;
@@ -83,8 +84,8 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
           _progress = _scannedChunks / _totalChunks;
         });
 
-        bool chunkExists = false;
-        int retries = 3;
+        var chunkExists = false;
+        var retries = 3;
         while (retries > 0) {
           try {
             await telegram.getMessage(channelId, chunk.messageId!);
@@ -158,7 +159,7 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
           if (channelId == null) {
             // Render Missing Channel UI State
             return Padding(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(24),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -169,22 +170,22 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.surfaceElevated,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                       ),
-                      child: Column(
+                      child: const Column(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.warning_amber_rounded,
                             size: 64,
                             color: AppColors.error,
                           ),
-                          const SizedBox(height: 16),
-                          const Text(
+                          SizedBox(height: 16),
+                          Text(
                             'No Storage Channel Added',
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
+                          SizedBox(height: 12),
+                          Text(
                             'To run a channel health check, you must add and select an active storage channel first.',
                             textAlign: TextAlign.center,
                             style: TextStyle(color: AppColors.onSurfaceVariant),
@@ -209,7 +210,7 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
           final channelName = channelNameAsync.valueOrNull ?? 'AeroDrive Storage Channel';
 
           return Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -225,8 +226,8 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: _compromisedFiles.isNotEmpty
-                          ? AppColors.error.withOpacity(0.4)
-                          : AppColors.primary.withOpacity(0.3),
+                          ? AppColors.error.withValues(alpha: 0.4)
+                          : AppColors.primary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -265,7 +266,7 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                   ),
                   const SizedBox(height: 8),
                   Expanded(
-                    child: Container(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: AppColors.surfaceElevated,
                         borderRadius: BorderRadius.circular(12),
@@ -273,16 +274,14 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                       ),
                       child: ListView.builder(
                         itemCount: _compromisedFiles.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
+                        itemBuilder: (context, index) => ListTile(
                             leading: const Icon(Icons.error_outline, color: AppColors.error),
                             title: Text(
                               _compromisedFiles[index],
                               style: const TextStyle(color: Colors.white, fontSize: 14),
                             ),
                             subtitle: const Text('Missing chunk data on Telegram', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                          );
-                        },
+                          ),
                       ),
                     ),
                   ),

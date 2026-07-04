@@ -1,11 +1,12 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' hide Column;
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../drive/providers/drive_providers.dart';
+import '../preview/preview_router.dart';
 
 class AudiosScreen extends ConsumerWidget {
   const AudiosScreen({super.key});
@@ -34,7 +35,7 @@ class AudiosScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.audiotrack_outlined, size: 48, color: AppColors.fileAudio),
+                  const Icon(Icons.audiotrack_outlined, size: 48, color: AppColors.fileAudio),
                   const SizedBox(height: 16),
                   Text('No audio files found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -58,13 +59,12 @@ class AudiosScreen extends ConsumerWidget {
 }
 
 class _AudioItem extends StatelessWidget {
-  final FileData file;
 
   const _AudioItem({required this.file});
+  final FileData file;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
+  Widget build(BuildContext context) => ListTile(
       leading: Container(
         width: 44,
         height: 44,
@@ -72,16 +72,15 @@ class _AudioItem extends StatelessWidget {
           color: AppColors.fileAudio.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(Icons.audiotrack_outlined, color: AppColors.fileAudio, size: 22),
+        child: const Icon(Icons.audiotrack_outlined, color: AppColors.fileAudio, size: 22),
       ),
       title: Text(file.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
       subtitle: Text(
-        file.size != null ? '${_formatFileSize(file.size!)}' : 'Unknown size',
+        file.size != null ? _formatFileSize(file.size!) : 'Unknown size',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
       ),
       onTap: () => PreviewRouter.openPreview(context, file),
     );
-  }
 
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -94,7 +93,7 @@ class _AudioItem extends StatelessWidget {
 final audiosProvider = FutureProvider.family<Map<String, dynamic>, String?>((ref, folderId) async {
   final db = ref.watch(databaseProvider);
 
-  List<FileData> audioFiles = [];
+  final List<FileData> audioFiles = [];
 
   if (folderId == null) {
     final files = await (db.select(db.files)..where((f) => f.deletedAt.isNull())).get();

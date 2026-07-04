@@ -1,17 +1,19 @@
 import 'dart:io';
+
+import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:archive/archive.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/preview/file_decryption_util.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import 'file_decryption_util.dart';
 
 /// Shows the contents of a ZIP archive stored as an encrypted file.
 /// Supports browsing entries and extracting individual files.
 class ArchiveViewer extends ConsumerStatefulWidget {
-  final FileData file;
   const ArchiveViewer({super.key, required this.file});
+  final FileData file;
 
   @override
   ConsumerState<ArchiveViewer> createState() => _ArchiveViewerState();
@@ -177,7 +179,7 @@ class _ArchiveViewerState extends ConsumerState<ArchiveViewer> {
                   ),
                   subtitle: isDir ? null : Text(
                     _formatSize(entry.size),
-                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                    style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                   ),
                   trailing: isDir ? null : IconButton(
                     icon: const Icon(Icons.download, size: 16),

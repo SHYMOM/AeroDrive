@@ -1,37 +1,35 @@
-import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:io';
+
+import 'package:app_links/app_links.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
-
-import 'core/theme/aerodrive_theme.dart';
-import 'core/theme/theme_provider.dart';
-import 'core/routing/app_router.dart';
-import 'domain/streaming/streaming_server.dart';
-import 'package:app_links/app_links.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:aerodrive/features/sharing/share_service.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/domain/recovery/recovery_scanner.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:workmanager/workmanager.dart';
-import 'package:cryptography/cryptography.dart';
 
 import 'core/logger.dart';
-import 'domain/notification_service.dart';
-import 'features/debug/debug_error_screen.dart';
-import 'domain/boot_service.dart';
-import 'domain/backup_service.dart';
-import 'domain/auto_backup_watcher.dart';
-import 'data/repositories/settings_repository.dart';
+import 'core/providers/repository_providers.dart';
+import 'core/routing/app_router.dart';
+import 'core/theme/aerodrive_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'data/db/database.dart';
+import 'data/repositories/settings_repository.dart';
+import 'domain/auto_backup_watcher.dart';
+import 'domain/backup_service.dart';
+import 'domain/boot_service.dart';
+import 'domain/notification_service.dart';
+import 'domain/streaming/streaming_server.dart';
+import 'domain/sync/realtime_sync_service.dart';
+import 'features/debug/debug_error_screen.dart';
+import 'features/drive/providers/drive_providers.dart';
+import 'features/sharing/share_service.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -54,8 +52,8 @@ void callbackDispatcher() {
           return true;
         }
 
-        final uuid = const Uuid();
-        int queuedCount = 0;
+        const uuid = Uuid();
+        var queuedCount = 0;
 
         for (final p in profiles) {
           final profile = p as Map<String, dynamic>;
@@ -78,7 +76,7 @@ void callbackDispatcher() {
             if (entity is! File) continue;
             final ext = entity.path.split('.').last.toLowerCase();
 
-            bool matches = profile['include_all'] == true;
+            var matches = profile['include_all'] == true;
             if (!matches && profile['include_images'] == true) {
               matches = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif'].contains(ext);
             }
@@ -132,7 +130,7 @@ void main() {
   GoogleFonts.config.allowRuntimeFetching = true;
 
   // 3. Set up global error handlers AFTER binding is initialized.
-  FlutterError.onError = (FlutterErrorDetails details) {
+  FlutterError.onError = (details) {
     AppLogger.error('Flutter Error', details.exception, details.stack);
     FlutterError.presentError(details);
   };
@@ -144,13 +142,11 @@ void main() {
   };
 
   // Handle errors that occur during widget tree builds.
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return DebugErrorScreen(
+  ErrorWidget.builder = (details) => DebugErrorScreen(
       error: details.exception,
       stack: details.stack ?? StackTrace.current,
       logs: AppLogger.logs,
     );
-  };
 
   // 4. Run initialization in a guarded zone so any async error shows a crash
   //    screen instead of silently closing the app.
@@ -177,7 +173,7 @@ void main() {
 
     // --- DotEnv ---
     try {
-      await dotenv.load(fileName: ".env");
+      await dotenv.load();
     } catch (e, s) {
       debugPrint('[AeroDrive] dotenv load failed (non-fatal): $e\n$s');
     }
@@ -291,10 +287,8 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
         switch (schedule) {
           case 'daily':
             interval = const Duration(hours: 24);
-            break;
           case 'monthly':
             interval = const Duration(days: 30);
-            break;
           default:
             interval = const Duration(days: 7);
         }
@@ -329,9 +323,7 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     _appLinks = AppLinks();
 
     // Handle incoming links while app is running
-    _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
-      _handleIncomingUri(uri);
-    });
+    _linkSubscription = _appLinks.uriLinkStream.listen(_handleIncomingUri);
 
     // Handle the initial link if app was closed
     try {
@@ -347,7 +339,7 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     }
   }
 
-  void _handleIncomingUri(Uri uri) async {
+  Future<void> _handleIncomingUri(Uri uri) async {
     if (uri.scheme == 'aerodrive' && uri.host == 'share') {
       try {
         await ref.read(shareServiceProvider).importShareLink(uri.toString());
@@ -377,6 +369,7 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     // Initialize background services
     ref.watch(uploadQueueServiceProvider);
     ref.watch(downloadQueueServiceProvider);
+    ref.watch(realtimeSyncServiceProvider).startListening();
     
     // Start local proxy server for media streaming
     ref.read(streamingServerProvider).start();

@@ -1,15 +1,17 @@
 import 'dart:isolate';
-import 'package:workmanager/workmanager.dart';
-import 'package:aerodrive/data/db/database.dart';
+
 import 'package:drift/drift.dart';
+import 'package:workmanager/workmanager.dart';
+
+import '../data/db/database.dart';
 
 // Payload for messages to delete from TDLib
 class ExpiredMessagesPayload {
+
+  ExpiredMessagesPayload(this.chunksToDelete, this.fileIdsToPurge, this.folderIdsToPurge);
   final List<ChunkData> chunksToDelete;
   final List<String> fileIdsToPurge;
   final List<String> folderIdsToPurge;
-
-  ExpiredMessagesPayload(this.chunksToDelete, this.fileIdsToPurge, this.folderIdsToPurge);
 }
 
 class PurgeJob {
@@ -31,7 +33,7 @@ class PurgeJob {
   /// and then the caller must pass those chunks to TDLib before hard-deleting the rows.
   static Future<ExpiredMessagesPayload> findExpiredItems(AeroDriveDatabase db) async {
     // Isolate.run to prevent UI lag on massive DBs
-    return await Isolate.run(() async {
+    return Isolate.run(() async {
       final now = DateTime.now();
       final threshold = now.subtract(const Duration(days: 30));
 

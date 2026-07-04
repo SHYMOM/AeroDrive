@@ -1,39 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'package:aerodrive/core/routing/responsive_scaffold.dart';
-import 'package:aerodrive/features/auth/auth_screen.dart';
-import 'package:aerodrive/features/auth/auth_provider.dart';
-import 'package:aerodrive/features/splash/splash_screen.dart';
-import 'package:aerodrive/features/drive/drive_screen.dart';
-import 'package:aerodrive/features/search/search_screen.dart';
-import 'package:aerodrive/features/settings/settings_screen.dart';
-import 'package:aerodrive/features/settings/channels_screen.dart';
-import 'package:aerodrive/features/trash/trash_screen.dart';
-import 'package:aerodrive/features/media/media_screen.dart';
-import 'package:aerodrive/features/media/image_screen.dart';
-import 'package:aerodrive/features/media/video_screen.dart';
-import 'package:aerodrive/features/media/document_screen.dart';
-import 'package:aerodrive/features/media/audio_screen.dart';
-import 'package:aerodrive/features/transfers/transfers_screen.dart';
-import 'package:aerodrive/features/debug/debug_error_screen.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/settings/proxy_settings_screen.dart';
-import 'package:aerodrive/features/settings/appearance_settings_screen.dart';
-import 'package:aerodrive/features/drive/quick_access_tools_screen.dart';
-import 'package:aerodrive/features/media/smart_tags_screen.dart';
-import 'package:aerodrive/features/media/memories_screen.dart';
-import 'package:aerodrive/features/faces/faces_screen.dart';
-import 'package:aerodrive/features/places/places_screen.dart';
-
-import 'package:aerodrive/features/settings/accounts_screen.dart';
-import 'package:aerodrive/features/settings/session_screen.dart';
-import 'package:aerodrive/features/settings/profile_screen.dart';
-import 'package:aerodrive/features/settings/load_balancing_screen.dart';
-import 'package:aerodrive/features/settings/health_check_screen.dart';
-import 'package:aerodrive/features/settings/dropbox_backup_screen.dart';
-import 'package:aerodrive/features/settings/about_screen.dart';
+import '../../features/auth/auth_provider.dart';
+import '../../features/auth/auth_screen.dart';
+import '../../features/debug/debug_error_screen.dart';
+import '../../features/drive/drive_screen.dart';
+import '../../features/drive/quick_access_tools_screen.dart';
+import '../../features/faces/faces_screen.dart';
+import '../../features/media/audio_screen.dart';
+import '../../features/media/document_screen.dart';
+import '../../features/media/image_screen.dart';
+import '../../features/media/media_screen.dart';
+import '../../features/media/memories_screen.dart';
+import '../../features/media/smart_tags_screen.dart';
+import '../../features/media/video_screen.dart';
+import '../../features/places/places_screen.dart';
+import '../../features/search/search_screen.dart';
+import '../../features/settings/about_screen.dart';
+import '../../features/settings/accounts_screen.dart';
+import '../../features/settings/appearance_settings_screen.dart';
+import '../../features/settings/channels_screen.dart';
+import '../../features/settings/dropbox_backup_screen.dart';
+import '../../features/settings/health_check_screen.dart';
+import '../../features/settings/load_balancing_screen.dart';
+import '../../features/settings/profile_screen.dart';
+import '../../features/settings/proxy_settings_screen.dart';
+import '../../features/settings/session_screen.dart';
+import '../../features/settings/settings_screen.dart';
+import '../../features/splash/splash_screen.dart';
+import '../../features/transfers/transfers_screen.dart';
+import '../../features/trash/trash_screen.dart';
+import '../logger.dart';
+import 'responsive_scaffold.dart';
 
 /// Top-level navigation destinations used by the responsive scaffold.
 enum AppDestination {
@@ -116,9 +115,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       ShellRoute(
-        builder: (context, state, child) {
-          return ResponsiveScaffold(child: child);
-        },
+        builder: (context, state, child) => ResponsiveScaffold(child: child),
         routes: [
           GoRoute(
             path: AppDestination.drive.path,

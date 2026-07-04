@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../data/db/database.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 final trashedItemsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final db = ref.watch(databaseProvider);
@@ -52,7 +53,7 @@ class TrashScreen extends ConsumerWidget {
 
                 // Delete Telegram messages permanently before clearing DB
                 final files = await (db.select(db.files)..where((f) => f.deletedAt.isNotNull())).get();
-                int deletedCount = 0;
+                var deletedCount = 0;
                 for (final file in files) {
                   final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).get();
                   for (final chunk in chunks) {

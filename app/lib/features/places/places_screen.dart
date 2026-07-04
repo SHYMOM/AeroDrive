@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
+import '../../data/db/database.dart';
+import '../../core/providers.dart';
 import 'package:drift/drift.dart' as drift;
 
 class PlaceNode {
-  final Place place;
-  final int photoCount;
 
   PlaceNode(this.place, this.photoCount);
+  final Place place;
+  final int photoCount;
 }
 
 class PlaceHierarchy {
-  final String country;
-  final Map<String, List<PlaceNode>> states;
 
   PlaceHierarchy(this.country, this.states);
+  final String country;
+  final Map<String, List<PlaceNode>> states;
 }
 
 final placesHierarchyProvider = FutureProvider<List<PlaceHierarchy>>((ref) async {
@@ -85,13 +85,12 @@ class PlacesScreen extends ConsumerWidget {
 }
 
 class _CountrySection extends StatelessWidget {
-  final PlaceHierarchy hierarchy;
 
   const _CountrySection({required this.hierarchy});
+  final PlaceHierarchy hierarchy;
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
+  Widget build(BuildContext context) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Premium Country Header
@@ -107,7 +106,7 @@ class _CountrySection extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 5),
               ),
@@ -123,7 +122,7 @@ class _CountrySection extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
-                  padding: const EdgeInsets.all(24.0),
+                  padding: const EdgeInsets.all(24),
                   child: Text(
                     hierarchy.country,
                     style: const TextStyle(
@@ -140,8 +139,7 @@ class _CountrySection extends StatelessWidget {
         ),
         
         // States and Cities
-        ...hierarchy.states.entries.map((stateEntry) {
-          return Padding(
+        ...hierarchy.states.entries.map((stateEntry) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,8 +156,7 @@ class _CountrySection extends StatelessWidget {
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-                  children: stateEntry.value.map((cityNode) {
-                    return InkWell(
+                  children: stateEntry.value.map((cityNode) => InkWell(
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Opening ${cityNode.photoCount} photos for ${cityNode.place.locality}')),
@@ -169,8 +166,8 @@ class _CountrySection extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
-                          border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.2)),
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -194,15 +191,12 @@ class _CountrySection extends StatelessWidget {
                           ],
                         ),
                       ),
-                    );
-                  }).toList(),
+                    )).toList(),
                 ),
                 const SizedBox(height: 16),
               ],
             ),
-          );
-        }),
+          )),
       ],
     );
-  }
 }

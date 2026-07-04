@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+import '../../core/providers/repository_providers.dart';
+import '../telegram/telegram_service.dart';
 
 class ProxySettingsScreen extends ConsumerStatefulWidget {
   const ProxySettingsScreen({super.key});
@@ -71,7 +71,6 @@ class _ProxySettingsScreenState extends ConsumerState<ProxySettingsScreen> {
         username: _proxyType == 'SOCKS5' ? _userCtrl.text : null,
         password: _proxyType == 'SOCKS5' ? _passCtrl.text : null,
         secret: _proxyType == 'MTProto' ? _secretCtrl.text : null,
-        enable: true,
       );
     } else {
       await telegram.disableProxy(0); // TDLib clears proxies if you don't supply specific IDs sometimes, or we can just send disableProxy
@@ -111,7 +110,7 @@ class _ProxySettingsScreenState extends ConsumerState<ProxySettingsScreen> {
           const Divider(),
           if (_isEnabled) ...[
             DropdownButtonFormField<String>(
-              value: _proxyType,
+              initialValue: _proxyType,
               decoration: const InputDecoration(labelText: 'Proxy Type'),
               items: const [
                 DropdownMenuItem(value: 'SOCKS5', child: Text('SOCKS5')),

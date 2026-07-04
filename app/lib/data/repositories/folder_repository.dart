@@ -1,34 +1,33 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/db/tables.dart';
+import '../db/database.dart';
 
 class FolderPathTooLongException implements Exception {
-  final String message;
   FolderPathTooLongException([this.message = 'Folder path too long. Please use shorter names (max 255 chars).']);
+  final String message;
   @override
   String toString() => message;
 }
 
 class FolderNameTooLongException implements Exception {
-  final String message;
   FolderNameTooLongException([this.message = 'Folder name exceeds 200 characters.']);
+  final String message;
   @override
   String toString() => message;
 }
 
 class FolderRepository {
-  final AeroDriveDatabase _db;
-  final Uuid _uuid = const Uuid();
 
   FolderRepository(this._db);
+  final AeroDriveDatabase _db;
+  final Uuid _uuid = const Uuid();
 
   /// Recursively resolves the full path string of a folder to enforce limits.
   Future<String> getFolderPath(String? folderId) async {
     if (folderId == null) return '/';
     
     // We traverse up the tree to build the path.
-    String path = '';
+    var path = '';
     String? currentId = folderId;
     
     while (currentId != null) {
@@ -114,7 +113,7 @@ class FolderRepository {
   Future<void> trashFolder(String folderId) async {
     final int nowSecs = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-    final String fileQuery = '''
+    const fileQuery = '''
       WITH RECURSIVE folder_tree AS (
         SELECT id FROM folders WHERE id = ?1
         UNION ALL
@@ -124,7 +123,7 @@ class FolderRepository {
       UPDATE files SET deleted_at = ?2 WHERE folder_id IN folder_tree;
     ''';
 
-    final String query = '''
+    const query = '''
       WITH RECURSIVE folder_tree AS (
         SELECT id FROM folders WHERE id = ?1
         UNION ALL
@@ -161,7 +160,7 @@ class FolderRepository {
     }
 
     // 3. Recursive soft-restore via CTE
-    final String fileQuery = '''
+    const fileQuery = '''
       WITH RECURSIVE folder_tree AS (
         SELECT id FROM folders WHERE id = ?
         UNION ALL
@@ -171,7 +170,7 @@ class FolderRepository {
       UPDATE files SET deleted_at = NULL WHERE folder_id IN folder_tree;
     ''';
 
-    final String query = '''
+    const query = '''
       WITH RECURSIVE folder_tree AS (
         SELECT id FROM folders WHERE id = ?
         UNION ALL

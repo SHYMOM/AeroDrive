@@ -55,9 +55,9 @@ class CaptionSerializer {
       "ver": version,
       "enc": isEncrypted,
       "chk": isChunked,
-      if (chunkIndex != null) "c": chunkIndex,
-      if (wrappedDekBase64 != null) "k": wrappedDekBase64,
-      if (ctrIvBase64 != null) "iv": ctrIvBase64,
+      "c": ?chunkIndex,
+      "k": ?wrappedDekBase64,
+      "iv": ?ctrIvBase64,
     };
 
     final jsonStr = jsonEncode(jsonMap);
@@ -94,7 +94,7 @@ class CaptionSerializer {
       "name": safeName,
       if (parentFolderId != null && parentFolderId.isNotEmpty) "pid": parentFolderId,
       "ts": DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      if (color != null) "col": color,
+      "col": ?color,
     };
 
     final jsonStr = jsonEncode(jsonMap);

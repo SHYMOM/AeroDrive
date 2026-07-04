@@ -1,17 +1,18 @@
 import 'dart:convert';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:cryptography/cryptography.dart';
 
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/providers.dart';
+import '../../core/providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../data/db/database.dart';
 
 class ShareService {
-  final Ref _ref;
 
   ShareService(this._ref);
+  final Ref _ref;
 
   /// Generate a share link with optional [password] protection,
   /// [expiresAt] date, [maxDownloads] limit, or [burnAfterReading].
@@ -105,7 +106,7 @@ class ShareService {
       ),
     );
 
-    return await (db.select(db.shareLinks)..where((s) => s.id.equals(shareId))).getSingle();
+    return (db.select(db.shareLinks)..where((s) => s.id.equals(shareId))).getSingle();
   }
 
   /// Validate a password against the stored hash.
@@ -145,7 +146,7 @@ class ShareService {
       await (db.update(db.shareLinks)..where((s) => s.id.equals(link.id)))
         .write(ShareLinksCompanion(
           expiresAt: drift.Value(now),
-          maxDownloads: drift.Value(0),
+          maxDownloads: const drift.Value(0),
         ));
     }
 
@@ -214,6 +215,4 @@ class ShareService {
   }
 }
 
-final shareServiceProvider = Provider<ShareService>((ref) {
-  return ShareService(ref);
-});
+final shareServiceProvider = Provider<ShareService>(ShareService.new);

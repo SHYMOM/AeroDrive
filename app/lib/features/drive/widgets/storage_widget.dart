@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 class StorageWidget extends StatelessWidget {
   const StorageWidget({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
+  Widget build(BuildContext context) => Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -115,5 +114,4 @@ class StorageWidget extends StatelessWidget {
         ],
       ),
     );
-  }
 }

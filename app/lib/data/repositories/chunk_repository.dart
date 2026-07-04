@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import 'package:aerodrive/data/db/database.dart';
+import '../db/database.dart';
 
 class ChunkRepository {
-  final AeroDriveDatabase _db;
-  final Uuid _uuid = const Uuid();
 
   ChunkRepository(this._db);
+  final AeroDriveDatabase _db;
+  final Uuid _uuid = const Uuid();
 
   /// Inserts a chunk record for a file.
   Future<String> insertChunk({
@@ -33,12 +33,10 @@ class ChunkRepository {
   }
 
   /// Retrieves all chunks for a given file
-  Future<List<ChunkData>> getChunksForFile(String fileId) {
-    return (_db.select(_db.chunks)
+  Future<List<ChunkData>> getChunksForFile(String fileId) => (_db.select(_db.chunks)
           ..where((c) => c.fileId.equals(fileId))
-          ..orderBy([(c) => OrderingTerm(expression: c.chunkIndex, mode: OrderingMode.asc)]))
+          ..orderBy([(c) => OrderingTerm(expression: c.chunkIndex)]))
         .get();
-  }
 
   /// Updates a specific chunk's message ID if it was re-uploaded or modified.
   Future<void> updateChunkMessageId(String chunkId, int newMessageId) async {

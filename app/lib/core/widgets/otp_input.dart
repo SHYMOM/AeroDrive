@@ -2,11 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class OtpInput extends StatefulWidget {
-  final int length;
-  final ValueChanged<String> onCompleted;
-  final Color? activeColor;
-  final Color? inactiveColor;
-  final Color? textColor;
 
   const OtpInput({
     super.key,
@@ -16,6 +11,11 @@ class OtpInput extends StatefulWidget {
     this.inactiveColor,
     this.textColor,
   });
+  final int length;
+  final ValueChanged<String> onCompleted;
+  final Color? activeColor;
+  final Color? inactiveColor;
+  final Color? textColor;
 
   @override
   State<OtpInput> createState() => _OtpInputState();
@@ -72,17 +72,22 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
 
     if (text.length > 1) {
       _isUpdating = true;
-      final cleaned = text.replaceAll(RegExp(r'[^0-9]'), '');
-      final chars = cleaned.split('').take(widget.length).toList();
+      final cleaned = text.replaceAll(RegExp('[^0-9]'), '');
+      final chars = cleaned.split('');
 
-      for (var i = 0; i < widget.length; i++) {
-        _controllers[i].text = i < chars.length ? chars[i] : '';
+      for (var i = 0; i < chars.length; i++) {
+        final targetIndex = index + i;
+        if (targetIndex < widget.length) {
+          _controllers[targetIndex].text = chars[i];
+        }
       }
 
       _isUpdating = false;
 
-      final nextIndex = chars.length < widget.length ? chars.length : widget.length - 1;
-      _focusNodes[nextIndex].requestFocus();
+      final nextIndex = (index + chars.length) < widget.length ? (index + chars.length) : widget.length - 1;
+      if (chars.isNotEmpty && _focusNodes[nextIndex].canRequestFocus) {
+        _focusNodes[nextIndex].requestFocus();
+      }
       _checkCompleted();
       return;
     }
@@ -114,11 +119,9 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) {
-        return Padding(
+      children: List.generate(widget.length, (index) => Padding(
           padding: EdgeInsets.symmetric(horizontal: widget.length > 6 ? 4 : 6),
           child: _OtpBox(
             controller: _controllers[index],
@@ -128,19 +131,11 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
             inactiveColor: widget.inactiveColor,
             textColor: widget.textColor,
           ),
-        );
-      }),
+        )),
     );
-  }
 }
 
 class _OtpBox extends StatefulWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final AnimationController glowController;
-  final Color? activeColor;
-  final Color? inactiveColor;
-  final Color? textColor;
 
   const _OtpBox({
     required this.controller,
@@ -150,6 +145,12 @@ class _OtpBox extends StatefulWidget {
     this.inactiveColor,
     this.textColor,
   });
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final AnimationController glowController;
+  final Color? activeColor;
+  final Color? inactiveColor;
+  final Color? textColor;
 
   @override
   State<_OtpBox> createState() => _OtpBoxState();
@@ -198,7 +199,7 @@ class _OtpBoxState extends State<_OtpBox> {
             boxShadow: glowValue > 0
                 ? [
                     BoxShadow(
-                      color: active.withOpacity(0.3 * glowValue),
+                      color: active.withValues(alpha: 0.3 * glowValue),
                       blurRadius: 8 + (4 * glowValue),
                       spreadRadius: 2 * glowValue,
                     ),
@@ -213,16 +214,18 @@ class _OtpBoxState extends State<_OtpBox> {
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
             ],
+            maxLength: 1,
             style: TextStyle(
               color: text,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
             decoration: InputDecoration(
+              counterText: '',
               filled: true,
               fillColor: focusNode.hasFocus
-                  ? active.withOpacity(0.1)
-                  : Colors.white.withOpacity(0.05),
+                  ? active.withValues(alpha: 0.1)
+                  : Colors.white.withValues(alpha: 0.05),
               contentPadding: EdgeInsets.zero,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -233,7 +236,7 @@ class _OtpBoxState extends State<_OtpBox> {
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: inactive, width: 1),
+                borderSide: BorderSide(color: inactive),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

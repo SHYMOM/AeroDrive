@@ -2,14 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class PremiumButton extends StatefulWidget {
-  final String label;
-  final VoidCallback? onPressed;
-  final bool isLoading;
-  final IconData? icon;
-  final bool fullWidth;
-  final List<Color> gradient;
-  final Color? textColor;
-  final double height;
 
   const PremiumButton({
     super.key,
@@ -22,6 +14,14 @@ class PremiumButton extends StatefulWidget {
     this.textColor,
     this.height = 52,
   });
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  final IconData? icon;
+  final bool fullWidth;
+  final List<Color> gradient;
+  final Color? textColor;
+  final double height;
 
   @override
   State<PremiumButton> createState() => _PremiumButtonState();
@@ -39,7 +39,7 @@ class _PremiumButtonState extends State<PremiumButton>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+    _pulseAnimation = Tween<double>(begin: 1, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
   }
@@ -56,12 +56,10 @@ class _PremiumButtonState extends State<PremiumButton>
 
     return AnimatedBuilder(
       animation: _pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
+      builder: (context, child) => Transform.scale(
           scale: effective ? _pulseAnimation.value : 1.0,
           child: child,
-        );
-      },
+        ),
       child: SizedBox(
         width: widget.fullWidth ? double.infinity : null,
         height: widget.height,
@@ -78,7 +76,7 @@ class _PremiumButtonState extends State<PremiumButton>
             boxShadow: [
               if (effective)
                 BoxShadow(
-                  color: widget.gradient.first.withOpacity(0.4),
+                  color: widget.gradient.first.withValues(alpha: 0.4),
                   blurRadius: 16,
                   spreadRadius: 1,
                 ),
@@ -89,7 +87,7 @@ class _PremiumButtonState extends State<PremiumButton>
             child: InkWell(
               onTap: effective ? widget.onPressed : null,
               borderRadius: BorderRadius.circular(14),
-              splashColor: Colors.white.withOpacity(0.15),
+              splashColor: Colors.white.withValues(alpha: 0.15),
               highlightColor: Colors.transparent,
               child: Center(
                 child: widget.isLoading
@@ -126,8 +124,8 @@ class _PremiumButtonState extends State<PremiumButton>
 }
 
 class _LoadingIndicator extends StatefulWidget {
-  final List<Color> gradient;
   const _LoadingIndicator({required this.gradient});
+  final List<Color> gradient;
 
   @override
   State<_LoadingIndicator> createState() => _LoadingIndicatorState();
@@ -153,28 +151,21 @@ class _LoadingIndicatorState extends State<_LoadingIndicator>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
+  Widget build(BuildContext context) => AnimatedBuilder(
       animation: _controller,
-      builder: (context, child) {
-        return Transform.rotate(
+      builder: (context, child) => Transform.rotate(
           angle: _controller.value * 2 * math.pi,
           child: child,
-        );
-      },
+        ),
       child: Icon(
         Icons.sync,
         color: widget.gradient.first,
         size: 22,
       ),
     );
-  }
 }
 
 class PremiumSwitch extends StatelessWidget {
-  final bool value;
-  final ValueChanged<bool>? onChanged;
-  final String? label;
 
   const PremiumSwitch({
     super.key,
@@ -182,17 +173,19 @@ class PremiumSwitch extends StatelessWidget {
     this.onChanged,
     this.label,
   });
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final String? label;
 
   @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget build(BuildContext context) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (label != null) ...[
           Text(
             label!,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
               fontSize: 14,
             ),
           ),
@@ -205,10 +198,10 @@ class PremiumSwitch extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             gradient: value
                 ? const LinearGradient(
-                    colors: [const Color(0xFFFFAE00), const Color(0xFFFF8C00)],
+                    colors: [Color(0xFFFFAE00), Color(0xFFFF8C00)],
                   )
                 : null,
-            color: value ? null : Colors.white.withOpacity(0.1),
+            color: value ? null : Colors.white.withValues(alpha: 0.1),
           ),
           child: Material(
             color: Colors.transparent,
@@ -230,7 +223,7 @@ class PremiumSwitch extends StatelessWidget {
                       boxShadow: value
                           ? [
                               BoxShadow(
-                                color: const Color(0xFFFFAE00).withOpacity(0.4),
+                                color: const Color(0xFFFFAE00).withValues(alpha: 0.4),
                                 blurRadius: 4,
                               ),
                             ]
@@ -244,20 +237,9 @@ class PremiumSwitch extends StatelessWidget {
         ),
       ],
     );
-  }
 }
 
 class PremiumTextField extends StatelessWidget {
-  final TextEditingController controller;
-  final String label;
-  final String? hint;
-  final IconData? prefixIcon;
-  final Widget? suffixIcon;
-  final bool obscureText;
-  final TextInputType keyboardType;
-  final bool enabled;
-  final ValueChanged<String>? onSubmitted;
-  final String? Function(String?)? validator;
 
   const PremiumTextField({
     super.key,
@@ -272,10 +254,19 @@ class PremiumTextField extends StatelessWidget {
     this.onSubmitted,
     this.validator,
   });
+  final TextEditingController controller;
+  final String label;
+  final String? hint;
+  final IconData? prefixIcon;
+  final Widget? suffixIcon;
+  final bool obscureText;
+  final TextInputType keyboardType;
+  final bool enabled;
+  final ValueChanged<String>? onSubmitted;
+  final String? Function(String?)? validator;
 
   @override
-  Widget build(BuildContext context) {
-    return TextFormField(
+  Widget build(BuildContext context) => TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
@@ -283,37 +274,37 @@ class PremiumTextField extends StatelessWidget {
       onFieldSubmitted: onSubmitted,
       validator: validator,
       style: TextStyle(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         fontSize: 16,
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         labelStyle: TextStyle(
-          color: Colors.white.withOpacity(0.5),
+          color: Colors.white.withValues(alpha: 0.5),
           fontSize: 14,
         ),
         hintStyle: TextStyle(
-          color: Colors.white.withOpacity(0.25),
+          color: Colors.white.withValues(alpha: 0.25),
         ),
         prefixIcon: prefixIcon != null
             ? Icon(prefixIcon, color: const Color(0xFFFFAE00), size: 20)
             : null,
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white.withOpacity(0.05),
+        fillColor: Colors.white.withValues(alpha: 0.05),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: const Color(0xFFFFAE00), width: 2),
+          borderSide: const BorderSide(color: Color(0xFFFFAE00), width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -321,5 +312,4 @@ class PremiumTextField extends StatelessWidget {
         ),
       ),
     );
-  }
 }

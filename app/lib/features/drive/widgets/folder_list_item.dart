@@ -1,22 +1,23 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart';
-import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
 import 'dart:math';
 
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/providers.dart';
+import '../../../core/providers/repository_providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/db/database.dart';
+import '../providers/drive_providers.dart';
+import 'folder_picker_dialog.dart';
+
 class FolderListItem extends ConsumerWidget {
-  final FolderData folder;
   
   const FolderListItem({super.key, required this.folder});
+  final FolderData folder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -36,9 +37,9 @@ class FolderListItem extends ConsumerWidget {
 
     final sizeAsync = ref.watch(folderSizeProvider(folder.id));
     final sizeText = sizeAsync.when(
-      data: (size) => _formatFolderSize(size),
+      data: _formatFolderSize,
       loading: () => '...',
-      error: (_, __) => '0 B',
+      error: (_, _) => '0 B',
     );
 
     final isSelectionMode = ref.watch(isSelectionModeProvider);
@@ -80,13 +81,13 @@ class FolderListItem extends ConsumerWidget {
             ),
             if (folder.isFavorite)
               const Padding(
-                padding: EdgeInsets.only(left: 8.0),
+                padding: EdgeInsets.only(left: 8),
                 child: Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 16),
               ),
           ],
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
+          padding: const EdgeInsets.only(top: 4),
           child: Text(
             '$sizeText • $dateString',
             style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
@@ -126,8 +127,7 @@ class FolderListItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
+  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white54),
       color: AppColors.surfaceElevated,
       onSelected: (value) async {
@@ -152,7 +152,6 @@ class FolderListItem extends ConsumerWidget {
         const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
-  }
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
     final db = ref.read(databaseProvider);
@@ -180,7 +179,7 @@ class FolderListItem extends ConsumerWidget {
   String _formatFolderSize(int bytes) {
     if (bytes <= 0) return '0 B';
     const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = (log(bytes) / log(1024)).floor();
+    final i = (log(bytes) / log(1024)).floor();
     return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }
 

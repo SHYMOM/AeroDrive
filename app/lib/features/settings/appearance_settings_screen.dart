@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/theme_provider.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+
+import '../../core/providers/repository_providers.dart';
+import '../../core/theme/theme_provider.dart';
 
 class AppearanceSettingsScreen extends ConsumerWidget {
   const AppearanceSettingsScreen({super.key});
@@ -43,7 +44,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
                   ],
                   selected: {themeState.themeMode},
-                  onSelectionChanged: (Set<ThemeMode> newSelection) {
+                  onSelectionChanged: (newSelection) {
                     themeNotifier.setThemeMode(newSelection.first);
                   },
                   style: SegmentedButton.styleFrom(
@@ -67,7 +68,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: colors.map((color) {
-                      final isSelected = themeState.accentColorValue == color.value;
+                      final isSelected = themeState.accentColorValue == color.toARGB32();
                       return GestureDetector(
                         onTap: () => themeNotifier.setAccentColor(color),
                         child: Container(
@@ -135,7 +136,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                         max: 1.4,
                         divisions: 6,
                         label: '${(themeState.fontScale * 100).round()}%',
-                        onChanged: (val) => themeNotifier.setFontScale(val),
+                        onChanged: themeNotifier.setFontScale,
                       ),
                     ),
                     const Text('A', style: TextStyle(fontSize: 24)),
@@ -151,15 +152,14 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             title: const Text('High Contrast', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             subtitle: const Text('Maximize color legibility and contrast ratios'),
             value: themeState.highContrast,
-            onChanged: (val) => themeNotifier.setHighContrast(val),
+            onChanged: themeNotifier.setHighContrast,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDropdownSetting(WidgetRef ref, String title, String key, List<String> options, String defaultVal) {
-    return FutureBuilder<String?>(
+  Widget _buildDropdownSetting(WidgetRef ref, String title, String key, List<String> options, String defaultVal) => FutureBuilder<String?>(
       future: ref.read(settingsRepositoryProvider).getSetting(key),
       builder: (context, snapshot) {
         final currentVal = snapshot.data ?? defaultVal;
@@ -184,5 +184,4 @@ class AppearanceSettingsScreen extends ConsumerWidget {
         );
       }
     );
-  }
 }

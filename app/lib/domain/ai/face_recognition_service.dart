@@ -1,6 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers.dart';
 
 // Interface for Face Recognition
 abstract class FaceRecognitionService {
@@ -11,10 +12,6 @@ abstract class FaceRecognitionService {
 
 // Data models
 class FaceCluster {
-  final String id;
-  final String label;
-  final String? avatarFileId; // Photo used as the main avatar for this face
-  final int photoCount;
 
   FaceCluster({
     required this.id,
@@ -22,12 +19,14 @@ class FaceCluster {
     this.avatarFileId,
     required this.photoCount,
   });
+  final String id;
+  final String label;
+  final String? avatarFileId; // Photo used as the main avatar for this face
+  final int photoCount;
 }
 
 // Provider
-final faceRecognitionServiceProvider = Provider<FaceRecognitionService>((ref) {
-  return DbFaceService(ref);
-});
+final faceRecognitionServiceProvider = Provider<FaceRecognitionService>(DbFaceService.new);
 
 // Riverpod FutureProvider for face clusters caching/signals
 final faceClustersProvider = FutureProvider.autoDispose<List<FaceCluster>>((ref) async {
@@ -37,9 +36,9 @@ final faceClustersProvider = FutureProvider.autoDispose<List<FaceCluster>>((ref)
 
 // Production-ready database-backed implementation
 class DbFaceService implements FaceRecognitionService {
-  final Ref _ref;
 
   DbFaceService(this._ref);
+  final Ref _ref;
 
   @override
   Future<List<FaceCluster>> getClusters() async {
@@ -53,14 +52,12 @@ class DbFaceService implements FaceRecognitionService {
       'GROUP BY c.id, c.name'
     ).get();
 
-    return rows.map((row) {
-      return FaceCluster(
+    return rows.map((row) => FaceCluster(
         id: row.read<String>('id'),
         label: row.read<String?>('name') ?? 'Unknown Person',
         avatarFileId: row.read<String?>('avatar_id'),
         photoCount: row.read<int>('photo_count'),
-      );
-    }).toList();
+      )).toList();
   }
 
   @override
@@ -94,7 +91,7 @@ class DbFaceService implements FaceRecognitionService {
         const clusterId = 'default_people_cluster';
         final exists = await db.customSelect(
           "SELECT id FROM face_clusters WHERE id = ?",
-          variables: [drift.Variable<String>(clusterId)]
+          variables: [const drift.Variable<String>(clusterId)]
         ).get();
 
         if (exists.isEmpty) {

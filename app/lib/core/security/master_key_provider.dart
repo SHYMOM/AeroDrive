@@ -17,7 +17,7 @@ class MasterKeyProvider {
     _key = null;
     // Overwrite key bytes in memory before releasing for GC
     if (k != null) {
-      for (int i = 0; i < k.length; i++) {
+      for (var i = 0; i < k.length; i++) {
         k[i] = 0;
       }
     }

@@ -1,19 +1,21 @@
 import 'dart:math';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
 
 enum TransferFilter { all, active, completed, failed }
 
 class TransferItem {
+  TransferItem({required this.transfer, this.file});
   final TransferQueueData transfer;
   final FileData? file;
-  TransferItem({required this.transfer, this.file});
 }
 
 // Stream provider to watch database transfers live
@@ -21,14 +23,10 @@ final transfersStreamProvider = StreamProvider<List<TransferItem>>((ref) {
   final db = ref.watch(databaseProvider);
   return (db.select(db.transferQueue).join([
     drift.leftOuterJoin(db.files, db.files.id.equalsExp(db.transferQueue.fileId)),
-  ])..orderBy([drift.OrderingTerm.desc(db.transferQueue.createdAt)])).watch().map((rows) {
-    return rows.map((row) {
-      return TransferItem(
+  ])..orderBy([drift.OrderingTerm.desc(db.transferQueue.createdAt)])).watch().map((rows) => rows.map((row) => TransferItem(
         transfer: row.readTable(db.transferQueue),
         file: row.readTableOrNull(db.files),
-      );
-    }).toList();
-  });
+      )).toList());
 });
 
 class TransfersScreen extends ConsumerStatefulWidget {
@@ -44,7 +42,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
   String _formatSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '0 B';
     const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = (log(bytes) / log(1024)).floor();
+    final i = (log(bytes) / log(1024)).floor();
     return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }
 
@@ -130,7 +128,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           preferredSize: const Size.fromHeight(60),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 _buildFilterChip(TransferFilter.all, 'All'),
@@ -187,7 +185,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                     border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -283,8 +281,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState() => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -312,7 +309,6 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
         ],
       ),
     );
-  }
 
   String _getFilterEmptyText() {
     switch (_currentFilter) {
@@ -335,19 +331,15 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       case 'PENDING':
         color = Colors.orangeAccent;
         text = 'PENDING';
-        break;
       case 'PROCESSING':
         color = Colors.blueAccent;
         text = 'ACTIVE';
-        break;
       case 'COMPLETED':
         color = Colors.green;
         text = 'SUCCESS';
-        break;
       case 'FAILED':
         color = Colors.red;
         text = 'FAILED';
-        break;
       default:
         color = Colors.grey;
         text = 'UNKNOWN';
@@ -392,7 +384,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           width: 0.5,
         ),
       ),
-      onSelected: (bool selected) {
+      onSelected: (selected) {
         if (selected) {
           setState(() {
             _currentFilter = filter;

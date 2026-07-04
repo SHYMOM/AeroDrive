@@ -2,8 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/domain/webdav/webdav_config.dart';
-import 'package:aerodrive/domain/webdav/webdav_server.dart';
+import '../../domain/webdav/webdav_config.dart';
+import '../../domain/webdav/webdav_server.dart';
 
 class WebDavSettingsDialog extends ConsumerStatefulWidget {
   const WebDavSettingsDialog({super.key});
@@ -95,8 +95,7 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('WebDAV Server Settings'),
       content: _isLoading 
         ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -111,7 +110,7 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
                 SwitchListTile(
                   title: const Text('Enable Server'),
                   value: _isRunning,
-                  onChanged: (val) => _toggleServer(val),
+                  onChanged: _toggleServer,
                 ),
 
                 if (_error != null) ...[
@@ -153,10 +152,8 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
         ),
       ],
     );
-  }
 
-  Widget _buildCopyRow(String label, String value) {
-    return Row(
+  Widget _buildCopyRow(String label, String value) => Row(
       children: [
         Expanded(
           child: Text('$label: $value', style: const TextStyle(fontFamily: 'monospace')),
@@ -170,5 +167,4 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
         ),
       ],
     );
-  }
 }

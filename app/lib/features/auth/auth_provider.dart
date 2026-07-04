@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+import '../telegram/telegram_service.dart';
 
 enum AuthState { initial, loading, unauthenticated, authenticated }
 

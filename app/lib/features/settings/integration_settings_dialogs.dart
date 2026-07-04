@@ -37,8 +37,7 @@ class _InlineBotSetupDialogState extends State<InlineBotSetupDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Inline Bot Setup'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -63,7 +62,6 @@ class _InlineBotSetupDialogState extends State<InlineBotSetupDialog> {
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
-  }
 }
 
 class SaveToDriveBotDialog extends StatefulWidget {
@@ -101,8 +99,7 @@ class _SaveToDriveBotDialogState extends State<SaveToDriveBotDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Save-to-Drive Bot'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -126,7 +123,6 @@ class _SaveToDriveBotDialogState extends State<SaveToDriveBotDialog> {
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
-  }
 }
 
 class WebhookUrlDialog extends StatefulWidget {
@@ -170,8 +166,7 @@ class _WebhookUrlDialogState extends State<WebhookUrlDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Webhook Setup'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -205,7 +200,6 @@ class _WebhookUrlDialogState extends State<WebhookUrlDialog> {
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
-  }
 }
 
 class ApiKeyManagementDialog extends StatefulWidget {
@@ -246,8 +240,7 @@ class _ApiKeyManagementDialogState extends State<ApiKeyManagementDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('API Key Management'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -286,5 +279,4 @@ class _ApiKeyManagementDialogState extends State<ApiKeyManagementDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
       ],
     );
-  }
 }

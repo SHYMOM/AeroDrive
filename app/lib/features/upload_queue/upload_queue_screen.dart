@@ -1,9 +1,11 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/transfers/transfers_screen.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../transfers/transfers_screen.dart';
 
 class UploadQueueScreen extends ConsumerStatefulWidget {
   const UploadQueueScreen({super.key});
@@ -16,7 +18,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
   String _formatSize(int? bytes) {
     if (bytes == null || bytes <= 0) return '0 B';
     const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    var i = (log(bytes) / log(1024)).floor();
+    final i = (log(bytes) / log(1024)).floor();
     return '${(bytes / pow(1024, i)).toStringAsFixed(1)} ${suffixes[i]}';
   }
 
@@ -45,7 +47,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.cloud_upload_outlined, size: 64, color: Colors.white24),
+                  const Icon(Icons.cloud_upload_outlined, size: 64, color: Colors.white24),
                   const SizedBox(height: 24),
                   Text(
                     'No uploads yet',
@@ -55,7 +57,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     'Files you upload will appear here',
                     style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
                   ),
@@ -81,19 +83,15 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                 case 'PROCESSING':
                   statusColor = Colors.blueAccent;
                   statusText = 'UPLOADING';
-                  break;
                 case 'PENDING':
                   statusColor = Colors.orangeAccent;
                   statusText = 'QUEUED';
-                  break;
                 case 'COMPLETED':
                   statusColor = Colors.green;
                   statusText = 'DONE';
-                  break;
                 case 'FAILED':
                   statusColor = Colors.red;
                   statusText = 'FAILED';
-                  break;
                 default:
                   statusColor = Colors.grey;
                   statusText = status ?? 'UNKNOWN';
@@ -114,7 +112,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: AppColors.primaryLight.withOpacity(0.1),
+                            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
                             child: const Icon(Icons.cloud_upload, color: AppColors.primaryLight, size: 20),
                           ),
                           const SizedBox(width: 12),
@@ -131,7 +129,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _formatSize(totalBytes),
-                                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                                  style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -139,9 +137,9 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                              color: statusColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: statusColor.withOpacity(0.5), width: 0.5),
+                              border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 0.5),
                             ),
                             child: Text(
                               statusText,

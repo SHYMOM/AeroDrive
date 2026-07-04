@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/tags/tag_service.dart';
+import '../../data/db/database.dart';
+import 'tag_service.dart';
 
 extension HexColor on Color {
   static Color fromHex(String hexString) {
@@ -19,9 +19,9 @@ extension HexColor on Color {
 }
 
 class TagDialog extends ConsumerStatefulWidget {
-  final FileData file;
   
   const TagDialog({super.key, required this.file});
+  final FileData file;
 
   static void show(BuildContext context, FileData file) {
     showDialog(
@@ -75,8 +75,7 @@ class _TagDialogState extends ConsumerState<TagDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Manage Tags'),
       content: SizedBox(
         width: 350,
@@ -143,7 +142,7 @@ class _TagDialogState extends ConsumerState<TagDialog> {
                   onTap: () {
                     setState(() => _selectedColor = hex);
                   },
-                  child: Container(
+                  child: DecoratedBox(
                     decoration: BoxDecoration(
                       color: color,
                       shape: BoxShape.circle,
@@ -169,5 +168,4 @@ class _TagDialogState extends ConsumerState<TagDialog> {
         ),
       ],
     );
-  }
 }

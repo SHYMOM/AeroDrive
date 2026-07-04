@@ -1,15 +1,13 @@
-import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
+import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/drive/widgets/folder_grid_item.dart';
-import 'package:aerodrive/features/drive/widgets/file_list_item.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/core/constants.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../drive/widgets/file_list_item.dart';
+import '../drive/widgets/folder_grid_item.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -20,10 +18,10 @@ final searchSortByProvider = StateProvider<SearchSortBy>((ref) => SearchSortBy.n
 final searchFilterTypeProvider = StateProvider<SearchFilterType>((ref) => SearchFilterType.all);
 
 class _ParsedSearchQuery {
-  final String textQuery;
-  final String? tagName;
 
   const _ParsedSearchQuery({required this.textQuery, this.tagName});
+  final String textQuery;
+  final String? tagName;
 }
 
 _ParsedSearchQuery _parseSearchQuery(String rawQuery) {
@@ -69,10 +67,8 @@ final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     switch (sortBy) {
       case SearchSortBy.name:
         matchedFolders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        break;
       case SearchSortBy.date:
         matchedFolders.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
-        break;
       default:
         break;
     }
@@ -130,16 +126,12 @@ final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     switch (sortBy) {
       case SearchSortBy.name:
         matchedFiles.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-        break;
       case SearchSortBy.date:
         matchedFiles.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
-        break;
       case SearchSortBy.size:
         matchedFiles.sort((a, b) => (b.size ?? 0).compareTo(a.size ?? 0));
-        break;
       case SearchSortBy.type:
         matchedFiles.sort((a, b) => (a.mimeType ?? '').compareTo(b.mimeType ?? ''));
-        break;
     }
   }
 
@@ -258,10 +250,10 @@ class SearchScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
               const Color(0xFF7C3AED).withValues(alpha: 0.15),
@@ -361,7 +353,7 @@ class SearchScreen extends ConsumerWidget {
                         if (folders.isNotEmpty) ...[
                           const SliverToBoxAdapter(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Folders',
                                 style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
@@ -393,7 +385,7 @@ class SearchScreen extends ConsumerWidget {
                         if (files.isNotEmpty) ...[
                           const SliverToBoxAdapter(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Files',
                                 style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),

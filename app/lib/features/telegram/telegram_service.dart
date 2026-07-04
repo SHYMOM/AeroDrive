@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:tdlib/tdlib.dart';
 import 'package:uuid/uuid.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../core/logger.dart';
 
@@ -179,9 +180,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
   }
 
-  static void _startGlobalLoop() async {
+  static Future<void> _startGlobalLoop() async {
     _globalLoopStarted = true;
-    int idleCycles = 0;
+    var idleCycles = 0;
     while (true) {
       final rawStr = TdPlugin.instance.tdReceive(0.01);
       
@@ -267,9 +268,10 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         hasRecoveryEmail = authStateData?['has_recovery_email_address'] == true;
         state = TelegramAuthState.waitPassword;
       } else if (authState == 'authorizationStateReady') {
-        state = TelegramAuthState.ready;
-        _fetchMe();
-        onReady?.call();
+        _fetchMe().whenComplete(() {
+          state = TelegramAuthState.ready;
+          onReady?.call();
+        });
       } else if (authState == 'authorizationStateLoggingOut') {
         state = TelegramAuthState.loggingOut;
       } else if (authState == 'authorizationStateClosed') {
@@ -295,7 +297,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       if (chatType == 'chatTypeBasicGroup' || chatType == 'chatTypeSupergroup') {
         if (!chats.any((c) => c['id'] == chat['id'])) {
           chats = List.from(chats)..add(chat);
-          state = TelegramAuthState.ready; 
+          // Removed premature state = TelegramAuthState.ready;
         }
       }
     }
@@ -331,23 +333,19 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   List<Map<String, dynamic>> chats = [];
 
-  Future<Map<String, dynamic>> loadChats() async {
-    return sendRequest({
+  Future<Map<String, dynamic>> loadChats() async => sendRequest({
       "@type": "loadChats",
       "chat_list": {"@type": "chatListMain"},
       "limit": 500
     });
-  }
 
-  Future<Map<String, dynamic>> createNewChannel(String title, String description) async {
-    return sendRequest({
+  Future<Map<String, dynamic>> createNewChannel(String title, String description) async => sendRequest({
       "@type": "createNewSupergroupChat",
       "title": title,
       "is_channel": true,
       "description": description,
       "for_import": false
     });
-  }
 
   final Map<String, Completer<Map<String, dynamic>>> _pendingRequests = {};
   
@@ -355,7 +353,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   Stream<Map<String, dynamic>> get tdlibEvents => _eventController.stream;
 
   Future<Map<String, dynamic>> sendRequest(Map<String, dynamic> request, {Duration timeout = const Duration(seconds: 30), int maxRetries = 3}) async {
-    for (int attempt = 0; attempt < maxRetries; attempt++) {
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
       final requestId = const Uuid().v4();
       final completer = Completer<Map<String, dynamic>>();
       _pendingRequests[requestId] = completer;
@@ -399,12 +397,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     throw TimeoutException('TDLib request failed after $maxRetries retries: ${request['@type']}');
   }
 
-  Future<Map<String, dynamic>> getMe() async {
-    return sendRequest({"@type": "getMe"});
-  }
+  Future<Map<String, dynamic>> getMe() async => sendRequest({"@type": "getMe"});
 
-  Future<Map<String, dynamic>> getChatMember(int chatId, int userId) async {
-    return sendRequest({
+  Future<Map<String, dynamic>> getChatMember(int chatId, int userId) async => sendRequest({
       "@type": "getChatMember",
       "chat_id": chatId,
       "member_id": {
@@ -412,17 +407,14 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         "user_id": userId
       }
     });
-  }
 
-  Future<Map<String, dynamic>> searchPublicChat(String username) async {
-    return sendRequest({
+  Future<Map<String, dynamic>> searchPublicChat(String username) async => sendRequest({
       "@type": "searchPublicChat",
       "username": username
     });
-  }
 
   Future<Map<String, dynamic>> checkAdminStatus(dynamic chatId) async {
-    int id = chatId is String ? int.parse(chatId) : chatId;
+    final int id = chatId is String ? int.parse(chatId) : chatId;
     try {
       final me = await getMe();
       if (!me.containsKey('id')) return {"is_admin": false};
@@ -430,7 +422,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       
       final member = await getChatMember(id, userId);
       final status = member['status']?['@type'];
-      bool isAdmin = (status == 'chatMemberStatusCreator' || status == 'chatMemberStatusAdministrator');
+      final bool isAdmin = (status == 'chatMemberStatusCreator' || status == 'chatMemberStatusAdministrator');
       return {"is_admin": isAdmin, "chat_id": id};
     } catch (e) {
       return {"is_admin": false, "error": e.toString()};
@@ -464,7 +456,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<Map<String, dynamic>?> verifyChannel(String input) async {
-    String trimmedInput = input.trim();
+    final String trimmedInput = input.trim();
     if (trimmedInput.startsWith('@')) {
       try {
         final chat = await searchPublicChat(trimmedInput.substring(1));
@@ -481,7 +473,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       return null;
     } else {
       // Numeric ID logic
-      int? firstTryId = int.tryParse(trimmedInput);
+      final int? firstTryId = int.tryParse(trimmedInput);
       if (firstTryId == null) return null;
 
       try {
@@ -493,11 +485,11 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       } catch (e) {
         // Fallback: prepend -100 if it doesn't already start with -100
         if (!trimmedInput.startsWith('-100')) {
-          String prefixedStr = trimmedInput.startsWith('-') 
+          final prefixedStr = trimmedInput.startsWith('-') 
               ? '-100${trimmedInput.substring(1)}' 
               : '-100$trimmedInput';
           
-          int? secondTryId = int.tryParse(prefixedStr);
+          final int? secondTryId = int.tryParse(prefixedStr);
           if (secondTryId != null) {
             try {
               final chat2 = await sendRequest({"@type": "getChat", "chat_id": secondTryId});
@@ -517,13 +509,11 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
 
 
-  Future<Map<String, dynamic>> getMessage(int chatId, int messageId) async {
-    return sendRequest({
+  Future<Map<String, dynamic>> getMessage(int chatId, int messageId) async => sendRequest({
       "@type": "getMessage",
       "chat_id": chatId,
       "message_id": messageId,
     });
-  }
 
   Future<void> downloadFile(int fileId) async {
     await sendRequest({
@@ -678,7 +668,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     TdPlugin.instance.tdSend(_clientId, jsonEncode({
       "@type": "close"
     }));
-    int attempts = 0;
+    var attempts = 0;
     while (state != TelegramAuthState.closed && attempts < 30) {
       await Future.delayed(const Duration(milliseconds: 100));
       attempts++;
@@ -727,24 +717,18 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     });
   }
 
-  Future<Map<String, dynamic>> getActiveSessions() async {
-    return sendRequest({
+  Future<Map<String, dynamic>> getActiveSessions() async => sendRequest({
       "@type": "getActiveSessions",
     });
-  }
 
-  Future<Map<String, dynamic>> terminateSession(dynamic sessionId) async {
-    return sendRequest({
+  Future<Map<String, dynamic>> terminateSession(dynamic sessionId) async => sendRequest({
       "@type": "terminateSession",
       "session_id": sessionId is String ? int.parse(sessionId) : sessionId,
     });
-  }
 
-  Future<Map<String, dynamic>> terminateAllOtherSessions() async {
-    return sendRequest({
+  Future<Map<String, dynamic>> terminateAllOtherSessions() async => sendRequest({
       "@type": "terminateAllOtherSessions",
     });
-  }
 
   Future<List<Map<String, dynamic>>> getAdminChannels() async {
     try {
@@ -761,7 +745,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         "limit": 200,
       });
 
-      List<Map<String, dynamic>> adminChannels = [];
+      final List<Map<String, dynamic>> adminChannels = [];
       if (response.containsKey('chat_ids')) {
         final List<dynamic> chatIds = response['chat_ids'];
         for (final id in chatIds) {
@@ -813,8 +797,6 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 }
 
-final telegramServiceProvider = StateNotifierProvider<TelegramService, TelegramAuthState>((ref) {
-  return TelegramService(accountId: 'primary', isHeadless: false);
-});
+final telegramServiceProvider = StateNotifierProvider<TelegramService, TelegramAuthState>((ref) => TelegramService());
 
 

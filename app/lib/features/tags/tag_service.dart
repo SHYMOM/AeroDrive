@@ -1,13 +1,14 @@
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
+
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
 
 class TagService {
-  final Ref _ref;
 
   TagService(this._ref);
+  final Ref _ref;
 
   static const List<String> curatedColors = [
     '#FFB3BA', // Pastel Red
@@ -52,7 +53,7 @@ class TagService {
     );
 
     await db.into(db.tags).insert(companion);
-    return await (db.select(db.tags)..where((t) => t.id.equals(newTagId))).getSingle();
+    return (db.select(db.tags)..where((t) => t.id.equals(newTagId))).getSingle();
   }
 
   Future<void> attachTagToFile(String fileId, String tagId) async {
@@ -89,6 +90,4 @@ class TagService {
   }
 }
 
-final tagServiceProvider = Provider<TagService>((ref) {
-  return TagService(ref);
-});
+final tagServiceProvider = Provider<TagService>(TagService.new);

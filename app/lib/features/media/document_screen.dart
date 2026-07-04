@@ -1,11 +1,12 @@
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' hide Column;
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../drive/providers/drive_providers.dart';
+import '../preview/preview_router.dart';
 
 class DocumentsScreen extends ConsumerWidget {
   const DocumentsScreen({super.key});
@@ -34,7 +35,7 @@ class DocumentsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.description_outlined, size: 48, color: AppColors.fileDocument),
+                  const Icon(Icons.description_outlined, size: 48, color: AppColors.fileDocument),
                   const SizedBox(height: 16),
                   Text('No documents found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -58,13 +59,12 @@ class DocumentsScreen extends ConsumerWidget {
 }
 
 class _DocumentItem extends StatelessWidget {
-  final FileData file;
 
   const _DocumentItem({required this.file});
+  final FileData file;
 
   @override
-  Widget build(BuildContext context) {
-    return ListTile(
+  Widget build(BuildContext context) => ListTile(
       leading: Container(
         width: 44,
         height: 44,
@@ -72,16 +72,15 @@ class _DocumentItem extends StatelessWidget {
           color: AppColors.fileDocument.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(Icons.description_outlined, color: AppColors.fileDocument, size: 22),
+        child: const Icon(Icons.description_outlined, color: AppColors.fileDocument, size: 22),
       ),
       title: Text(file.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
       subtitle: Text(
-        file.size != null ? '${_formatFileSize(file.size!)}' : 'Unknown size',
+        file.size != null ? _formatFileSize(file.size!) : 'Unknown size',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
       ),
       onTap: () => PreviewRouter.openPreview(context, file),
     );
-  }
 
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -95,7 +94,7 @@ class _DocumentItem extends StatelessWidget {
 final documentsProvider = FutureProvider.family<Map<String, dynamic>, String?>((ref, folderId) async {
   final db = ref.watch(databaseProvider);
 
-  List<FileData> documentFiles = [];
+  final List<FileData> documentFiles = [];
 
   if (folderId == null) {
     // Get all documents from root level

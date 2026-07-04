@@ -1,12 +1,12 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import 'package:aerodrive/data/db/database.dart';
+import '../db/database.dart';
 
 class QueueRepository {
-  final AeroDriveDatabase _db;
-  final Uuid _uuid = const Uuid();
 
   QueueRepository(this._db);
+  final AeroDriveDatabase _db;
+  final Uuid _uuid = const Uuid();
 
   /// Enqueues a file for upload.
   Future<String> enqueueUpload(String filePath, {int priority = 0}) async {
@@ -24,16 +24,14 @@ class QueueRepository {
   }
 
   /// Retrieves the next pending task, ordered by priority.
-  Future<TransferQueueData?> getNextPendingTask() async {
-    return (_db.select(_db.transferQueue)
+  Future<TransferQueueData?> getNextPendingTask() async => (_db.select(_db.transferQueue)
           ..where((q) => q.status.equals('PENDING'))
           ..orderBy([
             (q) => OrderingTerm(expression: q.priority, mode: OrderingMode.desc),
-            (q) => OrderingTerm(expression: q.createdAt, mode: OrderingMode.asc),
+            (q) => OrderingTerm(expression: q.createdAt),
           ])
           ..limit(1))
         .getSingleOrNull();
-  }
 
   /// Updates the status of a queue item.
   Future<void> updateStatus(String id, String status, {String? errorMessage}) async {

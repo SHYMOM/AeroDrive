@@ -1,20 +1,22 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/core/logger.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../core/logger.dart';
+import '../data/crypto/encryption_engine.dart';
+
 class DecryptJobPayload {
-  final List<String> sourceEncryptedPaths;
-  final String outputFilePath;
-  final List<int> dekBytes;
 
   DecryptJobPayload({
     required this.sourceEncryptedPaths,
     required this.outputFilePath,
     required this.dekBytes,
   });
+  final List<String> sourceEncryptedPaths;
+  final String outputFilePath;
+  final List<int> dekBytes;
 }
 
 class DownloadOrchestrator {
@@ -140,7 +142,7 @@ class DownloadOrchestrator {
     final stem = lastDot > 0 ? basePath.substring(0, lastDot) : basePath;
     final ext = lastDot > 0 ? basePath.substring(lastDot) : '';
 
-    for (int i = 1; i < 999; i++) {
+    for (var i = 1; i < 999; i++) {
       final candidate = '$stem ($i)$ext';
       if (!await File(candidate).exists()) return candidate;
     }
@@ -151,7 +153,7 @@ class DownloadOrchestrator {
   static Future<void> _runDecryptionIsolate(DecryptJobPayload payload) async {
     final engine = EncryptionEngine();
     
-    for (int i = 0; i < payload.sourceEncryptedPaths.length; i++) {
+    for (var i = 0; i < payload.sourceEncryptedPaths.length; i++) {
       await engine.decryptDiskToStream(
         encryptedChunkFile: File(payload.sourceEncryptedPaths[i]),
         outputFile: File(payload.outputFilePath),

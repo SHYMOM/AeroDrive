@@ -1,21 +1,22 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
 import 'telegram_service.dart';
 
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/logger.dart';
-
 class TelegramManager extends StateNotifier<List<TelegramService>> {
-  final _eventController = StreamController<Map<String, dynamic>>.broadcast();
-  Stream<Map<String, dynamic>> get allEvents => _eventController.stream;
 
   TelegramManager(this.ref) : super([]) {
     _initPrimaryAndRestore();
   }
+  final _eventController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get allEvents => _eventController.stream;
 
   final Ref ref;
 
@@ -30,7 +31,7 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
 
     // Wait for the primary client to at least have its TDLib client handle created.
     // This ensures TdPlugin.initialize() has completed before secondary clients attempt it.
-    int attempts = 0;
+    var attempts = 0;
     while (primary.clientId == 0 && attempts < 100) {
       await Future.delayed(const Duration(milliseconds: 50));
       attempts++;
@@ -68,9 +69,7 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     });
   }
 
-  TelegramService getClient(String accountId) {
-    return state.firstWhere((c) => c.accountId == accountId, orElse: () => state.first);
-  }
+  TelegramService getClient(String accountId) => state.firstWhere((c) => c.accountId == accountId, orElse: () => state.first);
 
   Future<void> _restoreAccountsFromDb() async {
     try {
@@ -161,7 +160,7 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     try {
       if (client.authState == TelegramAuthState.ready) {
         await client.logOut();
-        int attempts = 0;
+        var attempts = 0;
         while (client.authState != TelegramAuthState.closed && attempts < 30) {
           await Future.delayed(const Duration(milliseconds: 100));
           attempts++;
@@ -200,13 +199,11 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
   }
 }
 
-final telegramManagerProvider = StateNotifierProvider<TelegramManager, List<TelegramService>>((ref) {
-  return TelegramManager(ref);
-});
+final telegramManagerProvider = StateNotifierProvider<TelegramManager, List<TelegramService>>(TelegramManager.new);
 
 final adminChannelsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final accounts = ref.watch(telegramManagerProvider);
-  List<Map<String, dynamic>> allAdminChannels = [];
+  final List<Map<String, dynamic>> allAdminChannels = [];
 
   for (final acc in accounts) {
     if (acc.authState == TelegramAuthState.ready) {
@@ -228,7 +225,7 @@ final adminChannelsProvider = FutureProvider.autoDispose<List<Map<String, dynami
 
 final activeSessionsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   final accounts = ref.watch(telegramManagerProvider);
-  List<Map<String, dynamic>> allSessions = [];
+  final List<Map<String, dynamic>> allSessions = [];
 
   for (final client in accounts) {
     if (client.authState == TelegramAuthState.ready) {

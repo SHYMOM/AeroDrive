@@ -1,23 +1,25 @@
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cryptography/cryptography.dart';
-import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/domain/thumbnail_cache_manager.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../data/db/database.dart';
+import '../../features/telegram/telegram_service.dart';
+import '../thumbnail_cache_manager.dart';
+import 'manifest_encoder.dart';
+
 class ZeroDBRecoveryService {
+
+  ZeroDBRecoveryService(this._ref, this._db, this._telegramService);
   final Ref _ref;
   final AeroDriveDatabase _db;
   final TelegramService _telegramService;
-
-  ZeroDBRecoveryService(this._ref, this._db, this._telegramService);
 
   /// Scans Telegram storage channels and reconstructs the local SQLite database.
   Future<void> runDisasterRecovery({
@@ -26,8 +28,8 @@ class ZeroDBRecoveryService {
     int? channelId,
     Function(int messagesScanned, int itemsRecovered)? onProgress,
   }) async {
-    int messagesScanned = 0;
-    int itemsRecovered = 0;
+    var messagesScanned = 0;
+    var itemsRecovered = 0;
 
     // 1. Resolve channel IDs to scan
     final settingsRepo = _ref.read(settingsRepositoryProvider);
@@ -65,11 +67,11 @@ class ZeroDBRecoveryService {
     final List<ChunksCompanion> recoveredChunks = [];
     final Set<String> recoveredFolderIds = {};
     final Set<String> recoveredFileIds = {};
-    final Uuid uuid = const Uuid();
+    const uuid = Uuid();
 
     // 2. Scan each channel
     for (final scanChannelId in channelsToScan) {
-      int lastMessageId = 0;
+      var lastMessageId = 0;
       while (true) {
         final response = await _telegramService.sendRequest({
           "@type": "getChatHistory",
@@ -134,7 +136,7 @@ class ZeroDBRecoveryService {
                   final remoteFileId = thumbFileObj['id'] as int;
                   // Download the encrypted thumbnail
                   await _telegramService.downloadFile(remoteFileId);
-                  for (int i = 0; i < 30; i++) {
+                  for (var i = 0; i < 30; i++) {
                     final fileInfo = await _telegramService.sendRequest({
                       '@type': 'getFile',
                       'file_id': remoteFileId,

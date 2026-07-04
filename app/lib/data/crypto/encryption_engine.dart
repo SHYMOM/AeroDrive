@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:cryptography/cryptography.dart';
+
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 
 class EncryptionEngine {
@@ -44,14 +45,10 @@ class EncryptionEngine {
   }
 
   /// Generates a new 24-word BIP39 recovery phrase.
-  String generateRecoveryPhrase() {
-    return bip39.generateMnemonic(strength: 256);
-  }
+  String generateRecoveryPhrase() => bip39.generateMnemonic(strength: 256);
 
   /// Verifies if a given string is a valid BIP39 phrase.
-  bool isValidRecoveryPhrase(String phrase) {
-    return bip39.validateMnemonic(phrase);
-  }
+  bool isValidRecoveryPhrase(String phrase) => bip39.validateMnemonic(phrase);
 
   /// Derives deterministic salt bytes from the BIP39 mnemonic seed.
   /// The same phrase always produces the same salt, enabling deterministic
@@ -79,8 +76,8 @@ class EncryptionEngine {
   /// Big-endian counter increment helper for AES-CTR nonce block offset calculations.
   static Uint8List incrementNonce(List<int> initialNonce, int increment) {
     final nonce = Uint8List.fromList(initialNonce);
-    int carry = increment;
-    for (int i = 15; i >= 0; i--) {
+    var carry = increment;
+    for (var i = 15; i >= 0; i--) {
       if (carry == 0) break;
       final val = nonce[i] + carry;
       nonce[i] = val & 0xFF;
@@ -101,18 +98,18 @@ class EncryptionEngine {
     int? chunkLimit,
     List<int>? ctrIv,
   }) async {
-    final int bufferSize = 4 * 1024 * 1024;
+    const int bufferSize = 4 * 1024 * 1024;
     final int limit = chunkLimit ?? (1.5 * 1024 * 1024 * 1024).toInt();
 
-    final file = await sourceFile.open(mode: FileMode.read);
+    final file = await sourceFile.open();
     final fileLength = await file.length();
     
-    int totalBytesProcessed = 0;
-    int currentChunkBytes = 0;
-    int chunkIndex = 0;
-    List<String> chunkPaths = [];
+    var totalBytesProcessed = 0;
+    var currentChunkBytes = 0;
+    var chunkIndex = 0;
+    final List<String> chunkPaths = [];
     
-    File currentTempFile = File('$outputDirectory/temp_chunk_$chunkIndex.enc');
+    var currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
     IOSink currentSink = currentTempFile.openWrite();
     chunkPaths.add(currentTempFile.path);
 
@@ -147,7 +144,7 @@ class EncryptionEngine {
           chunkIndex++;
           currentChunkBytes = 0;
           
-          currentTempFile = File('$outputDirectory/temp_chunk_$chunkIndex.enc');
+          currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
           chunkPaths.add(currentTempFile.path);
         }
@@ -182,7 +179,7 @@ class EncryptionEngine {
           chunkIndex++;
           currentChunkBytes = 0;
           
-          currentTempFile = File('$outputDirectory/temp_chunk_$chunkIndex.enc');
+          currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
           chunkPaths.add(currentTempFile.path);
         }
@@ -206,7 +203,7 @@ class EncryptionEngine {
     List<int>? ctrIv,
     int globalByteOffset = 0,
   }) async {
-    final file = await encryptedChunkFile.open(mode: FileMode.read);
+    final file = await encryptedChunkFile.open();
     final fileLength = await file.length();
     
     final outputSink = outputFile.openWrite(mode: append ? FileMode.writeOnlyAppend : FileMode.write);
@@ -214,8 +211,8 @@ class EncryptionEngine {
     if (ctrIv != null) {
       final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
       final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
-      final int bufferSize = 4 * 1024 * 1024;
-      int localOffset = 0;
+      const int bufferSize = 4 * 1024 * 1024;
+      var localOffset = 0;
 
       while (localOffset < fileLength) {
         final bytesToRead = (fileLength - localOffset < bufferSize) ? fileLength - localOffset : bufferSize;
@@ -234,8 +231,8 @@ class EncryptionEngine {
       }
     } else {
       final secretKey = await _cipher.newSecretKeyFromBytes(dekBytes);
-      final int encryptedBlockSize = (4 * 1024 * 1024) + 12 + 16;
-      int offset = 0;
+      const int encryptedBlockSize = (4 * 1024 * 1024) + 12 + 16;
+      var offset = 0;
 
       while (offset < fileLength) {
         final bytesToRead = (fileLength - offset < encryptedBlockSize) ? fileLength - offset : encryptedBlockSize;
@@ -282,9 +279,9 @@ class EncryptionEngine {
     } else {
       final gcmCipher = AesGcm.with256bits();
       final secretKey = await gcmCipher.newSecretKeyFromBytes(dekBytes);
-      final encryptedBlockSize = (4 * 1024 * 1024) + 12 + 16;
+      const encryptedBlockSize = (4 * 1024 * 1024) + 12 + 16;
       final builder = BytesBuilder();
-      int offset = 0;
+      var offset = 0;
 
       while (offset < data.length) {
         final blockEnd = (offset + encryptedBlockSize < data.length) ? offset + encryptedBlockSize : data.length;

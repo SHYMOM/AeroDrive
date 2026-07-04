@@ -1,19 +1,17 @@
 import 'dart:io';
-import 'dart:ui' as ui;
-import 'package:aerodrive/core/theme/app_colors.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../constants.dart';
-import '../providers.dart';
-import 'app_router.dart';
-import '../../widgets/aerodrive_logo.dart';
 import '../../features/drive/providers/drive_providers.dart';
 import '../../features/sharing/import_link_dialog.dart';
 import '../../features/transfers/widgets/global_progress_bar.dart';
+import '../constants.dart';
+import '../theme/app_colors.dart';
+import 'app_router.dart';
 
 class ResponsiveScaffold extends ConsumerStatefulWidget {
   const ResponsiveScaffold({super.key, required this.child});
@@ -27,9 +25,7 @@ class ResponsiveScaffold extends ConsumerStatefulWidget {
 class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
   final _rootPaths = AppDestination.values.map((d) => d.path).toSet();
 
-  bool _isRootRoute(String path) {
-    return _rootPaths.any((root) => path == root || path == '$root/');
-  }
+  bool _isRootRoute(String path) => _rootPaths.any((root) => path == root || path == '$root/');
 
   Future<bool> _onPopInvoked() async {
     if (!mounted) return true;
@@ -162,8 +158,7 @@ final class _DesktopLayout extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       backgroundColor: AppColors.background,
       body: Row(
         children: [
@@ -182,7 +177,6 @@ final class _DesktopLayout extends StatelessWidget {
         ],
       ),
     );
-  }
 }
 
 final class _TabletLayout extends StatelessWidget {
@@ -197,13 +191,11 @@ final class _TabletLayout extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return _DesktopLayout(
+  Widget build(BuildContext context) => _DesktopLayout(
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
       child: child,
     );
-  }
 }
 
 final class _MobileLayout extends StatelessWidget {
@@ -243,10 +235,10 @@ final class _MobileLayout extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const GlobalProgressBar(),
-                Container(
+                DecoratedBox(
                   decoration: const BoxDecoration(
                     color: AppColors.background,
-                    border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 1)),
+                    border: Border(top: BorderSide(color: AppColors.outlineVariant)),
                   ),
                   child: NavigationBar(
                 backgroundColor: AppColors.background,
@@ -321,13 +313,12 @@ class SidebarContent extends ConsumerWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+  Widget build(BuildContext context, WidgetRef ref) => Container(
       width: 280,
       decoration: BoxDecoration(
         color: AppColors.surface,
         border: Border(
-          right: BorderSide(color: AppColors.outline.withOpacity(0.5), width: 1),
+          right: BorderSide(color: AppColors.outline.withValues(alpha: 0.5)),
         ),
       ),
       child: Column(
@@ -349,7 +340,7 @@ class SidebarContent extends ConsumerWidget {
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
-                      BoxShadow(color: AppColors.primary.withOpacity(0.4), blurRadius: 12)
+                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 12)
                     ],
                   ),
                   child: const Center(
@@ -410,8 +401,8 @@ class SidebarContent extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
-                            color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
-                            border: isSelected ? Border.all(color: AppColors.primary.withOpacity(0.5)) : null,
+                            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+                            border: isSelected ? Border.all(color: AppColors.primary.withValues(alpha: 0.5)) : null,
                           ),
                           child: Row(
                             children: [
@@ -512,7 +503,6 @@ class SidebarContent extends ConsumerWidget {
         ],
       ),
     );
-  }
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -533,9 +523,9 @@ class SidebarContent extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withOpacity(0.2), blurRadius: 16)
+          BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 16)
         ],
       ),
       child: Column(
@@ -547,7 +537,7 @@ class SidebarContent extends ConsumerWidget {
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.primary.withOpacity(0.2),
+                  color: AppColors.primary.withValues(alpha: 0.2),
                 ),
                 child: const Icon(Icons.all_inclusive, color: AppColors.primary, size: 16),
               ),
@@ -590,22 +580,22 @@ class SidebarContent extends ConsumerWidget {
               );
             },
             loading: () => const LinearProgressIndicator(minHeight: 4, color: AppColors.secondary),
-            error: (_, __) => const Text('Error loading storage', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            error: (_, _) => const Text('Error loading storage', style: TextStyle(color: Colors.white54, fontSize: 12)),
           ),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
-              color: AppColors.secondary.withOpacity(0.15),
-              border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+              color: AppColors.secondary.withValues(alpha: 0.15),
+              border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
             ),
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.shield_rounded, size: 12, color: AppColors.secondary),
-                const SizedBox(width: 4),
-                const Text(
+                Icon(Icons.shield_rounded, size: 12, color: AppColors.secondary),
+                SizedBox(width: 4),
+                Text(
                   'Zero-Knowledge',
                   style: TextStyle(color: AppColors.secondary, fontSize: 9, fontWeight: FontWeight.w600),
                 ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import '../../core/providers/repository_providers.dart';
 
 class ConnectionTimeoutDialog extends ConsumerStatefulWidget {
   const ConnectionTimeoutDialog({super.key});
@@ -40,8 +40,7 @@ class _ConnectionTimeoutDialogState extends ConsumerState<ConnectionTimeoutDialo
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Connection Timeout'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -66,5 +65,4 @@ class _ConnectionTimeoutDialogState extends ConsumerState<ConnectionTimeoutDialo
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
-  }
 }

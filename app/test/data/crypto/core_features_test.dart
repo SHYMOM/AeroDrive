@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:cryptography/cryptography.dart';
+
 import 'package:aerodrive/domain/recovery/caption_codec.dart';
 import 'package:aerodrive/domain/thumbnail_cache_manager.dart';
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +13,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
       const MethodChannel('plugins.flutter.io/path_provider'),
-      (MethodCall methodCall) async {
+      (methodCall) async {
         return './test_cache'; // Use local directory for testing
       },
     );
@@ -31,14 +31,14 @@ void main() {
     final masterKey = await cipher.newSecretKey();
 
     // 1. Test File Caption serialization/decryption
-    final fileId = 'test-file-uuid';
-    final name = 'AeroDriveTestDocument.pdf';
-    final parentId = 'test-folder-uuid';
-    final hash = 'sha256-file-hash-value';
-    final size = 123456;
-    final mime = 'application/pdf';
-    final wrappedDek = 'wrapped-dek-key-base64-string';
-    final ctrIv = 'ctr-iv-base64-string';
+    const fileId = 'test-file-uuid';
+    const name = 'AeroDriveTestDocument.pdf';
+    const parentId = 'test-folder-uuid';
+    const hash = 'sha256-file-hash-value';
+    const size = 123456;
+    const mime = 'application/pdf';
+    const wrappedDek = 'wrapped-dek-key-base64-string';
+    const ctrIv = 'ctr-iv-base64-string';
 
     final encryptedFileCaption = await CaptionSerializer.serializeFile(
       fileId: fileId,
@@ -50,8 +50,6 @@ void main() {
       masterKey: masterKey,
       wrappedDekBase64: wrappedDek,
       ctrIvBase64: ctrIv,
-      isChunked: 0,
-      version: 1,
     );
 
     expect(encryptedFileCaption, isNotEmpty);
@@ -70,9 +68,9 @@ void main() {
     expect(decryptedFileMap['iv'], ctrIv);
 
     // 2. Test Folder Caption serialization/decryption
-    final folderId = 'test-folder-uuid';
-    final folderName = 'AeroDriveWorkFolder';
-    final color = '#FF0000';
+    const folderId = 'test-folder-uuid';
+    const folderName = 'AeroDriveWorkFolder';
+    const color = '#FF0000';
 
     final encryptedFolderCaption = await CaptionSerializer.serializeFolder(
       folderId: folderId,
@@ -98,7 +96,7 @@ void main() {
     final cipher = AesGcm.with256bits();
     final masterKey = await cipher.newSecretKey();
 
-    final fileId = 'test-thumbnail-file-id';
+    const fileId = 'test-thumbnail-file-id';
     final thumbnailData = Uint8List.fromList(List.generate(100, (i) => i % 256));
 
     // Save encrypted thumbnail

@@ -66,8 +66,7 @@ class _AeroDriveLogoState extends State<AeroDriveLogo>
       children: [
         AnimatedBuilder(
           animation: _glowAnimation,
-          builder: (context, child) {
-            return Container(
+          builder: (context, child) => Container(
               width: dim,
               height: dim,
               decoration: BoxDecoration(
@@ -97,8 +96,7 @@ class _AeroDriveLogoState extends State<AeroDriveLogo>
                 size: dim * 0.55,
                 color: Colors.white,
               ),
-            );
-          },
+            ),
         ),
         if (widget.showText) ...[
           SizedBox(width: dim * 0.3),

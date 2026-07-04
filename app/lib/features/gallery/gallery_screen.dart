@@ -1,11 +1,13 @@
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
-import 'package:drift/drift.dart' as drift;
+
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
+import '../preview/preview_router.dart';
+import 'thumbnail_service.dart';
 
 final mediaFilesProvider = FutureProvider<List<FileData>>((ref) async {
   final db = ref.watch(databaseProvider);
@@ -54,8 +56,8 @@ class GalleryScreenContent extends ConsumerWidget {
 }
 
 class _GalleryItem extends ConsumerStatefulWidget {
-  final FileData file;
   const _GalleryItem({required this.file});
+  final FileData file;
 
   @override
   ConsumerState<_GalleryItem> createState() => _GalleryItemState();
@@ -82,12 +84,11 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: () {
         PreviewRouter.openPreview(context, widget.file);
       },
-      child: Container(
+      child: ColoredBox(
         color: Colors.black12,
         child: Stack(
           fit: StackFit.expand,
@@ -110,5 +111,4 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
         ),
       ),
     );
-  }
 }

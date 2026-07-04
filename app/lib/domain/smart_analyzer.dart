@@ -1,20 +1,22 @@
 import 'dart:io';
 import 'dart:ui';
-import 'package:flutter/foundation.dart';
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:uuid/uuid.dart';
-import 'package:path_provider/path_provider.dart';
+
 import 'package:drift/drift.dart' as drift;
+import 'package:flutter/foundation.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
+
+import '../core/logger.dart';
+import '../data/db/database.dart';
 
 class SmartAnalyzer {
-  final AeroDriveDatabase _db;
-  final Uuid _uuid = const Uuid();
 
   SmartAnalyzer(this._db);
+  final AeroDriveDatabase _db;
+  final Uuid _uuid = const Uuid();
 
   Future<void> analyzeAndStore(File imageFile, String fileId) async {
     try {
@@ -43,7 +45,7 @@ class SmartAnalyzer {
         labeler.close();
 
         // Faces
-        final faceDetector = FaceDetector(options: FaceDetectorOptions(enableContours: false, enableLandmarks: false));
+        final faceDetector = FaceDetector(options: FaceDetectorOptions());
         final faces = await faceDetector.processImage(inputImage);
         faceRects = faces.map((f) => f.boundingBox).toList();
         faceDetector.close();
@@ -109,10 +111,10 @@ class SmartAnalyzer {
         decodedImage ??= await img.decodeImageFile(imageFile.path);
         if (decodedImage != null) {
           // Clamp rect to image bounds
-          int x = rect.left.toInt().clamp(0, decodedImage.width);
-          int y = rect.top.toInt().clamp(0, decodedImage.height);
-          int w = rect.width.toInt().clamp(1, decodedImage.width - x);
-          int h = rect.height.toInt().clamp(1, decodedImage.height - y);
+          final int x = rect.left.toInt().clamp(0, decodedImage.width);
+          final int y = rect.top.toInt().clamp(0, decodedImage.height);
+          final int w = rect.width.toInt().clamp(1, decodedImage.width - x);
+          final int h = rect.height.toInt().clamp(1, decodedImage.height - y);
 
           if (w > 0 && h > 0) {
             final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);

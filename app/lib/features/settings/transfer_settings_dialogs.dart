@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import '../../core/providers/repository_providers.dart';
 
 class ParallelThreadsDialog extends ConsumerStatefulWidget {
   const ParallelThreadsDialog({super.key});
@@ -24,8 +24,7 @@ class _ParallelThreadsDialogState extends ConsumerState<ParallelThreadsDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Parallel Threads'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -47,7 +46,6 @@ class _ParallelThreadsDialogState extends ConsumerState<ParallelThreadsDialog> {
         ),
       ],
     );
-  }
 }
 
 class BandwidthLimitDialog extends ConsumerStatefulWidget {
@@ -72,8 +70,7 @@ class _BandwidthLimitDialogState extends ConsumerState<BandwidthLimitDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Bandwidth Limit'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -95,7 +92,6 @@ class _BandwidthLimitDialogState extends ConsumerState<BandwidthLimitDialog> {
         ),
       ],
     );
-  }
 }
 
 class AutoRetryCountDialog extends ConsumerStatefulWidget {
@@ -120,8 +116,7 @@ class _AutoRetryCountDialogState extends ConsumerState<AutoRetryCountDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Auto-Retry Count'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -143,7 +138,6 @@ class _AutoRetryCountDialogState extends ConsumerState<AutoRetryCountDialog> {
         ),
       ],
     );
-  }
 }
 
 class UploadQualityDialog extends ConsumerStatefulWidget {
@@ -168,8 +162,7 @@ class _UploadQualityDialogState extends ConsumerState<UploadQualityDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Default Upload Quality'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -208,5 +201,4 @@ class _UploadQualityDialogState extends ConsumerState<UploadQualityDialog> {
         ),
       ],
     );
-  }
 }

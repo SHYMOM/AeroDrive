@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 
 class StorageBanner extends StatelessWidget {
   const StorageBanner({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      padding: const EdgeInsets.all(20.0),
+  Widget build(BuildContext context) => Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(16.0),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.glassBorder),
         boxShadow: const [
           BoxShadow(
@@ -51,7 +50,7 @@ class StorageBanner extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Used 1.38 TB',
-                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
                     ),
                   ],
                 ),
@@ -97,5 +96,4 @@ class StorageBanner extends StatelessWidget {
         ],
       ),
     );
-  }
 }

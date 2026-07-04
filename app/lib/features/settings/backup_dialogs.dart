@@ -1,24 +1,25 @@
 import 'dart:convert';
 import 'dart:io' as io;
+
+import 'package:drift/drift.dart' show InsertMode, Value;
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:file_selector/file_selector.dart';
-import 'package:drift/drift.dart' show Value, InsertMode;
+import 'package:path_provider/path_provider.dart';
 
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/domain/ai/face_recognition_service.dart' hide FaceCluster;
-import 'package:aerodrive/domain/ai/face_recognition_service.dart' show faceClustersProvider;
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/features/gallery/gallery_screen.dart';
-import 'package:aerodrive/features/trash/trash_screen.dart';
-import 'package:aerodrive/domain/backup_service.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../../domain/ai/face_recognition_service.dart' hide FaceCluster;
+import '../../domain/ai/face_recognition_service.dart' show faceClustersProvider;
+import '../../domain/backup_service.dart';
+import '../drive/providers/drive_providers.dart';
+import '../gallery/gallery_screen.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
+import '../trash/trash_screen.dart';
 
 class BackupExportDialog extends ConsumerStatefulWidget {
   const BackupExportDialog({super.key});
@@ -56,8 +57,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Row(
@@ -198,7 +198,6 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               ),
             ],
     );
-  }
 }
 
 enum ImportStage { selectFile, configureImport, loading }
@@ -258,9 +257,9 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         throw const FormatException('Invalid backup file format.');
       }
 
-      int folderCount = 0;
-      int fileCount = 0;
-      int settingsCount = 0;
+      var folderCount = 0;
+      var fileCount = 0;
+      var settingsCount = 0;
 
       final hasDb = data.containsKey('database');
       final hasSettings = data.containsKey('settings');
@@ -339,21 +338,13 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
       return f;
     }).toList();
 
-    final sanitizedChunks = importedChunks.where((c) {
-      return c.fileId != null && allFileIds.contains(c.fileId);
-    }).toList();
+    final sanitizedChunks = importedChunks.where((c) => c.fileId != null && allFileIds.contains(c.fileId)).toList();
 
-    final sanitizedFileTags = importedFileTags.where((ft) {
-      return allFileIds.contains(ft.fileId) && allTagIds.contains(ft.tagId);
-    }).toList();
+    final sanitizedFileTags = importedFileTags.where((ft) => allFileIds.contains(ft.fileId) && allTagIds.contains(ft.tagId)).toList();
 
-    final sanitizedShares = importedShares.where((s) {
-      return s.fileId == null || allFileIds.contains(s.fileId);
-    }).toList();
+    final sanitizedShares = importedShares.where((s) => s.fileId == null || allFileIds.contains(s.fileId)).toList();
 
-    final sanitizedPhotoFaces = importedPhotoFaces.where((pf) {
-      return allFileIds.contains(pf.fileId) && allFaceClusterIds.contains(pf.faceClusterId);
-    }).toList();
+    final sanitizedPhotoFaces = importedPhotoFaces.where((pf) => allFileIds.contains(pf.fileId) && allFaceClusterIds.contains(pf.faceClusterId)).toList();
 
     return {
       'folders': sanitizedFolders,
@@ -569,7 +560,6 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
             child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
         ];
-        break;
 
       case ImportStage.configureImport:
         content = SingleChildScrollView(
@@ -723,7 +713,6 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
             child: const Text('Import'),
           ),
         ];
-        break;
 
       case ImportStage.loading:
         content = const Column(
@@ -738,7 +727,6 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
           ],
         );
         actions = null;
-        break;
     }
 
     return AlertDialog(
@@ -836,8 +824,7 @@ class TelegramSelfBackupDialog extends ConsumerWidget {
   const TelegramSelfBackupDialog({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AlertDialog(
+  Widget build(BuildContext context, WidgetRef ref) => AlertDialog(
       title: const Text('Telegram Self-Backup'),
       content: const Text('Send an encrypted copy of your SQLite database to your "Saved Messages" in Telegram.'),
       actions: [
@@ -875,5 +862,4 @@ class TelegramSelfBackupDialog extends ConsumerWidget {
         ),
       ],
     );
-  }
 }

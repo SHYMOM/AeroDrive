@@ -1,10 +1,10 @@
 import 'package:drift/drift.dart';
-import 'package:aerodrive/data/db/database.dart';
+import '../db/database.dart';
 
 class SettingsRepository {
-  final AeroDriveDatabase _db;
 
   SettingsRepository(this._db);
+  final AeroDriveDatabase _db;
 
   /// Get a setting value by key. Returns null if not found.
   Future<String?> getSetting(String key) async {

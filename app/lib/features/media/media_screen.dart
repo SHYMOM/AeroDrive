@@ -1,17 +1,18 @@
 import 'dart:io';
+
+import 'package:collection/collection.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:intl/intl.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:collection/collection.dart';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../gallery/thumbnail_service.dart';
+import '../preview/preview_router.dart';
 
 enum MediaTab { photos, albums, explore }
 enum PhotosTimelineView { years, months, days, all }
@@ -145,18 +146,24 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   String _exploreSearchQuery = '';
 
   int? _filterYear;
-  String? _filterMonth; 
+  String? _filterMonth;
+  String? _mediaTypeFilter;
 
   @override
   Widget build(BuildContext context) {
     // Intercept hardware/system back button if an album is selected
     return PopScope(
-      canPop: _selectedAlbum == null,
+      canPop: _selectedAlbum == null && _mediaTypeFilter == null,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_selectedAlbum != null) {
           setState(() {
             _selectedAlbum = null;
+          });
+        }
+        if (_mediaTypeFilter != null) {
+          setState(() {
+            _mediaTypeFilter = null;
           });
         }
       },
@@ -195,13 +202,26 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   Widget _buildHeader() {
     if (_currentTab == MediaTab.photos) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Photos',
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+            Row(
+              children: [
+                if (_mediaTypeFilter != null)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () {
+                      setState(() {
+                        _mediaTypeFilter = null;
+                      });
+                    },
+                  ),
+                Text(
+                  _mediaTypeFilter == 'image/' ? 'All Images' : _mediaTypeFilter == 'video/' ? 'All Videos' : 'All media',
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             Row(
               children: [
@@ -220,7 +240,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       );
     } else if (_currentTab == MediaTab.albums) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -257,11 +277,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     } else {
       // Explore search bar with trailing popup menu
       return Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Row(
           children: [
             Expanded(
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
@@ -311,9 +331,8 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     }
   }
 
-  Widget _buildActiveFiltersHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+  Widget _buildActiveFiltersHeader() => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
           const Text('Filtered by: ', style: TextStyle(color: Colors.white54, fontSize: 12)),
@@ -357,7 +376,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildOptionsMenu() {
     final newestFirst = ref.watch(mediaSortProvider);
@@ -445,6 +463,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         }
 
         var files = allFiles;
+        if (_mediaTypeFilter != null) {
+          files = files.where((f) => f.mimeType?.startsWith(_mediaTypeFilter!) == true).toList();
+        }
         if (_filterYear != null) {
           files = files.where((f) => f.createdAt != null && f.createdAt!.year == _filterYear).toList();
         }
@@ -468,7 +489,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
+                padding: const EdgeInsets.only(bottom: 16),
                 child: _buildTimelineSelectorPill(),
               ),
             ),
@@ -506,14 +527,15 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           final dateToCheck = DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
           
           String headerText = DateFormat('MMMM d').format(parsedDate);
-          if (dateToCheck == today) headerText = 'Today';
-          else if (dateToCheck == yesterday) headerText = 'Yesterday';
+          if (dateToCheck == today) {
+            headerText = 'Today';
+          } else if (dateToCheck == yesterday) headerText = 'Yesterday';
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text(
                   headerText,
                   style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
@@ -529,9 +551,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   mainAxisSpacing: 4,
                 ),
                 itemCount: dayFiles.length,
-                itemBuilder: (context, index) {
-                  return _GalleryItem(file: dayFiles[index], siblings: dayFiles);
-                },
+                itemBuilder: (context, index) => _GalleryItem(file: dayFiles[index], siblings: dayFiles),
               ),
             ],
           );
@@ -686,13 +706,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     }
   }
 
-  Widget _buildTimelineSelectorPill() {
-    return Container(
+  Widget _buildTimelineSelectorPill() => Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.3),
@@ -730,7 +749,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         }).toList(),
       ),
     );
-  }
 
   // --- ALBUMS VIEW ---
   Widget _buildAlbumsTab() {
@@ -765,13 +783,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     final foldersAsync = ref.watch(allMediaFoldersProvider);
 
     return mediaFilesAsync.when(
-      data: (allFiles) {
-        return foldersAsync.when(
+      data: (allFiles) => foldersAsync.when(
           data: (folders) {
             final images = allFiles.where((f) => f.mimeType?.startsWith('image/') == true).toList();
             final videos = allFiles.where((f) => f.mimeType?.startsWith('video/') == true).toList();
             
-            final List<_AlbumItemData> primaryAlbums = [
+            final primaryAlbums = <_AlbumItemData>[
               if (images.isNotEmpty) _AlbumItemData(name: 'All Images', files: images),
               if (videos.isNotEmpty) _AlbumItemData(name: 'All Videos', files: videos, isVideosCategory: true),
             ];
@@ -788,7 +805,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 1.0,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -802,7 +818,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 if (otherFolders.isNotEmpty) ...[
                   const SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Text(
                         'More albums',
                         style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
@@ -810,7 +826,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                     ),
                   ),
                   SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverGrid(
                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
@@ -832,7 +848,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 AspectRatio(
-                                  aspectRatio: 1.0, // Fixed square aspect ratio prevents covers from shrinking
+                                  aspectRatio: 1, // Fixed square aspect ratio prevents covers from shrinking
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(12),
@@ -867,8 +883,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
-        );
-      },
+        ),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
     );
@@ -878,15 +893,17 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     final latestFile = albumFiles.isNotEmpty ? albumFiles.first : null;
     return GestureDetector(
       onTap: () {
-        if (name == 'All') {
+        if (name == 'All Images') {
           setState(() {
             _currentTab = MediaTab.photos;
             _timelineView = PhotosTimelineView.all;
+            _mediaTypeFilter = 'image/';
           });
-        } else if (isVideosCategory) {
+        } else if (name == 'All Videos' || isVideosCategory) {
           setState(() {
             _currentTab = MediaTab.photos;
             _timelineView = PhotosTimelineView.all;
+            _mediaTypeFilter = 'video/';
           });
         }
       },
@@ -973,7 +990,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               children: [
                 // 1. People & Places (Renders grid with overlay texts)
                 const Text(
@@ -1053,9 +1070,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            coverFile != null 
-                                ? _ThumbnailOrCover(file: coverFile)
-                                : _buildSmartTagFallback(tag['name'] as String),
+                            if (coverFile != null) _ThumbnailOrCover(file: coverFile) else _buildSmartTagFallback(tag['name'] as String),
                             
                             // Dark overlay
                             Container(
@@ -1196,8 +1211,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     required bool isPeople,
     List<String>? peopleCropPaths,
     List<FileData>? placeCoverFiles,
-  }) {
-    return Container(
+  }) => Container(
       height: 150,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.03),
@@ -1210,7 +1224,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         children: [
           // 2x2 grid of circles/rounded squares
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(8),
             child: GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 6,
@@ -1279,7 +1293,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         ],
       ),
     );
-  }
 
   Widget _buildMiniFallbackItem(bool isPeople, int index) {
     final emojisPeople = ['👨‍💻', '👩‍🎨', '🧑‍🚀', '👨‍💼'];
@@ -1299,20 +1312,17 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       case 'food':
         icon = Icons.restaurant;
         color = Colors.orangeAccent;
-        break;
       case 'buildings':
         icon = Icons.apartment;
         color = Colors.lightBlueAccent;
-        break;
       case 'ocean':
         icon = Icons.waves;
         color = Colors.blue;
-        break;
       default:
         icon = Icons.local_offer_outlined;
         color = AppColors.primary;
     }
-    return Container(
+    return ColoredBox(
       color: color.withValues(alpha: 0.1),
       child: Center(
         child: Icon(icon, color: color, size: 28),
@@ -1320,8 +1330,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     );
   }
 
-  Widget _buildBottomSubNavBar() {
-    return Container(
+  Widget _buildBottomSubNavBar() => DecoratedBox(
       decoration: const BoxDecoration(
         color: AppColors.background,
         border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 0.5)),
@@ -1344,7 +1353,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.image_outlined),
             activeIcon: Icon(Icons.image, color: AppColors.primary),
-            label: 'Photos',
+            label: 'All media',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.photo_album_outlined),
@@ -1359,10 +1368,8 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         ],
       ),
     );
-  }
 
-  Widget _buildEmptyState(IconData icon, String message) {
-    return Center(
+  Widget _buildEmptyState(IconData icon, String message) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1372,19 +1379,18 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         ],
       ),
     );
-  }
 }
 
 class _AlbumItemData {
+  _AlbumItemData({required this.name, required this.files, this.isVideosCategory = false});
   final String name;
   final List<FileData> files;
   final bool isVideosCategory;
-  _AlbumItemData({required this.name, required this.files, this.isVideosCategory = false});
 }
 
 class _ThumbnailOrCover extends ConsumerStatefulWidget {
-  final FileData? file;
   const _ThumbnailOrCover({required this.file});
+  final FileData? file;
 
   @override
   ConsumerState<_ThumbnailOrCover> createState() => _ThumbnailOrCoverState();
@@ -1428,7 +1434,7 @@ class _ThumbnailOrCoverState extends ConsumerState<_ThumbnailOrCover> {
   @override
   Widget build(BuildContext context) {
     if (widget.file == null) {
-      return Container(
+      return ColoredBox(
         color: Colors.white.withValues(alpha: 0.05),
         child: const Icon(Icons.image_outlined, color: Colors.white24, size: 28),
       );
@@ -1439,7 +1445,7 @@ class _ThumbnailOrCoverState extends ConsumerState<_ThumbnailOrCover> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
-    return Container(
+    return ColoredBox(
       color: Colors.white.withValues(alpha: 0.05),
       child: const Icon(Icons.image_outlined, color: Colors.white24, size: 28),
     );
@@ -1447,10 +1453,10 @@ class _ThumbnailOrCoverState extends ConsumerState<_ThumbnailOrCover> {
 }
 
 class _GalleryItem extends ConsumerStatefulWidget {
-  final FileData file;
-  final List<FileData>? siblings;
 
   const _GalleryItem({required this.file, this.siblings});
+  final FileData file;
+  final List<FileData>? siblings;
 
   @override
   ConsumerState<_GalleryItem> createState() => _GalleryItemState();
@@ -1477,8 +1483,7 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
+  Widget build(BuildContext context) => GestureDetector(
       onTap: () => PreviewRouter.openPreview(context, widget.file, siblings: widget.siblings),
       child: Container(
         decoration: BoxDecoration(
@@ -1507,5 +1512,4 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
         ),
       ),
     );
-  }
 }

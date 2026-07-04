@@ -1,13 +1,15 @@
-import 'dart:typed_data';
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:typed_data';
+
 import 'package:drift/drift.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/core/security/master_key_provider.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/core/logger.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/security/master_key_provider.dart';
+import '../../data/crypto/encryption_engine.dart';
+import '../../data/db/database.dart';
+import '../telegram/telegram_manager.dart';
 
 Future<Uint8List?> loadDecryptedFile(ProviderContainer ref, FileData file) async {
   try {
@@ -31,7 +33,7 @@ Future<Uint8List?> loadDecryptedFile(ProviderContainer ref, FileData file) async
 
     final manager = ref.read(telegramManagerProvider.notifier);
     final bytesBuilder = BytesBuilder();
-    int processedBytes = 0;
+    var processedBytes = 0;
 
     for (final chunk in chunks) {
       if (chunk.messageId == null || chunk.channelId == null) continue;

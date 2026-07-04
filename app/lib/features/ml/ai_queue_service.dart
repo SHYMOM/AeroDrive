@@ -1,17 +1,18 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/ml/ml_service.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
 import 'package:battery_plus/battery_plus.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import 'ml_service.dart';
 
 class AIQueueService {
+
+  AIQueueService(this._ref);
   final Ref _ref;
   final Battery _battery = Battery();
   bool _isProcessing = false;
-
-  AIQueueService(this._ref);
 
   Future<void> triggerQueue() async {
     if (_isProcessing) return;
@@ -49,6 +50,4 @@ class AIQueueService {
   }
 }
 
-final aiQueueServiceProvider = Provider<AIQueueService>((ref) {
-  return AIQueueService(ref);
-});
+final aiQueueServiceProvider = Provider<AIQueueService>(AIQueueService.new);

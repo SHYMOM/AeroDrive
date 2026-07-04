@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/tags/tag_service.dart';
-import 'package:aerodrive/features/tags/tag_providers.dart';
+
+import '../../tags/tag_providers.dart';
 
 class FileTagsRow extends ConsumerWidget {
-  final String fileId;
   const FileTagsRow({super.key, required this.fileId});
+  final String fileId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,7 +15,7 @@ class FileTagsRow extends ConsumerWidget {
       data: (tags) {
         if (tags.isEmpty) return const SizedBox.shrink();
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -30,7 +29,7 @@ class FileTagsRow extends ConsumerWidget {
                 }
                 final contrastColor = color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
@@ -53,7 +52,7 @@ class FileTagsRow extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

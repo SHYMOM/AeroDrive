@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:isolate';
+
 import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
-import 'package:aerodrive/domain/webdav/webdav_config.dart';
-import 'package:aerodrive/domain/webdav/propfind_handler.dart';
+
+import 'propfind_handler.dart';
+import 'webdav_config.dart';
 
 class WebDavServer {
   static Isolate? _serverIsolate;
@@ -40,7 +42,7 @@ class WebDavServer {
     debugPrint("WebDAV Server stopped.");
   }
 
-  static void _serverWorker(_WorkerParams params) async {
+  static Future<void> _serverWorker(_WorkerParams params) async {
     final router = Router();
     
     // Mount handlers
@@ -66,9 +68,7 @@ class WebDavServer {
   }
 
   /// Ensures Basic Authentication is present and matches.
-  static shelf.Middleware _authMiddleware(String expectedAuthHeader) {
-    return (shelf.Handler innerHandler) {
-      return (shelf.Request request) {
+  static shelf.Middleware _authMiddleware(String expectedAuthHeader) => (innerHandler) => (request) {
         if (request.method == 'OPTIONS') {
           // OPTIONS often doesn't carry auth in some OS discovery phases
           return innerHandler(request);
@@ -84,27 +84,19 @@ class WebDavServer {
         }
         return innerHandler(request);
       };
-    };
-  }
 
   /// Appends mandatory WebDAV headers to all responses.
-  static shelf.Middleware _osHeadersMiddleware() {
-    return (shelf.Handler innerHandler) {
-      return (shelf.Request request) async {
+  static shelf.Middleware _osHeadersMiddleware() => (innerHandler) => (request) async {
         final response = await innerHandler(request);
         return response.change(headers: {
           'DAV': '1, 2',
           'MS-Author-Via': 'DAV',
         });
       };
-    };
-  }
 
-  static Future<shelf.Response> _handleOptions(shelf.Request request) async {
-    return shelf.Response.ok('', headers: {
+  static Future<shelf.Response> _handleOptions(shelf.Request request) async => shelf.Response.ok('', headers: {
       'Allow': 'OPTIONS, PROPFIND, GET, PUT, MKCOL, DELETE, LOCK, UNLOCK',
     });
-  }
 
   static Future<shelf.Response> _handleLock(shelf.Request request) async {
     final uuid = 'urn:uuid:${DateTime.now().microsecondsSinceEpoch}-${_nextLockId++}';
@@ -136,13 +128,11 @@ class WebDavServer {
     return shelf.Response(204); // No Content
   }
 
-  static Future<shelf.Response> _handlePropfind(shelf.Request request) async {
-    return PropfindHandler.handle(request);
-  }
+  static Future<shelf.Response> _handlePropfind(shelf.Request request) async => PropfindHandler.handle(request);
 }
 
 class _WorkerParams {
+  _WorkerParams({required this.sendPort, required this.creds});
   final SendPort sendPort;
   final WebDavCredentials creds;
-  _WorkerParams({required this.sendPort, required this.creds});
 }

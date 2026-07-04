@@ -1,28 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/drive/media_player_screen.dart';
-import 'package:aerodrive/features/preview/decrypted_image_viewer.dart';
-import 'package:aerodrive/features/preview/decrypted_text_viewer.dart';
-import 'package:aerodrive/features/preview/archive_viewer.dart';
-import 'package:aerodrive/features/preview/file_decryption_util.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:aerodrive/features/preview/image_gallery_screen.dart';
-import 'package:aerodrive/features/preview/video_gallery_screen.dart';
 import 'dart:io';
 
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
+import '../drive/media_player_screen.dart';
+import 'archive_viewer.dart';
+import 'decrypted_text_viewer.dart';
+import 'file_decryption_util.dart';
+import 'image_gallery_screen.dart';
+import 'media_gallery_screen.dart';
+import 'video_gallery_screen.dart';
+
 class PreviewDownloadButton extends ConsumerWidget {
-  final String fileId;
   const PreviewDownloadButton({super.key, required this.fileId});
+  final String fileId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return IconButton(
+  Widget build(BuildContext context, WidgetRef ref) => IconButton(
       icon: const Icon(Icons.download),
       tooltip: 'Download',
       onPressed: () async {
@@ -31,9 +32,9 @@ class PreviewDownloadButton extends ConsumerWidget {
           TransferQueueCompanion.insert(
             id: const Uuid().v4(),
             fileId: drift.Value(fileId),
-            type: drift.Value('DOWNLOAD_FILE'),
-            status: drift.Value('PENDING'),
-            priority: drift.Value(1),
+            type: const drift.Value('DOWNLOAD_FILE'),
+            status: const drift.Value('PENDING'),
+            priority: const drift.Value(1),
             createdAt: drift.Value(DateTime.now()),
           ),
         );
@@ -44,32 +45,47 @@ class PreviewDownloadButton extends ConsumerWidget {
         }
       },
     );
-  }
 }
 
 class PreviewRouter {
   static void openPreview(BuildContext context, FileData file, {List<FileData>? siblings}) {
     final mime = file.mimeType ?? '';
 
-    if (mime.startsWith('video/')) {
-      final videoSiblings = siblings?.where((f) => f.mimeType?.startsWith('video/') == true).toList() ?? [file];
-      final initialIndex = videoSiblings.indexWhere((f) => f.id == file.id);
-      final startIndex = initialIndex >= 0 ? initialIndex : 0;
+    final isImage = mime.startsWith('image/');
+    final isVideo = mime.startsWith('video/');
 
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => VideoGalleryScreen(files: videoSiblings, initialIndex: startIndex),
-      ));
+    if (isVideo || isImage) {
+      final hasImages = siblings?.any((f) => f.mimeType?.startsWith('image/') == true) ?? isImage;
+      final hasVideos = siblings?.any((f) => f.mimeType?.startsWith('video/') == true) ?? isVideo;
+
+      if (hasImages && hasVideos) {
+        final mediaSiblings = siblings!.where((f) => f.mimeType?.startsWith('image/') == true || f.mimeType?.startsWith('video/') == true).toList();
+        final initialIndex = mediaSiblings.indexWhere((f) => f.id == file.id);
+        final startIndex = initialIndex >= 0 ? initialIndex : 0;
+
+        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+          builder: (_) => MediaGalleryScreen(files: mediaSiblings, initialIndex: startIndex),
+        ));
+      } else if (hasVideos && !hasImages) {
+        final videoSiblings = siblings?.where((f) => f.mimeType?.startsWith('video/') == true).toList() ?? [file];
+        final initialIndex = videoSiblings.indexWhere((f) => f.id == file.id);
+        final startIndex = initialIndex >= 0 ? initialIndex : 0;
+
+        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+          builder: (_) => VideoGalleryScreen(files: videoSiblings, initialIndex: startIndex),
+        ));
+      } else if (hasImages && !hasVideos) {
+        final imageSiblings = siblings?.where((f) => f.mimeType?.startsWith('image/') == true).toList() ?? [file];
+        final initialIndex = imageSiblings.indexWhere((f) => f.id == file.id);
+        final startIndex = initialIndex >= 0 ? initialIndex : 0;
+
+        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
+          builder: (_) => ImageGalleryScreen(files: imageSiblings, initialIndex: startIndex),
+        ));
+      }
     } else if (mime.startsWith('audio/')) {
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
         builder: (_) => MediaPlayerScreen(file: file),
-      ));
-    } else if (mime.startsWith('image/')) {
-      final imageSiblings = siblings?.where((f) => f.mimeType?.startsWith('image/') == true).toList() ?? [file];
-      final initialIndex = imageSiblings.indexWhere((f) => f.id == file.id);
-      final startIndex = initialIndex >= 0 ? initialIndex : 0;
-
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ImageGalleryScreen(files: imageSiblings, initialIndex: startIndex),
       ));
     } else if (mime == 'application/pdf') {
       _openPdf(context, file);

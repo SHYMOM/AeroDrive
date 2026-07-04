@@ -1,31 +1,31 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:shelf/shelf.dart' as shelf;
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
-import 'package:http/http.dart' as http;
-
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/domain/folder_scanner.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:path_provider/path_provider.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../data/db/database.dart';
+import '../../domain/folder_scanner.dart';
 
 /// Lightweight REST API for AI/tool integration.
 ///
 /// Runs on localhost:{port} (default 8765) and requires an API key
 /// set via the `aerodrive_api_key` setting.
 class ApiService {
+
+  ApiService({this.port = 8765, required this.container});
   final int port;
   final ProviderContainer container;
   HttpServer? _server;
-
-  ApiService({this.port = 8765, required this.container});
 
   bool get isRunning => _server != null;
 
@@ -35,7 +35,7 @@ class ApiService {
     final app = Router();
 
     // ── Middleware: JSON content type + CORS + API key auth ──────────
-    final middleware = shelf.Pipeline()
+    final middleware = const shelf.Pipeline()
         .addMiddleware(_corsMiddleware())
         .addMiddleware(_jsonMiddleware())
         .addMiddleware(_authMiddleware());
@@ -60,9 +60,7 @@ class ApiService {
 
   // ── Middleware ────────────────────────────────────────────────────
 
-  shelf.Middleware _corsMiddleware() {
-    return (shelf.Handler innerHandler) {
-      return (shelf.Request request) async {
+  shelf.Middleware _corsMiddleware() => (innerHandler) => (request) async {
         if (request.method == 'OPTIONS') {
           return shelf.Response.ok('', headers: {
             'Access-Control-Allow-Origin': '*',
@@ -73,21 +71,13 @@ class ApiService {
         final response = await innerHandler(request);
         return response.change(headers: {'Access-Control-Allow-Origin': '*'});
       };
-    };
-  }
 
-  shelf.Middleware _jsonMiddleware() {
-    return (shelf.Handler innerHandler) {
-      return (shelf.Request request) async {
+  shelf.Middleware _jsonMiddleware() => (innerHandler) => (request) async {
         final response = await innerHandler(request);
         return response.change(headers: {'Content-Type': 'application/json'});
       };
-    };
-  }
 
-  shelf.Middleware _authMiddleware() {
-    return (shelf.Handler innerHandler) {
-      return (shelf.Request request) async {
+  shelf.Middleware _authMiddleware() => (innerHandler) => (request) async {
         if (request.url.path == 'health') {
           return await innerHandler(request);
         }
@@ -109,18 +99,14 @@ class ApiService {
 
         return await innerHandler(request);
       };
-    };
-  }
 
   // ── Handlers ──────────────────────────────────────────────────────
 
-  Future<shelf.Response> _handleHealth(shelf.Request request) async {
-    return shelf.Response.ok(jsonEncode({
+  Future<shelf.Response> _handleHealth(shelf.Request request) async => shelf.Response.ok(jsonEncode({
       'status': 'ok',
       'version': '1.0.0',
       'api_running': true,
     }));
-  }
 
   Future<shelf.Response> _handleListFiles(shelf.Request request) async {
     try {
@@ -128,7 +114,7 @@ class ApiService {
       final folderId = request.url.queryParameters['folder_id'];
       final search = request.url.queryParameters['q'];
 
-      var query = db.select(db.files)
+      final query = db.select(db.files)
         ..where((t) => t.deletedAt.isNull())
         ..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)]);
 
@@ -144,7 +130,7 @@ class ApiService {
 
       final files = await query.get();
       return shelf.Response.ok(jsonEncode({
-        'files': files.map((f) => _fileToJson(f)).toList(),
+        'files': files.map(_fileToJson).toList(),
       }));
     } catch (e) {
       return shelf.Response.internalServerError(body: jsonEncode({'error': e.toString()}));
@@ -175,7 +161,7 @@ class ApiService {
       final db = container.read(databaseProvider);
       final parentId = request.url.queryParameters['parent_id'];
 
-      var query = db.select(db.folders)
+      final query = db.select(db.folders)
         ..where((t) => t.deletedAt.isNull())
         ..orderBy([(t) => drift.OrderingTerm.asc(t.name)]);
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:aerodrive/features/faces/faces_screen.dart';
+import '../faces/faces_screen.dart';
 
 class PeopleScreenContent extends StatelessWidget {
   const PeopleScreenContent({super.key});

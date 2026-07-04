@@ -1,8 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/providers.dart';
+import '../../../core/providers/repository_providers.dart';
+import '../../../data/db/database.dart';
 
 /// Manages the current folder ID being viewed by the user.
 /// null = Root (Vault)
@@ -11,6 +12,9 @@ final currentFolderIdProvider = StateProvider<String?>((ref) => null);
 /// Filter Drive screen to only show favorites
 final isFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
 
+/// Tracks if we have already checked for a remote config during this session
+final configCheckedProvider = StateProvider<bool>((ref) => false);
+
 /// Manages the breadcrumb path to the current folder.
 final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
   final currentId = ref.watch(currentFolderIdProvider);
@@ -18,7 +22,7 @@ final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
 
   final db = ref.watch(databaseProvider);
 
-  List<FolderData> breadcrumbs = [];
+  final List<FolderData> breadcrumbs = [];
   String? iterId = currentId;
 
   // Traverse upwards to build breadcrumbs
@@ -48,27 +52,25 @@ enum DriveSortOrder { ascending, descending }
 enum DriveSortCategory { none, images, videos, documents, programs, others }
 
 class DriveSortOption {
-  final DriveSortCriteria criteria;
-  final DriveSortOrder order;
-  final DriveSortCategory categoryPriority;
 
   const DriveSortOption({
     required this.criteria,
     required this.order,
     required this.categoryPriority,
   });
+  final DriveSortCriteria criteria;
+  final DriveSortOrder order;
+  final DriveSortCategory categoryPriority;
 
   DriveSortOption copyWith({
     DriveSortCriteria? criteria,
     DriveSortOrder? order,
     DriveSortCategory? categoryPriority,
-  }) {
-    return DriveSortOption(
+  }) => DriveSortOption(
       criteria: criteria ?? this.criteria,
       order: order ?? this.order,
       categoryPriority: categoryPriority ?? this.categoryPriority,
     );
-  }
 }
 
 final driveSortOptionProvider = StateProvider<DriveSortOption>((ref) => const DriveSortOption(
@@ -133,15 +135,12 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
     switch (sortOption.criteria) {
       case DriveSortCriteria.name:
         cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        break;
       case DriveSortCriteria.date:
         final da = a.createdAt ?? DateTime(0);
         final db = b.createdAt ?? DateTime(0);
         cmp = da.compareTo(db);
-        break;
       default:
         cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        break;
     }
     return sortOption.order == DriveSortOrder.ascending ? cmp : -cmp;
   });
@@ -161,15 +160,12 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
     switch (sortOption.criteria) {
       case DriveSortCriteria.name:
         cmp = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        break;
       case DriveSortCriteria.date:
         final da = a.createdAt ?? DateTime(0);
         final db = b.createdAt ?? DateTime(0);
         cmp = da.compareTo(db);
-        break;
       case DriveSortCriteria.size:
         cmp = (a.size ?? 0).compareTo(b.size ?? 0);
-        break;
       case DriveSortCriteria.type:
         final extA = a.name.contains('.') ? a.name.split('.').last.toLowerCase() : '';
         final extB = b.name.contains('.') ? b.name.split('.').last.toLowerCase() : '';
@@ -177,7 +173,6 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
         if (cmp == 0) {
           cmp = (a.mimeType ?? '').toLowerCase().compareTo((b.mimeType ?? '').toLowerCase());
         }
-        break;
     }
 
     return sortOption.order == DriveSortOrder.ascending ? cmp : -cmp;
@@ -191,7 +186,7 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
 
 /// Recursively calculates the size of a folder and all its nested subfolders.
 Future<int> calculateFolderSize(String folderId, AeroDriveDatabase db) async {
-  int totalSize = 0;
+  var totalSize = 0;
   
   // Get all files directly in this folder
   final directFiles = await (db.select(db.files)
@@ -227,10 +222,10 @@ final quickAccessStatsProvider = FutureProvider<Map<String, int>>((ref) async {
   final files = await (db.select(db.files)..where((f) => f.deletedAt.isNull())).get();
   final folders = await (db.select(db.folders)..where((f) => f.deletedAt.isNull())).get();
 
-  int imageCount = 0;
-  int videoCount = 0;
-  int audioCount = 0;
-  int docCount = 0;
+  var imageCount = 0;
+  var videoCount = 0;
+  var audioCount = 0;
+  var docCount = 0;
 
   for (final f in files) {
     final mime = (f.mimeType ?? '').toLowerCase();
@@ -312,7 +307,5 @@ final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
   final db = ref.watch(databaseProvider);
   ref.watch(dbRebuildVersionProvider);
   
-  return db.customSelect('SELECT SUM(size) AS total FROM chunks;').watchSingle().map((row) {
-    return row.read<int>('total') ?? 0;
-  });
+  return db.customSelect('SELECT SUM(size) AS total FROM chunks;').watchSingle().map((row) => row.read<int>('total') ?? 0);
 });

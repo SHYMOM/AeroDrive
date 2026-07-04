@@ -1,16 +1,17 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:aerodrive/data/db/database.dart';
-import 'package:drift/drift.dart' as drift;
 
-class ThumbnailCacheService {
-  final AeroDriveDatabase _db;
-  static const int maxCacheSizeBytes = 1024 * 1024 * 1024; // 1 GB
+import 'package:drift/drift.dart' as drift;
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import '../data/db/database.dart';
+
+class ThumbnailCacheService { // 1 GB
 
   ThumbnailCacheService(this._db);
+  final AeroDriveDatabase _db;
+  static const int maxCacheSizeBytes = 1024 * 1024 * 1024;
 
   /// Retrieves the correct cache directory based on the platform.
   Future<Directory> _getCacheDirectory() async {
@@ -100,10 +101,10 @@ class ThumbnailCacheService {
     // 2. Find files to delete (order by oldest lastAccessTime)
     final itemsToPurge = await (_db.select(_db.files)
       ..where((f) => f.thumbnailPath.isNotNull())
-      ..orderBy([(t) => drift.OrderingTerm(expression: t.thumbnailLastAccess, mode: drift.OrderingMode.asc)])
+      ..orderBy([(t) => drift.OrderingTerm(expression: t.thumbnailLastAccess)])
     ).get();
 
-    int currentSize = totalSize;
+    var currentSize = totalSize;
     
     for (final item in itemsToPurge) {
       if (currentSize <= maxCacheSizeBytes) break;

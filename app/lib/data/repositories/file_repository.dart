@@ -1,17 +1,15 @@
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
-import 'package:aerodrive/data/db/database.dart';
+import '../db/database.dart';
 
 class FileRepository {
+
+  FileRepository(this._db);
   final AeroDriveDatabase _db;
   final Uuid _uuid = const Uuid();
 
-  FileRepository(this._db);
-
-  Future<FileData?> getFileByHash(String sha256Hash) async {
-    return await (_db.select(_db.files)..where((f) => f.sha256Hash.equals(sha256Hash) & f.deletedAt.isNull()))
+  Future<FileData?> getFileByHash(String sha256Hash) async => (_db.select(_db.files)..where((f) => f.sha256Hash.equals(sha256Hash) & f.deletedAt.isNull()))
         .getSingleOrNull();
-  }
 
   /// Creates a file entry. Implements the Zero Re-upload deduplication algorithm.
   Future<String> createFileEntry({
@@ -20,8 +18,7 @@ class FileRepository {
     required int sizeBytes,
     required String mimeType,
     String? folderId,
-  }) async {
-    return _db.transaction(() async {
+  }) async => _db.transaction(() async {
       // 1. Pre-flight check: Does this hash already exist in the database?
       final existingFile = await getFileByHash(sha256Hash);
 
@@ -68,7 +65,6 @@ class FileRepository {
 
       return newFileId;
     });
-  }
 
   /// Retrieves the files within a specific folder.
   Future<List<FileData>> getFilesInFolder(String? folderId) {

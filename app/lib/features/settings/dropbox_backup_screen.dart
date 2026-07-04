@@ -1,12 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/domain/backup_service.dart';
-import 'package:aerodrive/features/settings/dropbox_service.dart';
-import 'package:aerodrive/features/settings/widgets/backup_folder_mapper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers/repository_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../domain/backup_service.dart';
+import 'dropbox_service.dart';
+import 'widgets/backup_folder_mapper.dart';
 
 class DropboxBackupScreen extends ConsumerStatefulWidget {
   const DropboxBackupScreen({super.key});
@@ -18,7 +20,7 @@ class DropboxBackupScreen extends ConsumerStatefulWidget {
 class _DropboxBackupScreenState extends ConsumerState<DropboxBackupScreen> {
   bool _isConnecting = false;
   bool _isBackingUp = false;
-  double _uploadProgress = 0.0;
+  double _uploadProgress = 0;
   
   String _frequency = 'weekly';
   String _maxKeep = '5';
@@ -188,7 +190,7 @@ class _DropboxBackupScreenState extends ConsumerState<DropboxBackupScreen> {
               children: [
                 const Text('Auto-Backup Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                Container(
+                DecoratedBox(
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(16),
@@ -238,7 +240,7 @@ class _DropboxBackupScreenState extends ConsumerState<DropboxBackupScreen> {
                       SwitchListTile(
                         title: const Text('Wi-Fi Only'),
                         value: _wifiOnly,
-                        activeColor: Colors.blueAccent,
+                        activeThumbColor: Colors.blueAccent,
                         onChanged: (val) {
                           setState(() => _wifiOnly = val);
                           _saveSettings();

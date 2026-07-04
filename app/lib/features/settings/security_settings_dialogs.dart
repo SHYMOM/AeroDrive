@@ -1,12 +1,14 @@
 import 'dart:convert';
+
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cryptography/cryptography.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/security/master_key_provider.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
+
+import '../../core/providers/repository_providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../core/security/master_key_provider.dart';
+import '../../data/crypto/encryption_engine.dart';
 
 class EncryptionModeDialog extends ConsumerStatefulWidget {
   const EncryptionModeDialog({super.key});
@@ -30,8 +32,7 @@ class _EncryptionModeDialogState extends ConsumerState<EncryptionModeDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Encryption Mode'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -40,7 +41,7 @@ class _EncryptionModeDialogState extends ConsumerState<EncryptionModeDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blueAccent.withOpacity(0.1),
+              color: Colors.blueAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
@@ -84,7 +85,6 @@ class _EncryptionModeDialogState extends ConsumerState<EncryptionModeDialog> {
         ),
       ],
     );
-  }
 }
 
 class AutoLockTimeoutDialog extends ConsumerStatefulWidget {
@@ -109,8 +109,7 @@ class _AutoLockTimeoutDialogState extends ConsumerState<AutoLockTimeoutDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Auto-Lock Timeout'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -119,7 +118,7 @@ class _AutoLockTimeoutDialogState extends ConsumerState<AutoLockTimeoutDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blueAccent.withOpacity(0.1),
+              color: Colors.blueAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
@@ -147,7 +146,6 @@ class _AutoLockTimeoutDialogState extends ConsumerState<AutoLockTimeoutDialog> {
         ),
       ],
     );
-  }
 }
 
 class DuressPinDialog extends ConsumerStatefulWidget {
@@ -161,8 +159,7 @@ class _DuressPinDialogState extends ConsumerState<DuressPinDialog> {
   final _pinCtrl = TextEditingController();
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Duress PIN Setup'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -171,7 +168,7 @@ class _DuressPinDialogState extends ConsumerState<DuressPinDialog> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.redAccent.withOpacity(0.1),
+              color: Colors.redAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
@@ -207,7 +204,6 @@ class _DuressPinDialogState extends ConsumerState<DuressPinDialog> {
         ),
       ],
     );
-  }
 }
 
 class RecoverFromPhraseDialog extends ConsumerStatefulWidget {
@@ -252,7 +248,6 @@ class _RecoverFromPhraseDialogState extends ConsumerState<RecoverFromPhraseDialo
       await settings.setSetting('verification_ciphertext', base64Encode(secretBox.cipherText));
 
       MasterKeyProvider.instance.setKey(kekBytes);
-      ref.read(masterKeyProvider.notifier).state = kekBytes;
 
       if (mounted) {
         Navigator.pop(context);
@@ -268,8 +263,7 @@ class _RecoverFromPhraseDialogState extends ConsumerState<RecoverFromPhraseDialo
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Recover from Phrase'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -296,16 +290,13 @@ class _RecoverFromPhraseDialogState extends ConsumerState<RecoverFromPhraseDialo
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        _isLoading
-            ? const CircularProgressIndicator()
-            : FilledButton.icon(
+        if (_isLoading) const CircularProgressIndicator() else FilledButton.icon(
                 onPressed: _recover,
                 icon: const Icon(Icons.restore),
                 label: const Text('Recover Vault'),
               ),
       ],
     );
-  }
 }
 
 class RecoveryPhraseDialog extends ConsumerStatefulWidget {
@@ -320,7 +311,7 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
   String? _recoveryPhrase;
 
   Future<void> _authAndDerive() async {
-    bool authenticated = true;
+    const authenticated = true;
     if (!authenticated || !mounted) return;
 
     // Derive the recovery phrase from the stored salt + master key
@@ -364,7 +355,7 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withOpacity(0.1),
+                    color: Colors.redAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Text(
@@ -378,7 +369,7 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.15),
+                    color: Colors.grey.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: SelectableText(
@@ -389,7 +380,7 @@ class _RecoveryPhraseDialogState extends ConsumerState<RecoveryPhraseDialog> {
                 const SizedBox(height: 8),
                 Text(
                   'Tap and hold to select, then copy. Store offline — never digitally.',
-                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5)),
+                  style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.5)),
                 ),
               ],
             )

@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:math';
-import 'package:flutter_test/flutter_test.dart';
+import 'dart:typed_data';
+
 import 'package:aerodrive/data/crypto/encryption_engine.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -40,7 +41,7 @@ void main() {
     // Generate 10MB of random data
     final random = Random.secure();
     final data = Uint8List(10 * 1024 * 1024);
-    for (int i = 0; i < data.length; i++) {
+    for (var i = 0; i < data.length; i++) {
       data[i] = random.nextInt(256);
     }
     await sourceFile.writeAsBytes(data);
@@ -79,8 +80,8 @@ void main() {
     expect(decryptedData.length, data.length);
     
     // Check byte-for-byte equality
-    bool isIdentical = true;
-    for (int i = 0; i < data.length; i++) {
+    var isIdentical = true;
+    for (var i = 0; i < data.length; i++) {
       if (data[i] != decryptedData[i]) {
         isIdentical = false;
         break;

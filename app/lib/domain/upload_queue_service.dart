@@ -1,38 +1,35 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:exif/exif.dart';
 import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:uuid/uuid.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
-import 'package:aerodrive/domain/notification_service.dart';
+import 'package:uuid/uuid.dart';
 
-import 'dart:convert';
-import 'package:cryptography/cryptography.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/features/ml/ml_service.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/repositories/settings_repository.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/domain/upload_orchestrator.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
-import 'package:aerodrive/features/places/places_service.dart';
-import 'package:exif/exif.dart';
-import 'package:aerodrive/domain/smart_analyzer.dart';
-import 'package:aerodrive/features/media/media_screen.dart';
+import '../core/logger.dart';
+import '../core/providers/security_providers.dart';
+import '../data/db/database.dart';
+import '../data/repositories/settings_repository.dart';
+import '../features/media/media_screen.dart';
+import '../features/ml/ml_service.dart';
+import '../features/places/places_service.dart';
+import '../features/telegram/telegram_manager.dart';
+import '../features/telegram/telegram_service.dart';
+import 'notification_service.dart';
+import 'recovery/manifest_encoder.dart';
+import 'smart_analyzer.dart';
+import 'thumbnail_cache_manager.dart';
+import 'upload_orchestrator.dart';
+import 'video_thumbnail_service.dart';
 
 class ActiveUploadInfo {
-  final String queueId;
-  final String fileId;
-  final int chunkIndex;
-  final int totalChunks;
-  final int chatId;
-  final int messageId;
   ActiveUploadInfo({
     required this.queueId,
     required this.fileId,
@@ -41,13 +38,19 @@ class ActiveUploadInfo {
     required this.chatId,
     required this.messageId,
   });
+  final String queueId;
+  final String fileId;
+  final int chunkIndex;
+  final int totalChunks;
+  final int chatId;
+  final int messageId;
 }
 
 /// Payload for the isolate-based thumbnail extraction.
 class _ThumbnailPayload {
+  const _ThumbnailPayload(this.filePath, this.maxDimension);
   final String filePath;
   final int maxDimension;
-  const _ThumbnailPayload(this.filePath, this.maxDimension);
 }
 
 /// Runs in a background isolate. Loads and resizes image, returns JPEG bytes.
@@ -83,6 +86,11 @@ Future<Uint8List?> _extractImageThumbnailIsolate(_ThumbnailPayload payload) asyn
 }
 
 class UploadQueueService {
+
+  UploadQueueService(this._ref, this._db, this._settings, this._telegramManager, this._orchestrator) {
+    _startPolling();
+    _listenToTdlibEvents();
+  }
   final ProviderRef _ref;
   final AeroDriveDatabase _db;
   final SettingsRepository _settings;
@@ -107,11 +115,6 @@ class UploadQueueService {
 
   // Track chunk upload progress: fileId -> {chunkIndex: bytesUploaded}
   final Map<String, Map<int, int>> _uploadProgress = {};
-
-  UploadQueueService(this._ref, this._db, this._settings, this._telegramManager, this._orchestrator) {
-    _startPolling();
-    _listenToTdlibEvents();
-  }
 
   String _getMimeType(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
@@ -175,11 +178,11 @@ class UploadQueueService {
   Future<String> _calculateFileHash(File file) async {
     final algorithm = Sha256();
     final sink = algorithm.newHashSink();
-    final openFile = await file.open(mode: FileMode.read);
+    final openFile = await file.open();
     try {
-      final int bufferSize = 4 * 1024 * 1024;
+      const int bufferSize = 4 * 1024 * 1024;
       final length = await openFile.length();
-      int offset = 0;
+      var offset = 0;
       while (offset < length) {
         final toRead = (length - offset < bufferSize) ? length - offset : bufferSize;
         final block = await openFile.read(toRead);
@@ -385,6 +388,58 @@ class UploadQueueService {
     return 0;
   }
 
+  Future<void> _uploadThumbnailManifest({
+    required String fileId,
+    required Uint8List encryptedThumbBytes,
+    required List<int> masterKey,
+    required int channelId,
+  }) async {
+    try {
+      final cipher = AesGcm.with256bits();
+      final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+
+      final manifestData = {
+        't': 'thumb',
+        'fid': fileId,
+      };
+
+      final jsonStr = jsonEncode(manifestData);
+      final jsonBytes = utf8.encode(jsonStr);
+
+      final nonce = cipher.newNonce();
+      final secretBox = await cipher.encrypt(
+        jsonBytes,
+        secretKey: secretKey,
+        nonce: nonce,
+      );
+
+      final ctBase64 = base64Encode(secretBox.cipherText);
+      final nonceBase64 = base64Encode(secretBox.nonce);
+      final macBase64 = base64Encode(secretBox.mac.bytes);
+      final finalCaption = 'aero:$ctBase64:$nonceBase64:$macBase64';
+
+      final dir = await getTemporaryDirectory();
+      final tempFile = File('${dir.path}${Platform.pathSeparator}thumb_$fileId.tmp');
+      await tempFile.writeAsBytes(encryptedThumbBytes);
+
+      final readyClients = _telegramManager.readyClients;
+      if (readyClients.isEmpty) return;
+      final client = readyClients.first;
+
+      await _orchestrator.handoffToTelegram(
+        client,
+        channelId,
+        [tempFile.path],
+        caption: finalCaption,
+      );
+      
+      // We don't delete tempFile immediately since handoffToTelegram is async and might need it.
+      // It will be cleaned up by OS temp directory cleaner or can be safely ignored for small thumbnails.
+    } catch (e) {
+      AppLogger.error('UploadQueue: Failed to upload thumbnail manifest for $fileId', e);
+    }
+  }
+
   Future<void> _processQueueItem(TransferQueueData item) async {
     final savedChannelsJson = await _settings.getSetting('storage_channels_list');
     List<Map<String, dynamic>> storageChannels = [];
@@ -403,7 +458,7 @@ class UploadQueueService {
       final strategy = await _settings.getSetting('load_balancing_strategy') ?? 'round_robin';
 
       if (strategy == 'round_robin') {
-        int index = int.tryParse(await _settings.getSetting('load_balancing_round_robin_index') ?? '0') ?? 0;
+        final int index = int.tryParse(await _settings.getSetting('load_balancing_round_robin_index') ?? '0') ?? 0;
         final ch = storageChannels[index % storageChannels.length];
         activeChannelId = ch['id'] is String ? int.parse(ch['id']) : ch['id'] as int;
         await _settings.setSetting('load_balancing_round_robin_index', ((index + 1) % storageChannels.length).toString());
@@ -535,11 +590,61 @@ class UploadQueueService {
         isEncrypted: const drift.Value(true),
         isChunked: drift.Value(totalChunks > 1),
         totalChunks: drift.Value(totalChunks),
-        sha256Hash: drift.Value(''), // updated on finalize
+        sha256Hash: const drift.Value(''), // updated on finalize
         createdAt: drift.Value(DateTime.now()),
         photoTakenAt: drift.Value(photoTakenAt),
       )
     );
+
+    // Bug Fix: Generate and cache thumbnail immediately during upload
+    Uint8List? finalThumbBytes;
+
+    if (mimeType.startsWith('image/')) {
+      final payload = _ThumbnailPayload(localFilePath, 256);
+      finalThumbBytes = await compute(_extractImageThumbnailIsolate, payload);
+    } else if (mimeType.startsWith('video/')) {
+      final videoService = _ref.read(videoThumbnailServiceProvider);
+      final thumbPath = await videoService.generateSmartThumbnail(localFilePath);
+      if (thumbPath != null) {
+        final f = File(thumbPath);
+        if (await f.exists()) {
+          finalThumbBytes = await f.readAsBytes();
+          await f.delete(); // cleanup
+        }
+      }
+    }
+
+    if (finalThumbBytes != null && masterKey != null) {
+      try {
+        final cipher = AesGcm.with256bits();
+        final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+        
+        final encryptedPath = await ThumbnailCacheManager.saveThumbnail(
+          fileId: fileId,
+          plaintextBytes: finalThumbBytes,
+          masterKey: secretKey,
+        );
+        
+        await (_db.update(_db.files)..where((f) => f.id.equals(fileId))).write(
+          FilesCompanion(
+            thumbnailPath: drift.Value(encryptedPath),
+            thumbnailSize: drift.Value(finalThumbBytes.length),
+            thumbnailLastAccess: drift.Value(DateTime.now()),
+          ),
+        );
+
+        // Upload the generated thumbnail as a 'thumb' manifest message so it syncs across devices
+        _uploadThumbnailManifest(
+          fileId: fileId,
+          encryptedThumbBytes: await File(encryptedPath).readAsBytes(),
+          masterKey: masterKey,
+          channelId: activeChannelId,
+        );
+
+      } catch (e) {
+        AppLogger.error('Failed to save thumbnail during upload for $fileId', e);
+      }
+    }
 
     if (mimeType.startsWith('image/')) {
       final analyzer = SmartAnalyzer(_db);
@@ -568,7 +673,7 @@ class UploadQueueService {
 
     final List<Future<void>> uploadFutures = [];
 
-    for (int i = 0; i < totalChunks; i++) {
+    for (var i = 0; i < totalChunks; i++) {
       final path = encryptedChunkPaths[i];
 
       final ch = storageChannels.isNotEmpty ? storageChannels[i % storageChannels.length] : null;
@@ -632,8 +737,8 @@ class UploadQueueService {
   }) async {
     AppLogger.info('_uploadChunkWithTracking: chunk=$chunkIndex/$totalChunks fileId=$fileId captionPresent=${caption != null} captionLen=${caption?.length ?? 0}');
     
-    const int maxRetries = 3;
-    for (int attempt = 0; attempt < maxRetries; attempt++) {
+    const maxRetries = 3;
+    for (var attempt = 0; attempt < maxRetries; attempt++) {
       try {
         final response = await _orchestrator.handoffToTelegram(
           client, channelId, [chunkPath], caption: caption,
@@ -736,10 +841,10 @@ class UploadQueueService {
     final completedChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
     if (completedChunks.length >= totalChunks) {
       final masterKey = _ref.read(masterKeyProvider);
-      String wrappedDekString = dekBytesString;
+      var wrappedDekString = dekBytesString;
 
       if (masterKey != null) {
-        final dekBytes = dekBytesString.split(',').map((s) => int.parse(s)).toList();
+        final dekBytes = dekBytesString.split(',').map(int.parse).toList();
         final cipher = AesGcm.with256bits();
         final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
         final nonce = cipher.newNonce();
@@ -919,7 +1024,7 @@ class UploadQueueService {
 
       // 3. Write encrypted thumbnail to temp file
       final tempDir = await getTemporaryDirectory();
-      final thumbFile = File('${tempDir.path}/thumb_$fileId.enc');
+      final thumbFile = File('${tempDir.path}${Platform.pathSeparator}thumb_$fileId.enc');
       await thumbFile.writeAsBytes(encryptedThumbBytes);
 
       // 4. Encrypt thumbnail caption: {"t":"thumb","fid":"<fileId>"}
@@ -960,7 +1065,7 @@ class UploadQueueService {
       } finally {
         try { await thumbFile.delete(); } catch (_) {}
       }
-    } catch (e, s) {
+    } catch (e) {
       // Outer catch: never let thumbnail failure propagate and crash the upload.
       AppLogger.warning('_uploadThumbnail FAILED for $fileId (non-fatal): $e');
     }

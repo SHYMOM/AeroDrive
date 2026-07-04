@@ -1,13 +1,15 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/widgets/otp_input.dart';
-import 'package:aerodrive/core/widgets/premium_button.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/utils/phone_validator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/phone_validator.dart';
+import '../../core/widgets/otp_input.dart';
+import '../../core/widgets/premium_button.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
@@ -17,9 +19,7 @@ class AccountsScreen extends ConsumerStatefulWidget {
 }
 
 class _AccountsScreenState extends ConsumerState<AccountsScreen> {
-  bool _hasPendingAccount(List<TelegramService> accounts) {
-    return accounts.any((c) => c.authState != TelegramAuthState.ready);
-  }
+  bool _hasPendingAccount(List<TelegramService> accounts) => accounts.any((c) => c.authState != TelegramAuthState.ready);
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
         title: const Text('Telegram Accounts'),
         scrolledUnderElevation: 0,
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -43,15 +43,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           children: [
             Text(
               'Manage multiple Telegram accounts. Bind channels to specific accounts for bandwidth pooling.',
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
             ),
             const SizedBox(height: 24),
-            ...accounts.map((client) {
-              return TelegramAccountCard(
+            ...accounts.map((client) => TelegramAccountCard(
                 key: ValueKey(client.accountId),
                 client: client,
-              );
-            }),
+              )),
             if (!_hasPendingAccount(accounts))
               Padding(
                 padding: const EdgeInsets.only(top: 16),
@@ -60,7 +58,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
                   icon: Icons.add,
                   onPressed: () {
                     final newId = 'account_${DateTime.now().millisecondsSinceEpoch}';
-                    ref.read(telegramManagerProvider.notifier).addClient(newId, isHeadless: true);
+                    ref.read(telegramManagerProvider.notifier).addClient(newId);
                   },
                   gradient: const [Color(0xFFBB86FC), Color(0xFF7C4DFF)],
                 ),
@@ -73,8 +71,8 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
 }
 
 class TelegramAccountCard extends ConsumerStatefulWidget {
-  final TelegramService client;
   const TelegramAccountCard({super.key, required this.client});
+  final TelegramService client;
 
   @override
   ConsumerState<TelegramAccountCard> createState() => _TelegramAccountCardState();
@@ -118,7 +116,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
       await Future.delayed(const Duration(seconds: 1));
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Error sending code';
+        var errorMsg = 'Error sending code';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         } else {
@@ -139,7 +137,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
       await widget.client.checkAuthenticationCode(code);
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Invalid verification code';
+        var errorMsg = 'Invalid verification code';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         } else {
@@ -163,7 +161,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
       await Future.delayed(const Duration(seconds: 1));
     } catch (e) {
       if (mounted) {
-        String errorMsg = 'Password verification failed';
+        var errorMsg = 'Password verification failed';
         if (e is Map && e['message'] != null) {
           errorMsg = e['message'];
         } else {
@@ -227,8 +225,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
       duration: const Duration(milliseconds: 350),
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        return FadeTransition(
+      transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
           child: SlideTransition(
             position: Tween<Offset>(
@@ -237,8 +234,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
             ).animate(animation),
             child: child,
           ),
-        );
-      },
+        ),
       child: _buildViewForState(authState),
     );
   }
@@ -280,7 +276,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           : '';
       avatar = CircleAvatar(
         radius: 28,
-        backgroundColor: const Color(0xFFBB86FC).withOpacity(0.2),
+        backgroundColor: const Color(0xFFBB86FC).withValues(alpha: 0.2),
         child: initials.isNotEmpty
             ? Text(initials, style: const TextStyle(color: Color(0xFFBB86FC), fontWeight: FontWeight.bold, fontSize: 18))
             : const Icon(Icons.person, size: 28, color: Color(0xFFBB86FC)),
@@ -324,7 +320,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
                 const SizedBox(height: 4),
                 Text(
                   client.phoneNumber ?? 'Ready',
-                  style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5)),
+                  style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
                 ),
                 if (client.username != null && client.username!.isNotEmpty) ...[
                   const SizedBox(height: 2),
@@ -339,7 +335,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           if (client.accountId != 'primary')
             _isDeleting
                 ? const Padding(
-                    padding: EdgeInsets.all(12.0),
+                    padding: EdgeInsets.all(12),
                     child: SizedBox(
                       width: 24,
                       height: 24,
@@ -352,11 +348,10 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
                   ),
         ],
       ),
-    ).animate().fadeIn(duration: 300.ms).shimmer(duration: 1000.ms, color: Colors.green.withOpacity(0.08));
+    ).animate().fadeIn(duration: 300.ms).shimmer(duration: 1000.ms, color: Colors.green.withValues(alpha: 0.08));
   }
 
-  Widget _buildPhoneInput() {
-    return _buildCard(
+  Widget _buildPhoneInput() => _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -376,7 +371,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
               Text(
                 'Add Telegram Account',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -386,7 +381,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           const SizedBox(height: 16),
           Text(
             'Enter your Telegram phone number with country code (e.g. +1234567890).',
-            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 16),
           PremiumTextField(
@@ -422,10 +417,8 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         ],
       ),
     ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0);
-  }
 
-  Widget _buildCodeInput() {
-    return _buildCard(
+  Widget _buildCodeInput() => _buildCard(
       borderColor: const Color(0xFF03DAC6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -446,7 +439,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
               Text(
                 'Verification Code',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -456,7 +449,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           const SizedBox(height: 12),
           Text(
             'A verification code has been sent to ${_phoneController.text.isNotEmpty ? _phoneController.text : "your phone number"}.',
-            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 20),
           Center(
@@ -490,7 +483,6 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         ],
       ),
     ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0);
-  }
 
   Widget _buildPasswordInput() {
     final hint = widget.client.passwordHint;
@@ -515,7 +507,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
               Text(
                 '2-Step Verification',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -525,7 +517,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           const SizedBox(height: 12),
           Text(
             'This account has 2-step verification enabled.${hint != null && hint.isNotEmpty ? '\nHint: $hint' : ''}',
-            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.5), height: 1.4),
+            style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5), height: 1.4),
           ),
           const SizedBox(height: 16),
           PremiumTextField(
@@ -537,7 +529,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
             suffixIcon: IconButton(
               icon: Icon(
                 _showPassword ? Icons.visibility : Icons.visibility_off,
-                color: Colors.white.withOpacity(0.4),
+                color: Colors.white.withValues(alpha: 0.4),
                 size: 20,
               ),
               onPressed: () => setState(() => _showPassword = !_showPassword),
@@ -570,8 +562,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
     ).animate().fadeIn(duration: 350.ms).slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildLoadingView(String message) {
-    return _buildCard(
+  Widget _buildLoadingView(String message) => _buildCard(
       child: Row(
         children: [
           SizedBox(
@@ -580,7 +571,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
             child: CircularProgressIndicator(
               strokeWidth: 2,
               valueColor: AlwaysStoppedAnimation<Color>(
-                const Color(0xFFBB86FC).withOpacity(0.8),
+                const Color(0xFFBB86FC).withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -594,10 +585,8 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         ],
       ),
     );
-  }
 
-  Widget _buildErrorView() {
-    return _buildCard(
+  Widget _buildErrorView() => _buildCard(
       borderColor: Colors.redAccent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -610,7 +599,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
                 'Connection Error',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white.withValues(alpha: 0.9),
                 ),
               ),
             ],
@@ -618,7 +607,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
           const SizedBox(height: 12),
           Text(
             'An error occurred while connecting to TDLib. Please verify API configuration.',
-            style: TextStyle(color: Colors.white.withOpacity(0.5)),
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 16),
           Row(
@@ -627,7 +616,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
               FilledButton(
                 onPressed: () => ref.read(telegramManagerProvider.notifier).removeClient(widget.client.accountId),
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.redAccent.withOpacity(0.2),
+                  backgroundColor: Colors.redAccent.withValues(alpha: 0.2),
                   foregroundColor: Colors.redAccent,
                 ),
                 child: const Text('Remove & Retry'),
@@ -637,21 +626,17 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         ],
       ),
     );
-  }
 
-  Widget _buildCard({required Widget child, Color? borderColor}) {
-    return Container(
+  Widget _buildCard({required Widget child, Color? borderColor}) => Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: Colors.white.withOpacity(0.04),
+        color: Colors.white.withValues(alpha: 0.04),
         border: Border.all(
-          color: borderColor ?? Colors.white.withOpacity(0.06),
-          width: 1,
+          color: borderColor ?? Colors.white.withValues(alpha: 0.06),
         ),
       ),
       child: child,
     );
-  }
 }

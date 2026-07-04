@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import '../../core/providers/repository_providers.dart';
 
 class ThumbnailCacheSizeDialog extends ConsumerStatefulWidget {
   const ThumbnailCacheSizeDialog({super.key});
@@ -24,8 +24,7 @@ class _ThumbnailCacheSizeDialogState extends ConsumerState<ThumbnailCacheSizeDia
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Thumbnail Cache Size'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -47,15 +46,13 @@ class _ThumbnailCacheSizeDialogState extends ConsumerState<ThumbnailCacheSizeDia
         ),
       ],
     );
-  }
 }
 
 class ClearThumbnailCacheDialog extends ConsumerWidget {
   const ClearThumbnailCacheDialog({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AlertDialog(
+  Widget build(BuildContext context, WidgetRef ref) => AlertDialog(
       title: const Text('Clear Thumbnail Cache'),
       content: const Text(
         'Are you sure you want to clear the local thumbnail cache? '
@@ -79,7 +76,6 @@ class ClearThumbnailCacheDialog extends ConsumerWidget {
         ),
       ],
     );
-  }
 }
 
 class VideoPlayerQualityDialog extends ConsumerStatefulWidget {
@@ -104,8 +100,7 @@ class _VideoPlayerQualityDialogState extends ConsumerState<VideoPlayerQualityDia
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Default Video Quality'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -126,5 +121,4 @@ class _VideoPlayerQualityDialogState extends ConsumerState<VideoPlayerQualityDia
         ),
       ],
     );
-  }
 }

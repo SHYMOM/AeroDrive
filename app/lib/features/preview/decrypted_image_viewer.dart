@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' hide Column;
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/core/security/master_key_provider.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:cryptography/cryptography.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../core/security/master_key_provider.dart';
+import '../../data/crypto/encryption_engine.dart';
+import '../../data/db/database.dart';
+import '../telegram/telegram_manager.dart';
 
 class DecryptedImageViewer extends ConsumerStatefulWidget {
-  final FileData file;
 
   const DecryptedImageViewer({super.key, required this.file});
+  final FileData file;
 
   @override
   ConsumerState<DecryptedImageViewer> createState() => _DecryptedImageViewerState();
@@ -25,11 +29,32 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
   Uint8List? _decryptedBytes;
   bool _isLoading = true;
   String? _error;
+  final TransformationController _transformationController = TransformationController();
+  bool _panEnabled = false;
+  bool _waitingForUnlock = false;
 
   @override
   void initState() {
     super.initState();
     _loadDecryptedImage();
+    _transformationController.addListener(_onScaleChanged);
+  }
+
+  void _onScaleChanged() {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    final shouldEnablePan = scale > 1.0;
+    if (_panEnabled != shouldEnablePan) {
+      if (mounted) {
+        setState(() => _panEnabled = shouldEnablePan);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _transformationController.removeListener(_onScaleChanged);
+    _transformationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDecryptedImage() async {
@@ -37,7 +62,9 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
       final file = widget.file;
       final masterKeyBytes = MasterKeyProvider.instance.key;
       if (masterKeyBytes == null) {
-        setState(() { _error = 'Vault is locked'; _isLoading = false; });
+        if (mounted) {
+          setState(() { _waitingForUnlock = true; _isLoading = false; });
+        }
         return;
       }
 
@@ -108,7 +135,6 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           data: chunkBytes,
           dekBytes: dekBytes,
           ctrIv: ctrIv,
-          globalByteOffset: 0,
         );
         bytesBuilder.add(decryptedBlock);
       }
@@ -146,7 +172,7 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
     // If synchronous download didn't complete, poll with getFile
     if (local['is_downloading_completed'] != true) {
-      for (int i = 0; i < 60; i++) {
+      for (var i = 0; i < 60; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
         final getFileRes = await telegram.sendRequest({
           "@type": "getFile",
@@ -157,7 +183,7 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           final path = getFileLocal['path'] as String?;
           if (path != null && path.isNotEmpty) {
             final f = File(path);
-            if (await f.exists()) return await f.readAsBytes();
+            if (await f.exists()) return f.readAsBytes();
           }
           break;
         }
@@ -169,16 +195,42 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
     final f = File(localPath);
     if (!await f.exists()) return Uint8List(0);
-    return await f.readAsBytes();
+    return f.readAsBytes();
   }
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(isAppUnlockedProvider, (prev, next) {
+      if (next && _waitingForUnlock) {
+        setState(() { _waitingForUnlock = false; _isLoading = true; _error = null; });
+        _loadDecryptedImage();
+      } else if (!next) {
+        setState(() => _waitingForUnlock = true);
+      }
+    });
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null) {
+    if (_waitingForUnlock) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.lock, size: 64, color: Colors.white30),
+            const SizedBox(height: 16),
+            const Text('Encryption Error', style: TextStyle(color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Text(
+              'Your secure connection could not be established.\nPlease restart the application.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ],
+        ),
+      );
+    }    if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -193,20 +245,20 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
     if (_decryptedBytes != null) {
       return InteractiveViewer(
+        transformationController: _transformationController,
+        panEnabled: _panEnabled,
         child: Center(
           child: Image.memory(
             _decryptedBytes!,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return Column(
+            errorBuilder: (context, error, stackTrace) => Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.broken_image, size: 64, color: Colors.white24),
                   const SizedBox(height: 16),
                   Text('Failed to render image: $error'),
                 ],
-              );
-            },
+              ),
           ),
         ),
       );

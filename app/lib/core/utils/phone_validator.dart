@@ -1,13 +1,13 @@
 class PhoneValidationResult {
-  final bool isValid;
-  final String? formattedNumber;
-  final String? errorMessage;
 
   const PhoneValidationResult({
     required this.isValid,
     this.formattedNumber,
     this.errorMessage,
   });
+  final bool isValid;
+  final String? formattedNumber;
+  final String? errorMessage;
 }
 
 class PhoneValidator {

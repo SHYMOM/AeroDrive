@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../providers/drive_providers.dart';
 
 class QuickAccessCategory {
+
+  QuickAccessCategory(this.title, this.icon, this.iconColor);
   final String title;
   final IconData icon;
   final Color iconColor;
-
-  QuickAccessCategory(this.title, this.icon, this.iconColor);
 }
 
 class QuickAccessRow extends ConsumerWidget {
@@ -61,8 +61,7 @@ class QuickAccessRow extends ConsumerWidget {
         SizedBox(
           height: 110,
           child: statsAsync.when(
-            data: (stats) {
-              return ListView.separated(
+            data: (stats) => ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
@@ -97,7 +96,7 @@ class QuickAccessRow extends ConsumerWidget {
                       },
                       borderRadius: BorderRadius.circular(16),
                       child: Padding(
-                        padding: const EdgeInsets.all(12.0),
+                        padding: const EdgeInsets.all(12),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -129,8 +128,7 @@ class QuickAccessRow extends ConsumerWidget {
                     ),
                   );
                 },
-              );
-            },
+              ),
             loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
             error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white, fontSize: 10))),
           ),

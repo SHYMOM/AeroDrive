@@ -1,12 +1,14 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/media/media_screen.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:drift/drift.dart' hide Column;
-import 'dart:io';
+
+import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../gallery/thumbnail_service.dart';
+import 'media_screen.dart';
 
 class SmartTagsScreen extends ConsumerStatefulWidget {
   const SmartTagsScreen({super.key});
@@ -79,10 +81,10 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
           style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: const Alignment(0.0, -0.3),
+            center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
               const Color(0xFF7C3AED).withValues(alpha: 0.15),
@@ -123,8 +125,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
     );
   }
 
-  Widget _buildTagsGridView(AsyncValue<Map<String, dynamic>> exploreAsync) {
-    return exploreAsync.when(
+  Widget _buildTagsGridView(AsyncValue<Map<String, dynamic>> exploreAsync) => exploreAsync.when(
       data: (exploreData) {
         final smartTags = exploreData['smartTags'] as List<Map<String, dynamic>>;
         
@@ -139,8 +140,8 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
           itemCount: smartTags.length,
           itemBuilder: (context, index) {
             final tagInfo = smartTags[index];
-            final String name = tagInfo['name'] as String;
-            final int count = tagInfo['count'] as int;
+            final name = tagInfo['name'] as String;
+            final count = tagInfo['count'] as int;
             final fileCover = tagInfo['cover'] as FileData?;
             
             final tagData = Tag(id: name.toLowerCase(), name: name, source: 'ML_VISION');
@@ -196,7 +197,6 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
     );
-  }
 
   Widget _buildFallbackGradient(String name) {
     IconData icon;
@@ -205,20 +205,17 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
       case 'food':
         icon = Icons.restaurant;
         color = Colors.orangeAccent;
-        break;
       case 'buildings':
         icon = Icons.apartment;
         color = Colors.lightBlueAccent;
-        break;
       case 'ocean':
         icon = Icons.waves;
         color = Colors.blue;
-        break;
       default:
         icon = Icons.local_offer_outlined;
         color = AppColors.primary;
     }
-    return Container(
+    return ColoredBox(
       color: color.withValues(alpha: 0.1),
       child: Center(child: Icon(icon, color: color, size: 36)),
     );
@@ -226,12 +223,11 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
 }
 
 class _LocalCoverImage extends ConsumerWidget {
-  final FileData file;
   const _LocalCoverImage({required this.file});
+  final FileData file;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<File?>(
+  Widget build(BuildContext context, WidgetRef ref) => FutureBuilder<File?>(
       future: ref.read(thumbnailServiceProvider).getThumbnail(file),
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
@@ -240,16 +236,14 @@ class _LocalCoverImage extends ConsumerWidget {
         return Container(color: Colors.white.withValues(alpha: 0.05));
       },
     );
-  }
 }
 
 class _LocalGalleryItem extends ConsumerWidget {
-  final FileData file;
   const _LocalGalleryItem({required this.file});
+  final FileData file;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return FutureBuilder<File?>(
+  Widget build(BuildContext context, WidgetRef ref) => FutureBuilder<File?>(
       future: ref.read(thumbnailServiceProvider).getThumbnail(file),
       builder: (context, snapshot) {
         final hasThumb = snapshot.hasData && snapshot.data != null;
@@ -273,5 +267,4 @@ class _LocalGalleryItem extends ConsumerWidget {
         );
       },
     );
-  }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/transfers/transfers_screen.dart';
+import '../core/theme/app_colors.dart';
+import '../features/transfers/transfers_screen.dart';
 
 class TransferProgressBar extends ConsumerWidget {
   const TransferProgressBar({super.key});
@@ -89,7 +89,7 @@ class TransferProgressBar extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -99,9 +99,9 @@ class TransferProgressBar extends ConsumerWidget {
     if (hasUpload && hasDownload) {
       return Icon(Icons.sync, size: 14, color: AppColors.onSurfaceVariant.withValues(alpha: 0.7));
     } else if (hasUpload) {
-      return Icon(Icons.cloud_upload_outlined, size: 14, color: AppColors.primaryLight);
+      return const Icon(Icons.cloud_upload_outlined, size: 14, color: AppColors.primaryLight);
     } else {
-      return Icon(Icons.cloud_download_outlined, size: 14, color: AppColors.secondaryLight);
+      return const Icon(Icons.cloud_download_outlined, size: 14, color: AppColors.secondaryLight);
     }
   }
 
@@ -114,9 +114,9 @@ class TransferProgressBar extends ConsumerWidget {
   }
 
   double _calculateAggregateProgress(List<TransferItem> items) {
-    if (items.isEmpty) return 0.0;
-    double total = 0.0;
-    int count = 0;
+    if (items.isEmpty) return 0;
+    var total = 0.0;
+    var count = 0;
     for (final item in items) {
       final t = item.transfer.totalBytes ?? 0;
       final b = item.transfer.bytesTransferred;
@@ -128,16 +128,17 @@ class TransferProgressBar extends ConsumerWidget {
     return count > 0 ? total / count : 0.0;
   }
 
-  int _sumBytes(List<TransferItem> items) {
-    return items.fold<int>(0, (sum, item) => sum + item.transfer.bytesTransferred);
-  }
+  int _sumBytes(List<TransferItem> items) => items.fold<int>(0, (sum, item) => sum + item.transfer.bytesTransferred);
 
   String _formatSummary(List<TransferItem> items, int pendingCount) {
-    int uploads = 0;
-    int downloads = 0;
+    var uploads = 0;
+    var downloads = 0;
     for (final item in items) {
-      if (item.transfer.type == 'UPLOAD_FILE') uploads++;
-      else downloads++;
+      if (item.transfer.type == 'UPLOAD_FILE') {
+        uploads++;
+      } else {
+        downloads++;
+      }
     }
     final parts = <String>[];
     if (uploads > 0) parts.add('$uploads uploading');

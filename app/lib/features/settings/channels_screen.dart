@@ -1,11 +1,17 @@
 import 'dart:convert';
+
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/logger.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../domain/recovery/recovery_scanner.dart';
+import '../../domain/sync/config_sync_service.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
   const ChannelsScreen({super.key});
@@ -86,6 +92,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
   Future<void> _saveChannelsList() async {
     final settings = ref.read(settingsRepositoryProvider);
     await settings.setSetting('storage_channels_list', jsonEncode(_storageChannels));
+    
+    // Sync the new configuration to the dedicated config channel
+    ref.read(configSyncServiceProvider).syncConfigToChannel();
   }
 
   Future<bool?> _showPoolConfirmationDialog(String channelTitle) async {
@@ -172,10 +181,22 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         // Store the master password salt in the channel description for cross-device sync.
         await _storeSaltInChannel(telegram, chatId);
 
+        // Run sync automatically in background
+        final masterKey = ref.read(masterKeyProvider);
+        if (masterKey != null) {
+          final recoveryService = ref.read(recoveryServiceProvider);
+          // Run non-blocking
+          AesGcm.with256bits().newSecretKeyFromBytes(masterKey).then((secretKey) {
+            recoveryService.runDisasterRecovery(masterKey: secretKey, channelId: chatId).catchError((e) {
+              AppLogger.error('Auto-sync failed for new channel', e);
+            });
+          });
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Channel successfully verified, pooled, and bound!'),
+              content: Text('Channel successfully verified, pooled, and bound! Syncing...'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -241,8 +262,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) {
-        return SafeArea(
+      builder: (context) => SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
             child: Column(
@@ -278,16 +298,14 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
               ],
             ),
           ),
-        );
-      },
+        ),
     );
   }
 
   void _showLinkExistingChannelDialog() {
     showDialog(
       context: context,
-      builder: (ctx) {
-        return Consumer(
+      builder: (ctx) => Consumer(
           builder: (context, ref, child) {
             final accounts = ref.watch(telegramManagerProvider);
             final adminChannelsAsync = ref.watch(adminChannelsProvider);
@@ -371,8 +389,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
               ],
             );
           },
-        );
-      },
+        ),
     );
   }
 
@@ -384,10 +401,8 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
 
     showDialog(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
               backgroundColor: AppColors.surfaceElevated,
               title: const Text('Create Private Channel', style: TextStyle(color: Colors.white)),
               content: Column(
@@ -494,12 +509,24 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
 
                         // Store the master password salt in the channel description.
                         await _storeSaltInChannel(telegram, chatId);
+
+                        // Run sync automatically in background
+                        final masterKey = ref.read(masterKeyProvider);
+                        if (masterKey != null) {
+                          final recoveryService = ref.read(recoveryServiceProvider);
+                          // Run non-blocking
+                          AesGcm.with256bits().newSecretKeyFromBytes(masterKey).then((secretKey) {
+                            recoveryService.runDisasterRecovery(masterKey: secretKey, channelId: chatId).catchError((e) {
+                              AppLogger.error('Auto-sync failed for new channel', e);
+                            });
+                          });
+                        }
                       }
                       
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Channel created, pooled, and bound successfully!'),
+                            content: Text('Channel created, pooled, and bound successfully! Syncing...'),
                             backgroundColor: AppColors.success,
                           ),
                         );
@@ -520,10 +547,8 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                   child: const Text('Create'),
                 ),
               ],
-            );
-          }
-        );
-      },
+            )
+        ),
     );
   }
 
@@ -565,10 +590,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       ),
                     ),
                   ),
-                  _storageChannels.isEmpty
-                      ? const SliverToBoxAdapter(
+                  if (_storageChannels.isEmpty) const SliverToBoxAdapter(
                           child: Padding(
-                            padding: EdgeInsets.all(24.0),
+                            padding: EdgeInsets.all(24),
                             child: Center(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -590,8 +614,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                               ),
                             ),
                           ),
-                        )
-                      : SliverList(
+                        ) else SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final chat = _storageChannels[index];
@@ -603,7 +626,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                               return ListTile(
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                                 leading: CircleAvatar(
-                                  backgroundColor: isActive ? Colors.green.withOpacity(0.2) : AppColors.primaryLight.withOpacity(0.2),
+                                  backgroundColor: isActive ? Colors.green.withValues(alpha: 0.2) : AppColors.primaryLight.withValues(alpha: 0.2),
                                   child: Icon(
                                     isActive ? Icons.check_circle : Icons.cloud,
                                     color: isActive ? Colors.green : AppColors.primaryLight,

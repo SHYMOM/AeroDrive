@@ -1,6 +1,7 @@
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flex_color_scheme/flex_color_scheme.dart';
+
 import 'theme_provider.dart';
 
 /// AeroDrive dynamic theme generation using FlexColorScheme.
@@ -26,18 +27,17 @@ abstract final class AeroDriveTheme {
       appBarOpacity: 0.95,
       subThemesData: const FlexSubThemesData(
         blendOnLevel: 10,
-        blendOnColors: false,
         useTextTheme: true,
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 12.0,
+        inputDecoratorRadius: 12,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
-        fabRadius: 16.0,
-        cardRadius: 12.0,
-        bottomSheetRadius: 20.0,
-        dialogRadius: 16.0,
+        fabRadius: 16,
+        cardRadius: 12,
+        bottomSheetRadius: 20,
+        dialogRadius: 16,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,
@@ -45,8 +45,8 @@ abstract final class AeroDriveTheme {
         navigationBarUnselectedIconSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedIcon: true,
         navigationBarIndicatorSchemeColor: SchemeColor.primary,
-        navigationBarIndicatorOpacity: 1.00,
-        navigationBarElevation: 0.0,
+        navigationBarIndicatorOpacity: 1,
+        navigationBarElevation: 0,
         navigationBarBackgroundSchemeColor: SchemeColor.surface,
       ),
       keyColors: const FlexKeyColors(
@@ -56,7 +56,6 @@ abstract final class AeroDriveTheme {
       ),
       tones: state.highContrast ? FlexTones.highContrast(Brightness.light) : FlexTones.material(Brightness.light),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
-      useMaterial3: true,
       fontFamily: GoogleFonts.inter().fontFamily,
       textTheme: _buildTextTheme(state.fontScale, Brightness.light),
     );
@@ -86,13 +85,13 @@ abstract final class AeroDriveTheme {
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 12.0,
+        inputDecoratorRadius: 12,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
-        fabRadius: 16.0,
-        cardRadius: 12.0,
-        bottomSheetRadius: 20.0,
-        dialogRadius: 16.0,
+        fabRadius: 16,
+        cardRadius: 12,
+        bottomSheetRadius: 20,
+        dialogRadius: 16,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,
@@ -100,8 +99,8 @@ abstract final class AeroDriveTheme {
         navigationBarUnselectedIconSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedIcon: true,
         navigationBarIndicatorSchemeColor: SchemeColor.primary,
-        navigationBarIndicatorOpacity: 1.00,
-        navigationBarElevation: 0.0,
+        navigationBarIndicatorOpacity: 1,
+        navigationBarElevation: 0,
         navigationBarBackgroundSchemeColor: SchemeColor.surface,
       ),
       keyColors: const FlexKeyColors(
@@ -111,7 +110,6 @@ abstract final class AeroDriveTheme {
       ),
       tones: state.highContrast ? FlexTones.highContrast(Brightness.dark) : FlexTones.vividSurfaces(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
-      useMaterial3: true,
       fontFamily: GoogleFonts.inter().fontFamily,
       textTheme: _buildTextTheme(state.fontScale, Brightness.dark),
     );

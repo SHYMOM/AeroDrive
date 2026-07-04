@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/data/repositories/folder_repository.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:cryptography/cryptography.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
+
+import '../../../core/providers/repository_providers.dart';
+import '../../../core/providers/security_providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../domain/recovery/manifest_encoder.dart';
+import '../../telegram/telegram_service.dart';
+import '../providers/drive_providers.dart';
 
 class CreateFolderDialog extends ConsumerStatefulWidget {
   const CreateFolderDialog({super.key});
@@ -31,8 +31,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
       title: const Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
       content: Column(
@@ -44,7 +43,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
             style: const TextStyle(color: AppColors.onSurface),
             decoration: InputDecoration(
               hintText: 'Folder name',
-              hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
+              hintStyle: const TextStyle(color: AppColors.onSurfaceVariant),
               filled: true,
               fillColor: AppColors.surfaceVariant,
               border: OutlineInputBorder(
@@ -68,7 +67,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: AppColors.folderColors.entries.map((entry) {
-                final hex = '0x${entry.value.value.toRadixString(16).toUpperCase()}';
+                final hex = '0x${entry.value.toARGB32().toRadixString(16).toUpperCase()}';
                 final isSelected = _selectedColorHex == hex;
                 return GestureDetector(
                   onTap: () {
@@ -149,30 +148,28 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
               
             // Background manifest sync
             try {
-              if (activeChannelStr != null && masterKey != null) {
-                final chatId = int.parse(activeChannelStr);
-                final cipher = AesGcm.with256bits();
-                final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
-                final manifestCaption = await ManifestEncoder.encodeFolderManifest(
-                  folderId: newFolderId,
-                  folderName: name,
-                  parentFolderId: currentId,
-                  masterKey: secretKey,
-                );
+              final chatId = int.parse(activeChannelStr);
+              final cipher = AesGcm.with256bits();
+              final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+              final manifestCaption = await ManifestEncoder.encodeFolderManifest(
+                folderId: newFolderId,
+                folderName: name,
+                parentFolderId: currentId,
+                masterKey: secretKey,
+              );
 
-                final tempDir = await getTemporaryDirectory();
-                final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
-                final pngBytes = Uint8List.fromList([
-                  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
-                ]);
-                await tempFile.writeAsBytes(pngBytes);
+              final tempDir = await getTemporaryDirectory();
+              final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
+              final pngBytes = Uint8List.fromList([
+                137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+              ]);
+              await tempFile.writeAsBytes(pngBytes);
 
-                final telegram = ref.read(telegramServiceProvider.notifier);
-                await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+              final telegram = ref.read(telegramServiceProvider.notifier);
+              await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
 
-                if (await tempFile.exists()) {
-                  await tempFile.delete();
-                }
+              if (await tempFile.exists()) {
+                await tempFile.delete();
               }
             } catch (e) {
               // Ignore sync errors here
@@ -186,5 +183,4 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
         ),
       ],
     );
-  }
 }

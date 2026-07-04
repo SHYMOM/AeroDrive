@@ -7,7 +7,7 @@ extension FileSizeExtension on int {
   String get readableFileSize {
     if (this < 0) return '0 B';
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    int unitIndex = 0;
+    var unitIndex = 0;
     double size = toDouble();
     while (size >= 1024 && unitIndex < units.length - 1) {
       size /= 1024;

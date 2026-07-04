@@ -1,64 +1,55 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/repositories/folder_repository.dart';
-import 'package:aerodrive/data/repositories/file_repository.dart';
-import 'package:aerodrive/data/repositories/chunk_repository.dart';
-import 'package:aerodrive/data/repositories/settings_repository.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/domain/upload_orchestrator.dart';
-import 'package:aerodrive/domain/upload_queue_service.dart';
-import 'package:aerodrive/domain/download_orchestrator.dart';
-import 'package:aerodrive/domain/download_queue_service.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/api/api_service.dart';
 
-final folderRepositoryProvider = Provider<FolderRepository>((ref) {
-  return FolderRepository(ref.watch(databaseProvider));
-});
+import '../../data/crypto/encryption_engine.dart';
+import '../../data/repositories/chunk_repository.dart';
+import '../../data/repositories/file_repository.dart';
+import '../../data/repositories/folder_repository.dart';
+import '../../data/repositories/settings_repository.dart';
+import '../../domain/download_orchestrator.dart';
+import '../../domain/download_queue_service.dart';
+import '../../domain/upload_orchestrator.dart';
+import '../../domain/upload_queue_service.dart';
+import '../../features/api/api_service.dart';
+import '../../features/telegram/telegram_manager.dart';
+import '../providers.dart';
 
-final fileRepositoryProvider = Provider<FileRepository>((ref) {
-  return FileRepository(ref.watch(databaseProvider));
-});
+final folderRepositoryProvider = Provider<FolderRepository>((ref) => FolderRepository(ref.watch(databaseProvider)));
 
-final chunkRepositoryProvider = Provider<ChunkRepository>((ref) {
-  return ChunkRepository(ref.watch(databaseProvider));
-});
-final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return SettingsRepository(ref.watch(databaseProvider));
-});
+final fileRepositoryProvider = Provider<FileRepository>((ref) => FileRepository(ref.watch(databaseProvider)));
+
+final chunkRepositoryProvider = Provider<ChunkRepository>((ref) => ChunkRepository(ref.watch(databaseProvider)));
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) => SettingsRepository(ref.watch(databaseProvider)));
 
 // Bug #2 fix: track settings version instead of invalidating the repository
 final settingsUpdateProvider = StateProvider<int>((ref) => 0);
 
-final encryptionEngineProvider = Provider<EncryptionEngine>((ref) {
-  return EncryptionEngine();
-});
+final encryptionEngineProvider = Provider<EncryptionEngine>((ref) => EncryptionEngine());
 
-final uploadOrchestratorProvider = Provider<UploadOrchestrator>((ref) {
-  return UploadOrchestrator();
-});
+final uploadOrchestratorProvider = Provider<UploadOrchestrator>((ref) => UploadOrchestrator());
 
 final uploadQueueServiceProvider = Provider<UploadQueueService>((ref) {
-  return UploadQueueService(
+  final service = UploadQueueService(
     ref,
     ref.watch(databaseProvider),
     ref.watch(settingsRepositoryProvider),
     ref.watch(telegramManagerProvider.notifier),
     ref.watch(uploadOrchestratorProvider),
   );
+  ref.onDispose(() => service.dispose());
+  return service;
 });
 
-final downloadOrchestratorProvider = Provider<DownloadOrchestrator>((ref) {
-  return DownloadOrchestrator();
-});
+final downloadOrchestratorProvider = Provider<DownloadOrchestrator>((ref) => DownloadOrchestrator());
 
 final downloadQueueServiceProvider = Provider<DownloadQueueService>((ref) {
-  return DownloadQueueService(
+  final service = DownloadQueueService(
     ref,
     ref.watch(databaseProvider),
     ref.watch(telegramManagerProvider.notifier),
     ref.watch(downloadOrchestratorProvider),
   );
+  ref.onDispose(() => service.dispose());
+  return service;
 });
 
 final apiServiceProvider = Provider<ApiService>((ref) {

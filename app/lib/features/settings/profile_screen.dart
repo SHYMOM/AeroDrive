@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -23,7 +23,7 @@ class ProfileScreen extends ConsumerWidget {
 
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppColors.primary.withOpacity(0.2),
+      backgroundColor: AppColors.primary.withValues(alpha: 0.2),
       child: initials.isNotEmpty
           ? Text(initials, style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: radius * 0.5))
           : Icon(Icons.person, size: radius, color: AppColors.primaryLight),
@@ -84,7 +84,7 @@ class ProfileScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -117,8 +117,7 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
-            ...secondaries.map((client) {
-              return Card(
+            ...secondaries.map((client) => Card(
                 color: AppColors.surface,
                 margin: const EdgeInsets.symmetric(vertical: 6),
                 shape: RoundedRectangleBorder(
@@ -147,8 +146,7 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-              );
-            }),
+              )),
           ] else ...[
             const Center(
               child: Padding(

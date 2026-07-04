@@ -1,26 +1,28 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:image/image.dart' as img;
+
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/domain/thumbnail_cache_manager.dart';
-import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
-import 'package:aerodrive/core/logger.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
+import 'package:path_provider/path_provider.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../data/crypto/encryption_engine.dart';
+import '../../data/db/database.dart';
+import '../../domain/recovery/manifest_encoder.dart';
+import '../../domain/thumbnail_cache_manager.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 class ThumbnailService {
-  final Ref _ref;
 
   ThumbnailService(this._ref);
+  final Ref _ref;
 
   /// Retrieves the decrypted temporary thumbnail file path.
   Future<File?> getThumbnail(FileData file) async {
@@ -270,7 +272,6 @@ class ThumbnailService {
           data: chunkData,
           dekBytes: dekBytes,
           ctrIv: ctrIv,
-          globalByteOffset: 0,
         );
       } else {
         final nonce = chunkData.sublist(0, 12);
@@ -329,7 +330,7 @@ class ThumbnailService {
   Future<String?> _downloadFile(TelegramService telegram, int remoteFileId) async {
     await telegram.downloadFile(remoteFileId);
     // Poll until downloaded
-    for (int i = 0; i < 50; i++) {
+    for (var i = 0; i < 50; i++) {
       final file = await telegram.sendRequest({
         '@type': 'getFile',
         'file_id': remoteFileId,
@@ -343,7 +344,5 @@ class ThumbnailService {
   }
 }
 
-final thumbnailServiceProvider = Provider<ThumbnailService>((ref) {
-  return ThumbnailService(ref);
-});
+final thumbnailServiceProvider = Provider<ThumbnailService>(ThumbnailService.new);
 

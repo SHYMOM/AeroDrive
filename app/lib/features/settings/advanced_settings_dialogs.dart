@@ -1,13 +1,15 @@
 import 'dart:io';
+
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/domain/recovery/recovery_scanner.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:cryptography/cryptography.dart';
+
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../domain/recovery/recovery_scanner.dart';
+import '../drive/providers/drive_providers.dart';
 
 class DatabaseStatsDialog extends ConsumerStatefulWidget {
   const DatabaseStatsDialog({super.key});
@@ -56,8 +58,7 @@ class _DatabaseStatsDialogState extends ConsumerState<DatabaseStatsDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Database Statistics'),
       content: _isLoading 
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -86,7 +87,6 @@ class _DatabaseStatsDialogState extends ConsumerState<DatabaseStatsDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
       ],
     );
-  }
 }
 
 class ClearCacheDialog extends StatefulWidget {
@@ -104,7 +104,7 @@ class _ClearCacheDialogState extends State<ClearCacheDialog> {
     try {
       final tempDir = await getTemporaryDirectory();
       if (tempDir.existsSync()) {
-        tempDir.listSync(recursive: false).forEach((entity) {
+        tempDir.listSync().forEach((entity) {
           if (entity is File) entity.deleteSync();
         });
       }
@@ -121,8 +121,7 @@ class _ClearCacheDialogState extends State<ClearCacheDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Clear Local Cache'),
       content: const Text('This will delete all temporary files, downloaded thumbnails, and partial chunks. It will free up device storage but may require re-downloading thumbnails later.'),
       actions: [
@@ -135,15 +134,13 @@ class _ClearCacheDialogState extends State<ClearCacheDialog> {
         ),
       ],
     );
-  }
 }
 
 class ResetSettingsDialog extends ConsumerWidget {
   const ResetSettingsDialog({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return AlertDialog(
+  Widget build(BuildContext context, WidgetRef ref) => AlertDialog(
       title: const Text('Reset All Settings'),
       content: const Text('Are you sure you want to revert all AeroDrive settings to their defaults? This will NOT delete your files or database, but you will lose custom preferences.'),
       actions: [
@@ -164,7 +161,6 @@ class ResetSettingsDialog extends ConsumerWidget {
         ),
       ],
     );
-  }
 }
 
 class RebuildDriveDialog extends ConsumerStatefulWidget {
@@ -176,7 +172,7 @@ class RebuildDriveDialog extends ConsumerStatefulWidget {
 
 class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
   bool _isRebuilding = false;
-  double _progress = 0.0;
+  final double _progress = 0;
   int _itemsRecovered = 0;
   String _status = "Ready to scan.";
 
@@ -268,8 +264,7 @@ class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Disaster Recovery'),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -293,5 +288,4 @@ class _RebuildDriveDialogState extends ConsumerState<RebuildDriveDialog> {
         ),
       ],
     );
-  }
 }

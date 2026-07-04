@@ -1,26 +1,28 @@
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
-import 'package:aerodrive/features/sharing/share_dialog.dart';
-import 'package:aerodrive/features/tags/tag_dialog.dart';
-import 'package:aerodrive/features/drive/widgets/file_type_icon.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/providers.dart';
+import '../../../core/providers/repository_providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/db/database.dart';
+import '../../gallery/thumbnail_service.dart';
+import '../../preview/preview_router.dart';
+import '../../sharing/share_dialog.dart';
+import '../../tags/tag_dialog.dart';
+import '../providers/drive_providers.dart';
+import 'file_type_icon.dart';
+import 'folder_picker_dialog.dart';
 
 class FileGridItem extends ConsumerWidget {
-  final FileData file;
-  final List<FileData>? siblings;
   
   const FileGridItem({super.key, required this.file, this.siblings});
+  final FileData file;
+  final List<FileData>? siblings;
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -79,7 +81,7 @@ class FileGridItem extends ConsumerWidget {
         }
       },
       borderRadius: BorderRadius.circular(16),
-      child: Container(
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0xFF0F172A).withValues(alpha: 0.6), // Dark slate theme
           borderRadius: BorderRadius.circular(16),
@@ -227,7 +229,7 @@ class FileGridItem extends ConsumerWidget {
               
               // Bottom Section: Title, options & details
               Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -302,14 +304,11 @@ class FileGridItem extends ConsumerWidget {
       case 'psd':
       case 'ps':
         textColor = const Color(0xFF38BDF8);
-        break;
       case 'pdf':
         textColor = Colors.redAccent;
-        break;
       case 'xlsx':
       case 'xls':
         textColor = Colors.greenAccent;
-        break;
       default:
         textColor = Colors.white70;
     }
@@ -323,8 +322,7 @@ class FileGridItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilePlaceholder() {
-    return Container(
+  Widget _buildFilePlaceholder() => DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.02),
       ),
@@ -336,10 +334,8 @@ class FileGridItem extends ConsumerWidget {
         ),
       ),
     );
-  }
 
-  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
+  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
       icon: const Icon(Icons.more_horiz, size: 16, color: Colors.white70),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
@@ -388,7 +384,6 @@ class FileGridItem extends ConsumerWidget {
         const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
-  }
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
     final db = ref.read(databaseProvider);
@@ -443,7 +438,7 @@ class FileGridItem extends ConsumerWidget {
   Future<void> _showMoveDialog(BuildContext context, WidgetRef ref) async {
     final targetFolderId = await showDialog<String?>(
       context: context,
-      builder: (ctx) => FolderPickerDialog(title: 'Move file to...'),
+      builder: (ctx) => const FolderPickerDialog(title: 'Move file to...'),
     );
     if (targetFolderId == null) return;
     
@@ -499,8 +494,8 @@ class FileGridItem extends ConsumerWidget {
 }
 
 class _FileThumbnail extends ConsumerStatefulWidget {
-  final FileData file;
   const _FileThumbnail({required this.file});
+  final FileData file;
 
   @override
   ConsumerState<_FileThumbnail> createState() => _FileThumbnailState();
@@ -542,7 +537,7 @@ class _FileThumbnailState extends ConsumerState<_FileThumbnail> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
-    return Container(
+    return ColoredBox(
       color: Colors.white.withValues(alpha: 0.05),
       child: const Icon(Icons.image_outlined, color: Colors.white24, size: 28),
     );

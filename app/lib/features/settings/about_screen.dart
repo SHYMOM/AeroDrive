@@ -14,8 +14,7 @@ class AboutScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('About AeroDrive'),
       ),
@@ -101,5 +100,4 @@ class AboutScreen extends StatelessWidget {
         ],
       ),
     );
-  }
 }

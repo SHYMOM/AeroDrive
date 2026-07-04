@@ -1,28 +1,29 @@
+import 'package:cryptography/cryptography.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:drift/drift.dart' as drift;
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:desktop_drop/desktop_drop.dart';
-import 'package:cross_file/cross_file.dart';
-import 'package:file_selector/file_selector.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/domain/folder_scanner.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/data/db/database.dart';
 import 'package:go_router/go_router.dart';
-import 'package:aerodrive/features/sharing/share_service.dart';
-import 'package:aerodrive/features/sharing/import_link_dialog.dart';
-import 'package:aerodrive/features/drive/widgets/quick_access_row.dart';
-import 'package:aerodrive/features/drive/widgets/folder_grid_item.dart';
-import 'package:aerodrive/features/drive/widgets/folder_list_item.dart';
-import 'package:aerodrive/features/drive/widgets/file_list_item.dart';
-import 'package:aerodrive/features/drive/widgets/file_grid_item.dart';
-import 'package:aerodrive/features/drive/widgets/create_folder_dialog.dart';
-import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
-import 'package:aerodrive/core/constants.dart';
-import 'package:drift/drift.dart' as drift;
 import 'package:uuid/uuid.dart';
+
+import '../../core/constants.dart';
+import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/providers/security_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../../data/db/database.dart';
+import '../../domain/folder_scanner.dart';
+import '../../domain/recovery/recovery_scanner.dart';
+import '../../domain/sync/config_sync_service.dart';
+import 'providers/drive_providers.dart';
+import 'widgets/create_folder_dialog.dart';
+import 'widgets/file_grid_item.dart';
+import 'widgets/file_list_item.dart';
+import 'widgets/folder_grid_item.dart';
+import 'widgets/folder_list_item.dart';
+import 'widgets/folder_picker_dialog.dart';
+import 'widgets/quick_access_row.dart';
 
 class DriveScreen extends ConsumerStatefulWidget {
   const DriveScreen({super.key});
@@ -56,7 +57,170 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         order: order,
         categoryPriority: category,
       );
+
+      final channelsStr = await settings.getSetting('storage_channels_list');
+      if (channelsStr == null || channelsStr.isEmpty || channelsStr == '[]') {
+        if (mounted) {
+          _checkConfigRoutine(); // Check for remote config before prompting
+        }
+      } else {
+        ref.read(configCheckedProvider.notifier).state = true;
+      }
     });
+  }
+
+  Future<void> _checkConfigRoutine() async {
+    if (!mounted) return;
+    
+    // Check if we've already done this during this session
+    final checked = ref.read(configCheckedProvider);
+    if (checked) {
+      _showChannelSetupPrompt(context);
+      return;
+    }
+    
+    ref.read(configCheckedProvider.notifier).state = true;
+    
+    final configService = ref.read(configSyncServiceProvider);
+    final status = await configService.checkConfigStatus();
+    
+    if (!mounted) return;
+
+    if (status == ConfigStatus.missing) {
+      // Channel doesn't exist. Tell user we are creating it, then show setup prompt.
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            backgroundColor: AppColors.surfaceElevated,
+            title: const Text('Creating Sync Channel', style: TextStyle(color: Colors.white)),
+            content: const Text(
+              'We are creating a private Telegram channel named "AeroDrive Config" in your account. '
+              'It will be placed in your Archive folder. This channel stores your storage configuration securely so you can sync across devices.\n\n'
+              '⚠️ Please NEVER delete this channel, or you will lose your sync configuration!',
+              style: TextStyle(color: AppColors.onSurface),
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (dialogCtx) => const PopScope(
+                      canPop: false,
+                      child: AlertDialog(
+                        backgroundColor: AppColors.surfaceElevated,
+                        content: Row(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(width: 20),
+                            Expanded(child: Text('Creating your secure channel...', style: TextStyle(color: Colors.white))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                  
+                  await configService.syncConfigToChannel();
+                  
+                  if (mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); // safely close loading dialog
+                    _showChannelSetupPrompt(context);
+                  }
+                },
+                child: const Text('Create Config Channel'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (status == ConfigStatus.found_unrestored) {
+      // Prompt to restore
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          title: const Text('Configuration Found', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'We found a previous storage configuration saved in your AeroDrive Config channel. '
+            'Would you like to restore these channels and rebuild your database?',
+            style: TextStyle(color: AppColors.onSurface),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _showChannelSetupPrompt(context);
+              },
+              child: const Text('Skip', style: TextStyle(color: Colors.white54)),
+            ),
+            FilledButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final jsonConfig = await configService.restoreConfigFromChannel();
+                if (jsonConfig != null) {
+                  await ref.read(settingsRepositoryProvider).setSetting('storage_channels_list', jsonConfig);
+                  // Trigger disaster recovery
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Restored config. Rebuilding database...'))
+                    );
+                  }
+                  final masterKey = ref.read(masterKeyProvider);
+                  if (masterKey != null) {
+                     await ref.read(recoveryServiceProvider).runDisasterRecovery(
+                       masterKey: SecretKey(masterKey),
+                       onProgress: (scanned, recovered) {
+                         debugPrint('Recovered $recovered items from $scanned messages');
+                       }
+                     );
+                     ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+                     ref.invalidate(folderContentsProvider);
+                     if (mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(content: Text('Database rebuild complete!'))
+                       );
+                     }
+                  }
+                }
+              },
+              child: const Text('Restore & Rebuild'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      _showChannelSetupPrompt(context);
+    }
+  }
+
+  void _showChannelSetupPrompt(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Welcome to AeroDrive!', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'To start uploading and syncing your files securely, you need to connect at least one Telegram storage channel.',
+          style: TextStyle(color: AppColors.onSurface),
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/settings/channels');
+            },
+            child: const Text('Connect Storage Channels'),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _checkSecurityAndChannel(BuildContext context, String? activeChannel, List<int>? masterKey) {
@@ -65,7 +229,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       return false;
     }
     if (masterKey == null) {
-      _showUnlockOrCreatePasswordDialog(context);
+      _showEncryptionErrorDialog(context);
       return false;
     }
     return true;
@@ -73,6 +237,54 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isConfigChecked = ref.watch(configCheckedProvider);
+
+    if (!isConfigChecked) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    )
+                  ],
+                ),
+                child: const CircularProgressIndicator(color: AppColors.primary),
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                'Initializing Secure Sync...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Establishing end-to-end encryption with Telegram.',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final contentsAsync = ref.watch(folderContentsProvider);
     final currentFolderId = ref.watch(currentFolderIdProvider);
     final breadcrumbsAsync = ref.watch(breadcrumbsProvider);
@@ -113,9 +325,13 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               color: AppColors.primary,
               backgroundColor: AppColors.surfaceElevated,
               onRefresh: () async {
+                final masterKey = ref.read(masterKeyProvider);
+                if (masterKey != null) {
+                  await ref.read(recoveryServiceProvider).runDisasterRecovery(
+                    masterKey: SecretKey(masterKey),
+                  );
+                }
                 ref.invalidate(folderContentsProvider);
-                // Artificial delay to show the refresh animation
-                await Future.delayed(const Duration(milliseconds: 500));
               },
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -126,7 +342,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 // Header (My Drive or Breadcrumb Path overview)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -156,7 +372,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                                   : breadcrumbsAsync.when(
                                       data: (breadcrumbs) => _buildPathOverview(context, breadcrumbs, currentFolderId),
                                       loading: () => const SizedBox.shrink(),
-                                      error: (_, __) => const SizedBox.shrink(),
+                                      error: (_, _) => const SizedBox.shrink(),
                                     ),
                         ),
                         Row(
@@ -257,7 +473,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           },
         ),
       ),
-      floatingActionButton: Container(
+      floatingActionButton: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
           gradient: const LinearGradient(
@@ -358,8 +574,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     );
   }
 
-  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) {
-    return SingleChildScrollView(
+  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) => SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
@@ -379,7 +594,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           ),
           for (final folder in breadcrumbs) ...[
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4.0),
+              padding: EdgeInsets.symmetric(horizontal: 4),
               child: Icon(Icons.chevron_right, size: 16, color: AppColors.onSurfaceVariant),
             ),
             GestureDetector(
@@ -402,7 +617,6 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ],
       ),
     );
-  }
 
   Future<void> _handleDeleteSelected(BuildContext context, Set<String> selectedIds) async {
     final confirmed = await showDialog<bool>(
@@ -582,15 +796,14 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
+      builder: (context) => DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surfaceElevated,
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(24),
               topRight: Radius.circular(24),
             ),
-            border: Border.all(color: AppColors.outline, width: 1),
+            border: Border.all(color: AppColors.outline),
           ),
           child: SafeArea(
             child: Column(
@@ -685,8 +898,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               ],
             ),
           ),
-        );
-      },
+        ),
     );
   }
 
@@ -694,18 +906,17 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
+      builder: (context) => StatefulBuilder(
           builder: (context, setModalState) {
             final activeSort = ref.watch(driveSortOptionProvider);
-            return Container(
+            return DecoratedBox(
               decoration: BoxDecoration(
                 color: AppColors.surfaceElevated,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
                 ),
-                border: Border.all(color: AppColors.outline, width: 1),
+                border: Border.all(color: AppColors.outline),
               ),
               child: SafeArea(
                 child: SingleChildScrollView(
@@ -773,13 +984,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               ),
             );
           },
-        );
-      },
+        ),
     );
   }
 
-  Widget _buildSortCriteriaItem(BuildContext context, String label, DriveSortCriteria criteria, DriveSortOption activeSort, StateSetter setModalState) {
-    return RadioListTile<DriveSortCriteria>(
+  Widget _buildSortCriteriaItem(BuildContext context, String label, DriveSortCriteria criteria, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortCriteria>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: criteria,
       groupValue: activeSort.criteria,
@@ -793,10 +1002,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         }
       },
     );
-  }
 
-  Widget _buildSortOrderItem(BuildContext context, String label, DriveSortOrder order, DriveSortOption activeSort, StateSetter setModalState) {
-    return RadioListTile<DriveSortOrder>(
+  Widget _buildSortOrderItem(BuildContext context, String label, DriveSortOrder order, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortOrder>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: order,
       groupValue: activeSort.order,
@@ -810,10 +1017,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         }
       },
     );
-  }
 
-  Widget _buildSortCategoryItem(BuildContext context, String label, DriveSortCategory category, DriveSortOption activeSort, StateSetter setModalState) {
-    return RadioListTile<DriveSortCategory>(
+  Widget _buildSortCategoryItem(BuildContext context, String label, DriveSortCategory category, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortCategory>(
       title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
       value: category,
       groupValue: activeSort.categoryPriority,
@@ -827,10 +1032,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         }
       },
     );
-  }
 
-  Widget _buildLayoutSelector(BuildContext context, bool isGridView) {
-    return Container(
+  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.4),
@@ -923,7 +1126,6 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ],
       ),
     );
-  }
 
   void _showNoChannelDialog(BuildContext context) {
     showDialog(
@@ -942,27 +1144,20 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     );
   }
 
-  void _showUnlockOrCreatePasswordDialog(BuildContext context) {
+  void _showEncryptionErrorDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Vault Locked', style: TextStyle(color: Colors.white)),
+        title: const Text('Encryption Error', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Your security vault is locked. Please unlock it before creating folders or uploading files to ensure they are encrypted correctly.',
+          'Your encryption keys could not be initialized properly. Please try restarting the app or logging out and logging back in.',
           style: TextStyle(color: AppColors.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/lock');
-            },
-            child: const Text('Unlock', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: const Text('OK', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

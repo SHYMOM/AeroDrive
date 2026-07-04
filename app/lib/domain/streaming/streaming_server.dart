@@ -1,24 +1,25 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:math';
 
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_router/shelf_router.dart';
-import 'package:cryptography/cryptography.dart';
 
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/security/master_key_provider.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/crypto/encryption_engine.dart';
-import 'package:drift/drift.dart';
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../core/security/master_key_provider.dart';
+import '../../data/crypto/encryption_engine.dart';
+import '../../data/db/database.dart';
+import '../../features/telegram/telegram_service.dart';
 
 class StreamingServer {
+
+  StreamingServer(this.ref);
   final Ref ref;
   HttpServer? _server;
   
@@ -28,8 +29,6 @@ class StreamingServer {
   final Map<int, int> _remoteFileIdCache = {};
   // Cache of fileId -> local path to avoid redundant downloads
   final Map<int, String> _localFilePathCache = {};
-
-  StreamingServer(this.ref);
 
   void _trimCache() {
     while (_remoteFileIdCache.length > _maxCacheSize) {
@@ -129,7 +128,7 @@ class StreamingServer {
 
       // 4. Handle Range Header
       final rangeHeader = request.headers['range'];
-      int start = 0;
+      var start = 0;
       int end = plainFileSize - 1;
 
       if (rangeHeader != null && rangeHeader.startsWith('bytes=')) {
@@ -178,7 +177,7 @@ class StreamingServer {
     final telegram = ref.read(telegramServiceProvider.notifier);
 
     // Calculate cumulative chunk boundaries
-    int currentOffset = 0;
+    var currentOffset = 0;
     final List<Map<String, dynamic>> chunkInfos = [];
     for (final chunk in chunks) {
       // If chunk size is not stored, fall back to the standard 20MB threshold
@@ -255,10 +254,10 @@ class StreamingServer {
         // Fallback AES-GCM block decryption:
         // Since GCM has 12-byte nonces and 16-byte MACs prepended to each 4MB block on disk,
         // we must download the full block(s) that overlap with the request.
-        final int plainBlockSize = 4 * 1024 * 1024;
-        final int cryptoBlockSize = plainBlockSize + 12 + 16;
+        const int plainBlockSize = 4 * 1024 * 1024;
+        const int cryptoBlockSize = plainBlockSize + 12 + 16;
 
-        int currentChunkOffset = chunkStart;
+        var currentChunkOffset = chunkStart;
         while (currentChunkOffset <= chunkEnd) {
           final int blockIndex = currentChunkOffset ~/ plainBlockSize;
           final int blockStartPlain = blockIndex * plainBlockSize;
@@ -320,7 +319,7 @@ class StreamingServer {
         _cacheLocalFilePath(fileId, localPath);
       } else {
         // Poll with getFile until download completes
-        for (int i = 0; i < 60; i++) {
+        for (var i = 0; i < 60; i++) {
           await Future.delayed(const Duration(milliseconds: 500));
           final getFileRes = await telegram.sendRequest({
             "@type": "getFile",
@@ -352,7 +351,7 @@ class StreamingServer {
       throw Exception("Downloaded file not found at $cachedPath");
     }
 
-    final raf = await fileOnDisk.open(mode: FileMode.read);
+    final raf = await fileOnDisk.open();
     try {
       await raf.setPosition(offset);
       final bytes = await raf.read(limit);
@@ -366,6 +365,4 @@ class StreamingServer {
   }
 }
 
-final streamingServerProvider = Provider<StreamingServer>((ref) {
-  return StreamingServer(ref);
-});
+final streamingServerProvider = Provider<StreamingServer>(StreamingServer.new);

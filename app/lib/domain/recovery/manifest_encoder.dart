@@ -16,8 +16,7 @@ class ManifestEncoder {
     int? chunkIndex,
     int isChunked = 0,
     int version = 1,
-  }) async {
-    return CaptionSerializer.serializeFile(
+  }) async => CaptionSerializer.serializeFile(
       fileId: fileId,
       name: fileName,
       parentFolderId: parentFolderId,
@@ -31,18 +30,15 @@ class ManifestEncoder {
       isChunked: isChunked,
       version: version,
     );
-  }
 
   /// Encodes and encrypts a Thumbnail Manifest for Telegram captions.
   static Future<String> encodeThumbnailManifest({
     required String fileId,
     required SecretKey masterKey,
-  }) async {
-    return CaptionSerializer.serializeThumbnail(
+  }) async => CaptionSerializer.serializeThumbnail(
       fileId: fileId,
       masterKey: masterKey,
     );
-  }
 
   /// Encodes and encrypts a Folder Metadata Manifest for Telegram captions.
   static Future<String> encodeFolderManifest({
@@ -51,19 +47,15 @@ class ManifestEncoder {
     required String? parentFolderId,
     required SecretKey masterKey,
     String? color,
-  }) async {
-    return CaptionSerializer.serializeFolder(
+  }) async => CaptionSerializer.serializeFolder(
       folderId: folderId,
       name: folderName,
       parentFolderId: parentFolderId,
       masterKey: masterKey,
       color: color,
     );
-  }
 
   /// Decodes a Base64 caption back to a JSON map.
-  static Future<Map<String, dynamic>?> decodeManifest(String base64Caption, SecretKey masterKey) async {
-    return CaptionDecryptor.deserialize(base64Caption, masterKey);
-  }
+  static Future<Map<String, dynamic>?> decodeManifest(String base64Caption, SecretKey masterKey) async => CaptionDecryptor.deserialize(base64Caption, masterKey);
 }
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../telegram/telegram_manager.dart';
+import '../telegram/telegram_service.dart';
 
 class SessionScreen extends ConsumerWidget {
   const SessionScreen({super.key});
@@ -171,12 +172,12 @@ class SessionScreen extends ConsumerWidget {
       body: sessionsAsync.when(
         data: (sessions) {
           if (sessions.isEmpty) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.devices, size: 64, color: AppColors.onSurfaceVariant),
-                  const SizedBox(height: 16),
+                  Icon(Icons.devices, size: 64, color: AppColors.onSurfaceVariant),
+                  SizedBox(height: 16),
                   Text(
                     'No active sessions found',
                     style: TextStyle(color: AppColors.onSurfaceVariant),
@@ -203,8 +204,7 @@ class SessionScreen extends ConsumerWidget {
                     style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryLight, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                  ...currentSessions.map((currentSession) {
-                    return Card(
+                  ...currentSessions.map((currentSession) => Card(
                       color: AppColors.surfaceElevated,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
@@ -218,7 +218,7 @@ class SessionScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
@@ -246,7 +246,7 @@ class SessionScreen extends ConsumerWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: AppColors.success.withOpacity(0.2),
+                                          color: AppColors.success.withValues(alpha: 0.2),
                                           borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: const Text(
@@ -259,18 +259,18 @@ class SessionScreen extends ConsumerWidget {
                                   const SizedBox(height: 6),
                                   Text(
                                     '${currentSession['application_name'] ?? 'AeroDrive'} • ${currentSession['application_version'] ?? ''}',
-                                    style: TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
+                                    style: const TextStyle(fontSize: 13, color: AppColors.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${currentSession['ip_address'] ?? 'Unknown IP'} • ${currentSession['location'] ?? 'Unknown location'}',
-                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withOpacity(0.8)),
+                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withValues(alpha: 0.8)),
                                   ),
                                   const SizedBox(height: 6),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.1),
+                                      color: AppColors.primary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
@@ -284,8 +284,7 @@ class SessionScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    );
-                  }),
+                    )),
                   const SizedBox(height: 24),
                 ],
                 if (otherSessions.isNotEmpty) ...[
@@ -304,13 +303,12 @@ class SessionScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  ...otherSessions.map((session) {
-                    return Card(
+                  ...otherSessions.map((session) => Card(
                       color: AppColors.surface,
                       margin: const EdgeInsets.symmetric(vertical: 6),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: AppColors.outline, width: 1),
+                        side: const BorderSide(color: AppColors.outline),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -348,7 +346,7 @@ class SessionScreen extends ConsumerWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: Colors.blue.withOpacity(0.15),
+                                          color: Colors.blue.withValues(alpha: 0.15),
                                           borderRadius: BorderRadius.circular(6),
                                         ),
                                         child: Text(
@@ -361,17 +359,17 @@ class SessionScreen extends ConsumerWidget {
                                   const SizedBox(height: 4),
                                   Text(
                                     '${session['application_name'] ?? 'AeroDrive'} • ${session['application_version'] ?? ''}',
-                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+                                    style: const TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     '${session['ip_address'] ?? 'Unknown IP'} • ${session['location'] ?? 'Unknown location'}',
-                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withOpacity(0.8)),
+                                    style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant.withValues(alpha: 0.8)),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     'Last active: ${_formatLastActive(session['last_active_date'] ?? 0)}',
-                                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant.withOpacity(0.6)),
+                                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant.withValues(alpha: 0.6)),
                                   ),
                                 ],
                               ),
@@ -384,8 +382,7 @@ class SessionScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                    );
-                  }),
+                    )),
                 ] else if (currentSessions.isNotEmpty) ...[
                   const Center(
                     child: Padding(

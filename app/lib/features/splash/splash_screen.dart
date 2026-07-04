@@ -1,19 +1,13 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:cryptography/cryptography.dart';
 
-import 'package:aerodrive/widgets/aerodrive_logo.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/domain/recovery/recovery_scanner.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
+import '../../core/theme/app_colors.dart';
+import '../../widgets/aerodrive_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -40,12 +34,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
+  Widget build(BuildContext context) => Scaffold(
+      body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment.center,
             radius: 1.5,
             colors: [
               Color(0xFF0D0E23), // deepSpace
@@ -69,12 +61,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Logo with neon pulse
-                  Container(
+                  DecoratedBox(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withOpacity(0.6),
+                          color: AppColors.primary.withValues(alpha: 0.6),
                           blurRadius: 30,
                           spreadRadius: 10,
                         ),
@@ -118,9 +110,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               borderRadius: BorderRadius.circular(2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withOpacity(0.4),
+                                  color: AppColors.primary.withValues(alpha: 0.4),
                                   blurRadius: 8,
-                                  spreadRadius: 0,
                                 ),
                               ],
                             ),
@@ -128,7 +119,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               borderRadius: BorderRadius.circular(2),
                               child: LinearProgressIndicator(
                                 value: _progress > 0 ? _progress : null,
-                                backgroundColor: Colors.white.withOpacity(0.1),
+                                backgroundColor: Colors.white.withValues(alpha: 0.1),
                                 valueColor: const AlwaysStoppedAnimation<Color>(
                                   AppColors.primary,
                                 ),
@@ -146,7 +137,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       ),
     );
-  }
 }
 
 class StarfieldPainter extends CustomPainter {
@@ -155,13 +145,13 @@ class StarfieldPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = Colors.white;
-    for (int i = 0; i < 80; i++) {
+    for (var i = 0; i < 80; i++) {
       final x = random.nextDouble() * size.width;
       // Spread stars far vertically to allow for the looping moveY animation
       final y = random.nextDouble() * size.height * 2 - size.height;
       final radius = random.nextDouble() * 1.5 + 0.5;
       final opacity = random.nextDouble() * 0.8 + 0.2;
-      paint.color = Colors.white.withOpacity(opacity);
+      paint.color = Colors.white.withValues(alpha: opacity);
       canvas.drawCircle(Offset(x, y), radius, paint);
     }
   }

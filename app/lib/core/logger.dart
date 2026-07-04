@@ -16,7 +16,7 @@ abstract final class AppLogger {
   /// Initializes the logger, intercepting all [debugPrint] and standard log output.
   static void init() {
     final originalDebugPrint = debugPrint;
-    debugPrint = (String? message, {int? wrapWidth}) {
+    debugPrint = (message, {wrapWidth}) {
       if (message != null) {
         _addLog(message);
       }

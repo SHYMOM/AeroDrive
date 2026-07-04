@@ -1,8 +1,10 @@
 import 'dart:convert';
+
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:file_selector/file_selector.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+
+import '../../core/providers/repository_providers.dart';
 
 class ManageBackupFoldersScreen extends ConsumerStatefulWidget {
   const ManageBackupFoldersScreen({super.key});
@@ -51,8 +53,7 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       appBar: AppBar(
         title: const Text('Manage Tracked Folders'),
       ),
@@ -108,7 +109,6 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
         label: const Text('Add Folder'),
       ),
     );
-  }
 }
 
 class AddBackupProfileDialog extends StatefulWidget {
@@ -127,7 +127,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
   String _quality = 'High';
 
   Future<void> _pickFolder() async {
-    String? result = await getDirectoryPath();
+    final String? result = await getDirectoryPath();
     if (result != null) {
       setState(() {
         _selectedPath = result;
@@ -136,8 +136,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('New Backup Profile'),
       content: SingleChildScrollView(
         child: Column(
@@ -206,7 +205,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
             const Text('Upload Quality', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _quality,
+              initialValue: _quality,
               decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
               items: const [
                 DropdownMenuItem(value: 'Original', child: Text('Original')),
@@ -238,5 +237,4 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
         ),
       ],
     );
-  }
 }

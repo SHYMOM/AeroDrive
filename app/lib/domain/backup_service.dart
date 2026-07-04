@@ -1,25 +1,25 @@
 import 'dart:convert';
 import 'dart:io' show Directory, File, Platform;
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' show Value;
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:cryptography/cryptography.dart';
 
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/features/settings/dropbox_service.dart';
+import 'package:drift/drift.dart' show Value;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:uuid/uuid.dart';
+
+import '../core/logger.dart';
+import '../core/providers.dart';
+import '../core/providers/security_providers.dart';
+import '../data/db/database.dart';
+import '../features/settings/dropbox_service.dart';
 
 class BackupService {
-  final Ref _ref;
 
   BackupService(this._ref);
+  final Ref _ref;
 
   Future<Directory> getOrCreateBackupDir() async {
     // Prefer public Downloads/AeroDrive/Backup when available
@@ -145,7 +145,7 @@ class BackupService {
     await db.into(db.backupHistory).insert(
       BackupHistoryCompanion.insert(
         id: const Uuid().v4(),
-        type: Value('export'),
+        type: const Value('export'),
         filePath: Value(finalPath),
         fileSize: Value(writtenSize),
         fileCount: Value(
@@ -199,7 +199,7 @@ class BackupService {
         await db.into(db.backupHistory).insert(
           BackupHistoryCompanion.insert(
             id: const Uuid().v4(),
-            type: Value('dropbox'),
+            type: const Value('dropbox'),
             filePath: Value('/AeroDrive/$fileName'),
             fileSize: Value(bytes.length),
             createdAt: Value(DateTime.now()),
@@ -252,8 +252,6 @@ class BackupService {
   }
 }
 
-final backupServiceProvider = Provider<BackupService>((ref) {
-  return BackupService(ref);
-});
+final backupServiceProvider = Provider<BackupService>(BackupService.new);
 
-final _secureStorage = const FlutterSecureStorage();
+const _secureStorage = FlutterSecureStorage();

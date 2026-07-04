@@ -1,32 +1,32 @@
 import 'dart:io';
+
 import 'package:archive/archive_io.dart';
-import 'dart:typed_data';
+import 'package:cryptography/cryptography.dart';
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import 'package:cryptography/cryptography.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:archive/archive.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/core/logger.dart';
+import 'package:uuid/uuid.dart';
+
+import '../core/logger.dart';
+import '../core/providers.dart';
+import '../core/providers/repository_providers.dart';
+import '../core/providers/security_providers.dart';
+import '../data/db/database.dart';
+import '../features/telegram/telegram_service.dart';
+import 'recovery/manifest_encoder.dart';
 
 /// Callback for ZIP progress: (filesProcessed, totalFiles, currentFilePath)
 typedef ZipProgressCallback = void Function(int processed, int total, String currentFile);
 
 class FolderScanner {
-  final Ref _ref;
-  late final AeroDriveDatabase _db;
-  final Uuid _uuid = const Uuid();
 
   FolderScanner(this._ref) {
     _db = _ref.read(databaseProvider);
   }
+  final Ref _ref;
+  late final AeroDriveDatabase _db;
+  final Uuid _uuid = const Uuid();
 
   /// Uploads folder metadata manifest as a 1px transparent PNG to Telegram.
   Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId) async {
@@ -139,9 +139,9 @@ class FolderScanner {
     });
 
     // Walk contents — each entity is handled independently
-    int filesQueued = 0;
-    int foldersQueued = 0;
-    int errors = 0;
+    var filesQueued = 0;
+    var foldersQueued = 0;
+    var errors = 0;
 
     try {
       await for (final entity in dir.list(followLinks: false)) {
@@ -192,7 +192,7 @@ class FolderScanner {
     // Create ZIP
     final tempDir = await getTemporaryDirectory();
     final safeFolderName = folderName.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
-    final zipPath = '${tempDir.path}/${safeFolderName}.zip';
+    final zipPath = '${tempDir.path}/$safeFolderName.zip';
 
     AppLogger.info('FolderScanner: creating ZIP archive of $rootDirPath -> $zipPath');
     await _createZipArchive(rootDirPath, zipPath, onProgress: onProgress);
@@ -238,7 +238,7 @@ class FolderScanner {
     final encoder = ZipFileEncoder();
     encoder.create(zipPath);
     
-    int processed = 0;
+    var processed = 0;
 
     for (final entity in allFiles) {
       final file = entity as File;
@@ -264,6 +264,4 @@ class FolderScanner {
   }
 }
 
-final folderScannerProvider = Provider<FolderScanner>((ref) {
-  return FolderScanner(ref);
-});
+final folderScannerProvider = Provider<FolderScanner>(FolderScanner.new);

@@ -2,14 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:aerodrive/core/logger.dart';
+import '../core/logger.dart';
 
 class NotificationService {
-  static final NotificationService instance = NotificationService._internal();
 
   factory NotificationService() => instance;
 
   NotificationService._internal();
+  static final NotificationService instance = NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   
@@ -98,7 +98,6 @@ class NotificationService {
         AndroidNotificationAction(
           'cancel_upload_$id',
           'Cancel Upload',
-          cancelNotification: true,
           showsUserInterface: true,
         ),
       ],
@@ -117,8 +116,6 @@ class NotificationService {
       'aerodrive_uploads',
       'Uploads',
       channelDescription: 'Upload complete',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
     );
     const details = NotificationDetails(android: androidDetails);
     await _plugin.show(
@@ -174,8 +171,6 @@ class NotificationService {
       'aerodrive_downloads',
       'Downloads',
       channelDescription: 'Download complete',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
     );
     const details = NotificationDetails(android: androidDetails);
     await _plugin.show(

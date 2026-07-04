@@ -1,21 +1,20 @@
-import 'dart:convert';
 import 'dart:ui' as ui;
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/features/settings/backup_dialogs.dart';
-import 'package:aerodrive/features/settings/transfer_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/media_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/auto_backup_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/network_settings_dialogs.dart';
-import 'package:aerodrive/features/settings/appearance_settings_screen.dart';
-import 'package:aerodrive/features/settings/advanced_settings_dialogs.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../core/theme/app_colors.dart';
+import '../telegram/telegram_service.dart';
+import 'advanced_settings_dialogs.dart';
+import 'appearance_settings_screen.dart';
+import 'auto_backup_settings_dialogs.dart';
+import 'backup_dialogs.dart';
+import 'media_settings_dialogs.dart';
+import 'transfer_settings_dialogs.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -35,8 +34,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -48,10 +46,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onPressed: () => context.go('/drive'),
         ),
       ),
-      body: Container(
+      body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment.center,
             radius: 1.5,
             colors: [
               Color(0xFF0D0E23), // deepSpace
@@ -188,27 +185,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     );
-  }
 
-  Widget _buildSearchBar() {
-    return Padding(
+  Widget _buildSearchBar() => Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: TextField(
               controller: _searchController,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
                 hintText: 'Search settings...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                 prefixIcon: const Icon(Icons.search, color: AppColors.primary),
                 suffixIcon: _searchQuery.isNotEmpty 
                   ? IconButton(
@@ -230,7 +225,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
     );
-  }
 
   Widget _buildSettingsGroup(String title, IconData icon, List<dynamic> items) {
     // Filter items based on search query
@@ -249,19 +243,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (filteredItems.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 24.0),
+      padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 12.0, bottom: 12.0),
+            padding: const EdgeInsets.only(left: 12, bottom: 12),
             child: Row(
               children: [
                 Icon(icon, size: 20, color: AppColors.primary),
                 const SizedBox(width: 8),
                 Text(
                   title.toUpperCase(),
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
@@ -275,11 +269,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             borderRadius: BorderRadius.circular(20),
             child: BackdropFilter(
               filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-              child: Container(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.03),
+                  color: Colors.white.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   children: List.generate(filteredItems.length, (index) {
@@ -299,7 +293,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       children: [
                         child,
                         if (index < filteredItems.length - 1)
-                          Divider(height: 1, color: Colors.white.withOpacity(0.05), indent: 56),
+                          Divider(height: 1, color: Colors.white.withValues(alpha: 0.05), indent: 56),
                       ],
                     );
                   }),
@@ -312,21 +306,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildTile(String title, String subtitle, IconData icon, VoidCallback? onTap) {
-    return Material(
+  Widget _buildTile(String title, String subtitle, IconData icon, VoidCallback? onTap) => Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        highlightColor: Colors.white.withOpacity(0.05),
-        splashColor: Colors.white.withOpacity(0.1),
+        highlightColor: Colors.white.withValues(alpha: 0.05),
+        splashColor: Colors.white.withValues(alpha: 0.1),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: AppColors.primary, size: 22),
@@ -338,21 +331,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   children: [
                     Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                    Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, size: 20, color: Colors.white.withOpacity(0.3)),
+              Icon(Icons.chevron_right, size: 20, color: Colors.white.withValues(alpha: 0.3)),
             ],
           ),
         ),
       ),
     );
-  }
 
-  Widget _buildSwitchTile(String title, String subtitle, IconData icon, String settingKey, bool defaultValue) {
-    return Consumer(builder: (context, ref, _) {
-      return FutureBuilder<String?>(
+  Widget _buildSwitchTile(String title, String subtitle, IconData icon, String settingKey, bool defaultValue) => Consumer(builder: (context, ref, _) => FutureBuilder<String?>(
         future: ref.watch(settingsRepositoryProvider).getSetting(settingKey),
         builder: (context, snapshot) {
           final isEnabled = snapshot.data == null ? defaultValue : snapshot.data == 'true';
@@ -363,16 +353,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 await ref.read(settingsRepositoryProvider).setSetting(settingKey, (!isEnabled) ? 'true' : 'false');
                 ref.invalidate(settingsRepositoryProvider);
               },
-              highlightColor: Colors.white.withOpacity(0.05),
-              splashColor: Colors.white.withOpacity(0.1),
+              highlightColor: Colors.white.withValues(alpha: 0.05),
+              splashColor: Colors.white.withValues(alpha: 0.1),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(icon, color: AppColors.primary, size: 22),
@@ -384,13 +374,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         children: [
                           Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white)),
                           const SizedBox(height: 2),
-                          Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                          Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13)),
                         ],
                       ),
                     ),
                     CupertinoSwitch(
                       value: isEnabled,
-                      activeColor: AppColors.primary,
+                      activeTrackColor: AppColors.primary,
                       onChanged: (val) async {
                         await ref.read(settingsRepositoryProvider).setSetting(settingKey, val ? 'true' : 'false');
                         ref.invalidate(settingsRepositoryProvider);
@@ -402,15 +392,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           );
         }
-      );
-    });
-  }
+      ));
 
-  _DynamicItemBuilder _buildDynamicItem(String title, String subtitleSuffix, IconData icon, String settingKey, String defaultValue, VoidCallback action) {
-    return _DynamicItemBuilder(
+  _DynamicItemBuilder _buildDynamicItem(String title, String subtitleSuffix, IconData icon, String settingKey, String defaultValue, VoidCallback action) => _DynamicItemBuilder(
       title: title,
-      builder: (context, ref) {
-        return FutureBuilder<String?>(
+      builder: (context, ref) => FutureBuilder<String?>(
           future: ref.watch(settingsRepositoryProvider).getSetting(settingKey),
           builder: (context, snapshot) {
             final value = snapshot.data ?? defaultValue;
@@ -422,14 +408,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ref.invalidate(settingsRepositoryProvider);
             });
           }
-        );
-      }
+        )
     );
-  }
 
-  Widget _buildLogoutButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+  Widget _buildLogoutButton() => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: BackdropFilter(
@@ -440,8 +423,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.redAccent.withOpacity(0.1),
-                border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                color: Colors.redAccent.withValues(alpha: 0.1),
+                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -457,33 +440,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     ).animate().fadeIn(delay: 300.ms, duration: 400.ms);
-  }
 }
 
 class _SettingsItem {
+
+  _SettingsItem(this.title, this.subtitle, this.icon, {required this.onTap});
   final String title;
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
-
-  _SettingsItem(this.title, this.subtitle, this.icon, {required this.onTap});
 }
 
 class _SettingsSwitchItem {
+
+  _SettingsSwitchItem(this.title, this.subtitle, this.icon, this.settingKey, this.defaultValue);
   final String title;
   final String subtitle;
   final IconData icon;
   final String settingKey;
   final bool defaultValue;
-
-  _SettingsSwitchItem(this.title, this.subtitle, this.icon, this.settingKey, this.defaultValue);
 }
 
 class _DynamicItemBuilder {
-  final String title;
-  final Widget Function(BuildContext context, WidgetRef ref) builder;
 
   _DynamicItemBuilder({required this.title, required this.builder});
+  final String title;
+  final Widget Function(BuildContext context, WidgetRef ref) builder;
   
   Widget build(BuildContext context, WidgetRef ref) => builder(context, ref);
 }

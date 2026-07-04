@@ -1,27 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+
+import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:convert';
-import 'package:cryptography/cryptography.dart';
-import 'package:flutter/foundation.dart';
-import 'package:aerodrive/domain/notification_service.dart';
 
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/features/telegram/telegram_manager.dart';
-import 'package:aerodrive/features/telegram/telegram_service.dart';
-import 'package:aerodrive/domain/download_orchestrator.dart';
-import 'package:aerodrive/core/logger.dart';
+import '../core/logger.dart';
+import '../core/providers/repository_providers.dart';
+import '../core/providers/security_providers.dart';
+import '../data/db/database.dart';
+import '../features/telegram/telegram_manager.dart';
+import '../features/telegram/telegram_service.dart';
+import 'download_orchestrator.dart';
+import 'notification_service.dart';
 
 class ActiveDownloadInfo {
-  final String queueId;
-  final String fileId;
-  final int chunkIndex;
-  final int totalChunks;
-  final String fileName;
-  final DateTime startedAt;
   ActiveDownloadInfo({
     required this.queueId,
     required this.fileId,
@@ -30,22 +24,35 @@ class ActiveDownloadInfo {
     required this.fileName,
     DateTime? startedAt,
   }) : startedAt = startedAt ?? DateTime.now();
+  final String queueId;
+  final String fileId;
+  final int chunkIndex;
+  final int totalChunks;
+  final String fileName;
+  final DateTime startedAt;
 }
 
 class DownloadCompletionEvent {
-  final String fileId;
-  final String fileName;
-  final String filePath;
-  final String mimeType;
   DownloadCompletionEvent({
     required this.fileId,
     required this.fileName,
     required this.filePath,
     required this.mimeType,
   });
+  final String fileId;
+  final String fileName;
+  final String filePath;
+  final String mimeType;
 }
 
 class DownloadQueueService {
+  
+  DownloadQueueService(this._ref, this._db, this._telegramManager, this._orchestrator) {
+    NotificationService.instance.initialize();
+    _startPolling();
+    _listenToTdlibEvents();
+    _startTimeoutChecker();
+  }
   final ProviderRef _ref;
   final AeroDriveDatabase _db;
   final TelegramManager _telegramManager;
@@ -65,13 +72,6 @@ class DownloadQueueService {
   final Map<String, int> _fileTotalBytes = {};
   
   static const Duration _chunkTimeout = Duration(minutes: 10);
-  
-  DownloadQueueService(this._ref, this._db, this._telegramManager, this._orchestrator) {
-    NotificationService.instance.initialize();
-    _startPolling();
-    _listenToTdlibEvents();
-    _startTimeoutChecker();
-  }
 
   void _startTimeoutChecker() {
     _timeoutTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
@@ -237,7 +237,7 @@ class DownloadQueueService {
     
     // 4. Request download for each valid chunk in parallel
     for (final dbChunk in validChunks) {
-      String targetAccountId = 'primary';
+      var targetAccountId = 'primary';
       if (settingsStr != null) {
         try {
           final List<dynamic> channels = jsonDecode(settingsStr);
@@ -284,7 +284,7 @@ class DownloadQueueService {
 
             // 6. Poll for completion (handles both progress and missing updateFile events)
             String? localPath;
-            for (int attempt = 0; attempt < 30; attempt++) {
+            for (var attempt = 0; attempt < 30; attempt++) {
               await Future.delayed(const Duration(seconds: 1));
               // If event listener already removed this from activeDownloads, skip
               if (!_activeDownloads.containsKey(remoteFileId)) {
@@ -333,9 +333,9 @@ class DownloadQueueService {
                   AppLogger.error('Failed to finalize download for ${item.fileId}', e);
                   await _markQueueFailed(item.id, 'Finalization failed: $e');
                 }
-                _downloadedChunkPaths.remove(item.fileId!);
-                _downloadProgress.remove(item.fileId!);
-                _fileTotalBytes.remove(item.fileId!);
+                _downloadedChunkPaths.remove(item.fileId);
+                _downloadProgress.remove(item.fileId);
+                _fileTotalBytes.remove(item.fileId);
               }
             } else {
               AppLogger.error('Download chunk ${dbChunk.chunkIndex} failed to download after 30s');

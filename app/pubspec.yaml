@@ -88,3 +88,4 @@ flutter:
   assets:
     - .env
     - assets/cities.json
+    - assets/icon.png

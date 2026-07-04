@@ -2,8 +2,8 @@ import 'dart:io' as io;
 
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'tables.dart';
 
@@ -36,8 +36,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   int get schemaVersion => 8;
 
   @override
-  MigrationStrategy get migration {
-    return MigrationStrategy(
+  MigrationStrategy get migration => MigrationStrategy(
       onCreate: (m) async {
         await m.createAll();
       },
@@ -78,13 +77,10 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
         }
       },
     );
-  }
 }
 
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
+LazyDatabase _openConnection() => LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = io.File(p.join(dbFolder.path, 'aerodrive.sqlite'));
     return NativeDatabase.createInBackground(file);
   });
-}

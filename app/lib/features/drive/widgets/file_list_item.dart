@@ -1,26 +1,28 @@
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
-import 'package:aerodrive/features/sharing/share_dialog.dart';
-import 'package:aerodrive/features/tags/tag_dialog.dart';
-import 'package:aerodrive/features/drive/widgets/file_type_icon.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/theme/app_colors.dart';
-import 'package:aerodrive/features/drive/providers/drive_providers.dart';
-import 'package:aerodrive/features/drive/widgets/folder_picker_dialog.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../../core/providers.dart';
+import '../../../core/providers/repository_providers.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/db/database.dart';
+import '../../gallery/thumbnail_service.dart';
+import '../../preview/preview_router.dart';
+import '../../sharing/share_dialog.dart';
+import '../../tags/tag_dialog.dart';
+import '../providers/drive_providers.dart';
+import 'file_type_icon.dart';
+import 'folder_picker_dialog.dart';
 
 class FileListItem extends ConsumerWidget {
-  final FileData file;
-  final List<FileData>? siblings;
   
   const FileListItem({super.key, required this.file, this.siblings});
+  final FileData file;
+  final List<FileData>? siblings;
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
@@ -140,13 +142,13 @@ class FileListItem extends ConsumerWidget {
             ),
             if (file.isFavorite)
               const Padding(
-                padding: EdgeInsets.only(left: 8.0),
+                padding: EdgeInsets.only(left: 8),
                 child: Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 16),
               ),
           ],
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4.0),
+          padding: const EdgeInsets.only(top: 4),
           child: Text(
             subtitleText,
             style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
@@ -179,8 +181,7 @@ class FileListItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) {
-    return PopupMenuButton<String>(
+  Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert, color: Colors.white54),
       color: AppColors.surfaceElevated,
       onSelected: (value) async {
@@ -227,7 +228,6 @@ class FileListItem extends ConsumerWidget {
         const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
-  }
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
     final db = ref.read(databaseProvider);
@@ -282,7 +282,7 @@ class FileListItem extends ConsumerWidget {
   Future<void> _showMoveDialog(BuildContext context, WidgetRef ref) async {
     final targetFolderId = await showDialog<String?>(
       context: context,
-      builder: (ctx) => FolderPickerDialog(title: 'Move file to...'),
+      builder: (ctx) => const FolderPickerDialog(title: 'Move file to...'),
     );
     if (targetFolderId == null) return;
     

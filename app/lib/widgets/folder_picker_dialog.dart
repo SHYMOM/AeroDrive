@@ -1,25 +1,26 @@
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/theme/app_colors.dart';
+
+import '../core/providers.dart';
+import '../core/theme/app_colors.dart';
+import '../data/db/database.dart';
 
 class FolderPickerResult {
+  const FolderPickerResult({this.folderId, required this.folderName});
   final String? folderId;
   final String folderName;
-  const FolderPickerResult({this.folderId, required this.folderName});
 }
 
 class FolderPickerDialog extends ConsumerStatefulWidget {
-  final String? excludeFolderId;
-  final String? currentFolderId;
 
   const FolderPickerDialog({
     super.key,
     this.excludeFolderId,
     this.currentFolderId,
   });
+  final String? excludeFolderId;
+  final String? currentFolderId;
 
   @override
   ConsumerState<FolderPickerDialog> createState() => _FolderPickerDialogState();
@@ -195,7 +196,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
       title: const Text('Root Directory', style: TextStyle(fontWeight: FontWeight.w500)),
       subtitle: const Text('Top level of your vault', style: TextStyle(fontSize: 12)),
       trailing: isCurrent ? Icon(Icons.check, color: theme.colorScheme.primary, size: 20) : null,
-      onTap: () => Navigator.pop(context, const FolderPickerResult(folderId: null, folderName: 'Root Directory')),
+      onTap: () => Navigator.pop(context, const FolderPickerResult(folderName: 'Root Directory')),
     );
   }
 
@@ -242,7 +243,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
 }
 
 class _TreeEntry {
+  const _TreeEntry(this.folder, this.depth);
   final FolderData folder;
   final int depth;
-  const _TreeEntry(this.folder, this.depth);
 }

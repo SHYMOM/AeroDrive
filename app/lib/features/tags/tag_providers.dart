@@ -1,8 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/tags/tag_service.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:aerodrive/core/providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
+import 'tag_service.dart';
 
 final fileTagsProvider = FutureProvider.family<List<Tag>, String>((ref, fileId) async {
   final service = ref.watch(tagServiceProvider);
@@ -16,7 +17,5 @@ final fileTagsStreamProvider = StreamProvider.family<List<Tag>, String>((ref, fi
   final db = ref.watch(databaseProvider);
   return (db.select(db.tags).join([
     drift.innerJoin(db.fileTags, db.fileTags.tagId.equalsExp(db.tags.id)),
-  ])..where(db.fileTags.fileId.equals(fileId))).watch().map((results) {
-    return results.map((row) => row.readTable(db.tags)).toList();
-  });
+  ])..where(db.fileTags.fileId.equals(fileId))).watch().map((results) => results.map((row) => row.readTable(db.tags)).toList());
 });

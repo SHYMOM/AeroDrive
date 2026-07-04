@@ -28,7 +28,7 @@ class StreamingEncryptionEngine {
 
     // Because AES-CTR block size is 16 bytes, we need to know exactly which 
     // 16-byte block the globalOffset starts at.
-    final int blockSize = 16;
+    const blockSize = 16;
     
     // The number of full blocks to skip
     final int skipBlocks = globalOffset ~/ blockSize;
@@ -73,9 +73,9 @@ class StreamingEncryptionEngine {
   /// Increments a 16-byte big-endian IV by a specific block count.
   static Uint8List _incrementIv(Uint8List iv, int blocksToSkip) {
     final result = Uint8List.fromList(iv);
-    int carry = blocksToSkip;
+    var carry = blocksToSkip;
     
-    for (int i = 15; i >= 0 && carry > 0; i--) {
+    for (var i = 15; i >= 0 && carry > 0; i--) {
       final sum = result[i] + carry;
       result[i] = sum & 0xFF;
       carry = sum >> 8;

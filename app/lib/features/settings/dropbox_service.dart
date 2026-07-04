@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:http/http.dart' as http;
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
-import 'package:aerodrive/core/logger.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/logger.dart';
 
 class DropboxService extends StateNotifier<bool> {
   DropboxService() : super(false) {
@@ -32,9 +34,7 @@ class DropboxService extends StateNotifier<bool> {
   }
 
   /// Returns the stored access token, if any.
-  Future<String?> getAccessToken() async {
-    return _storage.read(key: 'dropbox_access_token');
-  }
+  Future<String?> getAccessToken() async => _storage.read(key: 'dropbox_access_token');
 
   Future<void> openAuthUrl() async {
     final url = Uri.parse('https://www.dropbox.com/oauth2/authorize?client_id=$_clientId&response_type=code&token_access_type=offline');
@@ -106,7 +106,7 @@ class DropboxService extends StateNotifier<bool> {
       final lastUploadedHash = await _storage.read(key: 'dropbox_last_backup_hash');
       if (lastUploadedHash == fileHash) {
         AppLogger.info('Dropbox: Backup identical to last upload (Deduplicated). Skipping upload.');
-        onProgress?.call(1.0);
+        onProgress?.call(1);
         return true;
       }
 
@@ -134,7 +134,7 @@ class DropboxService extends StateNotifier<bool> {
         body: bytes,
       );
 
-      onProgress?.call(1.0);
+      onProgress?.call(1);
       if (response.statusCode == 200) {
         AppLogger.info('Dropbox: Backup uploaded successfully');
         await _storage.write(key: 'dropbox_last_backup_hash', value: fileHash);
@@ -176,8 +176,8 @@ class DropboxService extends StateNotifier<bool> {
       final sessionData = jsonDecode(startResponse.body);
       final sessionId = sessionData['session_id'] as String;
 
-      final raf = await file.open(mode: FileMode.read);
-      int bytesRead = 0;
+      final raf = await file.open();
+      var bytesRead = 0;
 
       // Step 2: Upload chunks
       while (bytesRead < fileSize) {
@@ -258,6 +258,4 @@ class DropboxService extends StateNotifier<bool> {
 
 }
 
-final dropboxServiceProvider = StateNotifierProvider<DropboxService, bool>((ref) {
-  return DropboxService();
-});
+final dropboxServiceProvider = StateNotifierProvider<DropboxService, bool>((ref) => DropboxService());

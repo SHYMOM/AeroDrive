@@ -1,17 +1,19 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/providers/security_providers.dart';
-import 'package:aerodrive/core/security/master_key_provider.dart';
-import 'package:aerodrive/core/logger.dart';
+
+import '../core/logger.dart';
+import '../core/providers/repository_providers.dart';
+import '../core/providers/security_providers.dart';
+import '../core/security/master_key_provider.dart';
 
 class AutoLockService extends WidgetsBindingObserver {
+
+  AutoLockService(this._ref);
   Timer? _lockTimer;
   final WidgetRef _ref;
   DateTime? _backgroundedAt;
-
-  AutoLockService(this._ref);
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
@@ -32,16 +34,12 @@ class AutoLockService extends WidgetsBindingObserver {
       switch (timeoutStr) {
         case '1m':
           duration = const Duration(minutes: 1);
-          break;
         case '5m':
           duration = const Duration(minutes: 5);
-          break;
         case '15m':
           duration = const Duration(minutes: 15);
-          break;
         case '1h':
           duration = const Duration(hours: 1);
-          break;
       }
 
       if (duration != null) {
@@ -75,10 +73,10 @@ class AutoLockService extends WidgetsBindingObserver {
           if (timeoutStr == null || timeoutStr == 'never') return;
           Duration? timeout;
           switch (timeoutStr) {
-            case '1m': timeout = const Duration(minutes: 1); break;
-            case '5m': timeout = const Duration(minutes: 5); break;
-            case '15m': timeout = const Duration(minutes: 15); break;
-            case '1h': timeout = const Duration(hours: 1); break;
+            case '1m': timeout = const Duration(minutes: 1);
+            case '5m': timeout = const Duration(minutes: 5);
+            case '15m': timeout = const Duration(minutes: 15);
+            case '1h': timeout = const Duration(hours: 1);
           }
           if (timeout != null && elapsed >= timeout) {
             if (MasterKeyProvider.instance.isUnlocked) {
@@ -99,7 +97,7 @@ class AutoLockService extends WidgetsBindingObserver {
     }
   }
 
-  void _checkMaxEncryptionMode() async {
+  Future<void> _checkMaxEncryptionMode() async {
     final settings = _ref.read(settingsRepositoryProvider);
     final mode = await settings.getSetting('encryption_mode');
     if (mode == 'max' && MasterKeyProvider.instance.isUnlocked) {

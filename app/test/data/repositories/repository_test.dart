@@ -1,9 +1,9 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:drift/native.dart';
 import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/data/repositories/folder_repository.dart';
-import 'package:aerodrive/data/repositories/file_repository.dart';
 import 'package:aerodrive/data/repositories/chunk_repository.dart';
+import 'package:aerodrive/data/repositories/file_repository.dart';
+import 'package:aerodrive/data/repositories/folder_repository.dart';
+import 'package:drift/native.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late AeroDriveDatabase db;
@@ -96,7 +96,7 @@ void main() {
         hash: 'chunk2hash',
       );
 
-      var chunksA = await chunkRepo.getChunksForFile(fileAId);
+      final chunksA = await chunkRepo.getChunksForFile(fileAId);
       expect(chunksA.length, 2);
 
       // 2. User tries to upload the exact same file (File B) into a different folder

@@ -1,24 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
-import 'package:drift/drift.dart' as drift;
 import 'package:permission_handler/permission_handler.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/core/providers/repository_providers.dart';
-import 'package:aerodrive/core/logger.dart';
+import 'package:uuid/uuid.dart';
+
+import '../core/logger.dart';
+import '../core/providers.dart';
+import '../core/providers/repository_providers.dart';
+import '../data/db/database.dart';
 
 class AutoBackupWatcherService {
+
+  AutoBackupWatcherService(this._ref);
   final Ref _ref;
   final Uuid _uuid = const Uuid();
   final List<StreamSubscription> _subscriptions = [];
   Timer? _pollTimer;
   bool _isRunning = false;
-
-  AutoBackupWatcherService(this._ref);
 
   Future<void> start() async {
     if (_isRunning) return;
@@ -148,7 +150,7 @@ class AutoBackupWatcherService {
   }
 
   Future<int> scanAllTrackedNow() async {
-    int count = 0;
+    var count = 0;
     final settingsRepo = _ref.read(settingsRepositoryProvider);
     final raw = await settingsRepo.getSetting('tracked_backup_folders');
     if (raw == null || raw.isEmpty) return 0;
@@ -185,6 +187,6 @@ class AutoBackupWatcherService {
 
 final autoBackupWatcherProvider = Provider<AutoBackupWatcherService>((ref) {
   final service = AutoBackupWatcherService(ref);
-  ref.onDispose(() => service.dispose());
+  ref.onDispose(service.dispose);
   return service;
 });

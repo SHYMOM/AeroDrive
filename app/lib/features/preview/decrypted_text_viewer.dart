@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/preview/file_decryption_util.dart';
+
+import '../../data/db/database.dart';
+import 'file_decryption_util.dart';
 
 class DecryptedTextViewer extends ConsumerStatefulWidget {
-  final FileData file;
   const DecryptedTextViewer({super.key, required this.file});
+  final FileData file;
 
   @override
   ConsumerState<DecryptedTextViewer> createState() => _DecryptedTextViewerState();
@@ -95,7 +97,7 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
         Expanded(
           child: InteractiveViewer(
             minScale: 0.5,
-            maxScale: 5.0,
+            maxScale: 5,
             constrained: false,
             child: SizedBox(
               width: _isCode ? _contentWidth(lines) : null,
@@ -108,7 +110,7 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
   }
 
   double _contentWidth(List<String> lines) {
-    final longest = lines.fold(0, (int max, l) => l.length > max ? l.length : max);
+    final longest = lines.fold(0, (max, l) => l.length > max ? l.length : max);
     return longest * _fontSize * 0.65 + 60;
   }
 
@@ -138,27 +140,23 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
             width: 40,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
-              children: List.generate(lines.length, (i) {
-                return Text(
+              children: List.generate(lines.length, (i) => Text(
                   '${i + 1}',
                   style: codeStyle.copyWith(
                     color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                     fontSize: _fontSize * 0.9,
                   ),
                   textAlign: TextAlign.right,
-                );
-              }),
+                )),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: lines.map((line) {
-                return SelectableText.rich(
+              children: lines.map((line) => SelectableText.rich(
                   TextSpan(children: _tokenize(line, codeStyle, theme)),
-                );
-              }).toList(),
+                )).toList(),
             ),
           ),
         ],
@@ -170,7 +168,7 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
     final spans = <TextSpan>[];
     final linkRegex = RegExp(r'(https?://[^\s)+<>,.!?;:"]+)');
 
-    int pos = 0;
+    var pos = 0;
     while (pos < text.length) {
       final linkMatch = linkRegex.matchAsPrefix(text, pos);
       if (linkMatch != null) {
@@ -211,15 +209,15 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
     r'"(?:[^"\\]|\\.)*"'
     r"|'(?:[^'\\]|\\.)*'"
     r'|`(?:[^`\\]|\\.)*`'
-    r')'
+    ')'
     r'|(#[^\n]*|//[^\n]*|/\*[\s\S]*?\*/)'
     r'|\b(\d+\.?\d*(?:[eE][+-]?\d+)?)\b'
     r'|\b(false|true|null|void|import|export|from|return|if|else|for|while|do|switch|case|break|continue|'
-    r'class|interface|extends|implements|abstract|final|const|var|let|function|async|await|new|throw|try|catch|'
-    r'def|lambda|yield|with|as|in|is|not|and|or|static|public|private|protected|override|super|this|'
+    'class|interface|extends|implements|abstract|final|const|var|let|function|async|await|new|throw|try|catch|'
+    'def|lambda|yield|with|as|in|is|not|and|or|static|public|private|protected|override|super|this|'
     r'print|debugPrint|require|module|package|library|typedef|enum|mixin|part|of)\b'
     r'|\b(int|double|num|String|bool|List|Map|Set|Object|dynamic|void|Never|Future|Stream|'
-    r'Uint8List|Uint16List|Uint32List|Uint64List|Int8List|Int16List|Int32List|Int64List|'
+    'Uint8List|Uint16List|Uint32List|Uint64List|Int8List|Int16List|Int32List|Int64List|'
     r'Float32List|Float64List|DateTime|Duration|Uri|RegExp|Symbol)\b',
   );
 

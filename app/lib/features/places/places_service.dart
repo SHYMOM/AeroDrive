@@ -1,21 +1,17 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
+
+import 'package:drift/drift.dart' as drift;
+import 'package:exif/exif.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:exif/exif.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/core/logger.dart';
-import 'package:aerodrive/core/providers.dart';
-import 'package:aerodrive/features/gallery/thumbnail_service.dart';
-import 'package:drift/drift.dart' as drift;
+
+import '../../core/logger.dart';
+import '../../core/providers.dart';
+import '../../data/db/database.dart';
+import '../gallery/thumbnail_service.dart';
 
 class PlaceLocation {
-  final String name;
-  final String admin;
-  final String country;
-  final double lat;
-  final double lon;
 
   PlaceLocation({
     required this.name,
@@ -25,22 +21,25 @@ class PlaceLocation {
     required this.lon,
   });
 
-  factory PlaceLocation.fromJson(Map<String, dynamic> json) {
-    return PlaceLocation(
+  factory PlaceLocation.fromJson(Map<String, dynamic> json) => PlaceLocation(
       name: json['name'],
       admin: json['admin'],
       country: json['country'],
       lat: (json['lat'] as num).toDouble(),
       lon: (json['lon'] as num).toDouble(),
     );
-  }
+  final String name;
+  final String admin;
+  final String country;
+  final double lat;
+  final double lon;
 }
 
 class PlacesService {
-  final Ref _ref;
-  List<PlaceLocation>? _cities;
 
   PlacesService(this._ref);
+  final Ref _ref;
+  List<PlaceLocation>? _cities;
 
   Future<void> _loadCities() async {
     if (_cities != null) return;
@@ -143,14 +142,12 @@ class PlacesService {
       return val is int ? val.toDouble() : double.parse(val.toString());
     }
 
-    double d = getValue(dms[0]);
-    double m = getValue(dms[1]);
-    double s = getValue(dms[2]);
+    final double d = getValue(dms[0]);
+    final double m = getValue(dms[1]);
+    final double s = getValue(dms[2]);
 
     return d + (m / 60) + (s / 3600);
   }
 }
 
-final placesServiceProvider = Provider<PlacesService>((ref) {
-  return PlacesService(ref);
-});
+final placesServiceProvider = Provider<PlacesService>(PlacesService.new);

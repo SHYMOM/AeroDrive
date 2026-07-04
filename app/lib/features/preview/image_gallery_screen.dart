@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:aerodrive/data/db/database.dart';
-import 'package:aerodrive/features/preview/decrypted_image_viewer.dart';
-import 'package:aerodrive/features/preview/preview_router.dart';
+import '../../data/db/database.dart';
+import 'decrypted_image_viewer.dart';
+import 'preview_router.dart';
 
 class ImageGalleryScreen extends StatefulWidget {
-  final List<FileData> files;
-  final int initialIndex;
 
   const ImageGalleryScreen({
     super.key,
     required this.files,
     required this.initialIndex,
   });
+  final List<FileData> files;
+  final int initialIndex;
 
   @override
   State<ImageGalleryScreen> createState() => _ImageGalleryScreenState();
@@ -62,9 +61,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
             _currentIndex = index;
           });
         },
-        itemBuilder: (context, index) {
-          return DecryptedImageViewer(file: widget.files[index]);
-        },
+        itemBuilder: (context, index) => DecryptedImageViewer(file: widget.files[index]),
       ),
     );
   }

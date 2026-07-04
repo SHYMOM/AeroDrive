@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 
 class FileTypeIcon extends StatelessWidget {
-  final String? mimeType;
-  final String fileName;
-  final double size;
 
   const FileTypeIcon({
     super.key,
@@ -11,6 +8,9 @@ class FileTypeIcon extends StatelessWidget {
     required this.fileName,
     this.size = 56,
   });
+  final String? mimeType;
+  final String fileName;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -20,47 +20,39 @@ class FileTypeIcon extends StatelessWidget {
     switch (ext) {
       case 'pdf':
         color = const Color(0xFFEF4444); // Red
-        break;
       case 'xls':
       case 'xlsx':
       case 'csv':
         color = const Color(0xFF10B981); // Green
-        break;
       case 'doc':
       case 'docx':
         color = const Color(0xFF3B82F6); // Blue
-        break;
       case 'ppt':
       case 'pptx':
         color = const Color(0xFFF97316); // Orange
-        break;
       case 'ps':
       case 'psd':
         color = const Color(0xFF0284C7); // Light Blue
-        break;
       case 'zip':
       case 'rar':
       case '7z':
       case 'tar':
         color = const Color(0xFFF59E0B); // Amber
-        break;
       case 'mp3':
       case 'wav':
       case 'ogg':
       case 'flac':
       case 'm4a':
         color = const Color(0xFF8B5CF6); // Purple
-        break;
       case 'txt':
       case 'md':
       case 'log':
         color = const Color(0xFF64748B); // Slate Grey
-        break;
       default:
         color = const Color(0xFF475569); // Dark slate
     }
 
-    return Container(
+    return SizedBox(
       width: size,
       height: size,
       child: CustomPaint(
@@ -85,8 +77,8 @@ class FileTypeIcon extends StatelessWidget {
 }
 
 class DogEarFilePainter extends CustomPainter {
-  final Color color;
   DogEarFilePainter({required this.color});
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {

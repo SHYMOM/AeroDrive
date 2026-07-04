@@ -50,8 +50,7 @@ class _CompanionServerDialogState extends State<CompanionServerDialog> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
+  Widget build(BuildContext context) => AlertDialog(
       title: const Text('Companion Server Configuration'),
       content: _isLoading
           ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
@@ -85,5 +84,4 @@ class _CompanionServerDialogState extends State<CompanionServerDialog> {
         FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
-  }
 }
