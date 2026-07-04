@@ -41,12 +41,14 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       
       // Load view mode preference
       final isGrid = await settings.getBoolSetting('is_grid_view', defaultValue: true);
+      if (!mounted) return;
       ref.read(isGridViewProvider.notifier).state = isGrid;
 
       // Load sort options preference
       final criteriaStr = await settings.getSetting('sort_criteria') ?? 'name';
       final orderStr = await settings.getSetting('sort_order') ?? 'ascending';
       final categoryStr = await settings.getSetting('sort_category') ?? 'none';
+      if (!mounted) return;
 
       final criteria = DriveSortCriteria.values.firstWhere((e) => e.name == criteriaStr, orElse: () => DriveSortCriteria.name);
       final order = DriveSortOrder.values.firstWhere((e) => e.name == orderStr, orElse: () => DriveSortOrder.ascending);
@@ -59,12 +61,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       );
 
       final channelsStr = await settings.getSetting('storage_channels_list');
+      if (!mounted) return;
       if (channelsStr == null || channelsStr.isEmpty || channelsStr == '[]') {
-        if (mounted) {
-          _checkConfigRoutine(); // Check for remote config before prompting
+        if (mounted && ref.read(isAppUnlockedProvider)) {
+          _checkConfigRoutine(); // Check for remote config before prompting if already unlocked
         }
       } else {
         ref.read(configCheckedProvider.notifier).state = true;
+        if (mounted && ref.read(isAppUnlockedProvider)) {
+          _checkAndRecreateConfigBackup();
+        }
       }
     });
   }
@@ -81,10 +87,32 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     
     ref.read(configCheckedProvider.notifier).state = true;
     
+    // Show immediate loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const PopScope(
+        canPop: false,
+        child: AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(child: Text('Connecting securely...', style: TextStyle(color: Colors.white))),
+            ],
+          ),
+        ),
+      ),
+    );
+    
     final configService = ref.read(configSyncServiceProvider);
     final status = await configService.checkConfigStatus();
     
     if (!mounted) return;
+    
+    // Dismiss loading dialog
+    Navigator.of(context, rootNavigator: true).pop();
 
     if (status == ConfigStatus.missing) {
       // Channel doesn't exist. Tell user we are creating it, then show setup prompt.
@@ -199,6 +227,20 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     }
   }
 
+  Future<void> _checkAndRecreateConfigBackup() async {
+    try {
+      final configService = ref.read(configSyncServiceProvider);
+      final status = await configService.checkConfigStatus();
+      if (!mounted) return;
+      if (status == ConfigStatus.missing) {
+        debugPrint('DriveScreen: Config channel was deleted remotely. Auto-recreating config channel backup...');
+        await configService.syncConfigToChannel();
+      }
+    } catch (e) {
+      debugPrint('DriveScreen: Failed to check or recreate config backup: $e');
+    }
+  }
+
   void _showChannelSetupPrompt(BuildContext context) {
     showDialog(
       context: context,
@@ -237,6 +279,20 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(isAppUnlockedProvider, (previous, next) async {
+      if (next) {
+        final settings = ref.read(settingsRepositoryProvider);
+        final channelsStr = await settings.getSetting('storage_channels_list');
+        if (!mounted) return;
+        final isConfigChecked = ref.read(configCheckedProvider);
+        if (!isConfigChecked && (channelsStr == null || channelsStr.isEmpty || channelsStr == '[]')) {
+          _checkConfigRoutine();
+        } else if (channelsStr != null && channelsStr.isNotEmpty && channelsStr != '[]') {
+          _checkAndRecreateConfigBackup();
+        }
+      }
+    });
+
     final isConfigChecked = ref.watch(configCheckedProvider);
 
     if (!isConfigChecked) {
@@ -325,13 +381,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               color: AppColors.primary,
               backgroundColor: AppColors.surfaceElevated,
               onRefresh: () async {
+                if (!mounted) return;
                 final masterKey = ref.read(masterKeyProvider);
                 if (masterKey != null) {
                   await ref.read(recoveryServiceProvider).runDisasterRecovery(
                     masterKey: SecretKey(masterKey),
                   );
                 }
-                ref.invalidate(folderContentsProvider);
+                if (mounted) {
+                  ref.invalidate(folderContentsProvider);
+                }
               },
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),

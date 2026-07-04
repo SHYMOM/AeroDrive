@@ -76,8 +76,24 @@ class TrashScreen extends ConsumerWidget {
                 }
 
                 await db.transaction(() async {
-                  await (db.delete(db.files)..where((f) => f.deletedAt.isNotNull())).go();
-                  await (db.delete(db.folders)..where((f) => f.deletedAt.isNotNull())).go();
+                  final fileIds = files.map((f) => f.id).toList();
+                  final foldersInTrash = await (db.select(db.folders)..where((f) => f.deletedAt.isNotNull())).get();
+                  final folderIds = foldersInTrash.map((f) => f.id).toList();
+
+                  if (fileIds.isNotEmpty) {
+                    await (db.delete(db.chunks)..where((c) => c.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.thumbnails)..where((t) => t.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.fileTags)..where((ft) => ft.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.photoFaces)..where((pf) => pf.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.filePlaces)..where((fp) => fp.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.shareLinks)..where((sl) => sl.fileId.isIn(fileIds))).go();
+                    await (db.delete(db.files)..where((f) => f.id.isIn(fileIds))).go();
+                  }
+
+                  if (folderIds.isNotEmpty) {
+                    await (db.delete(db.shareLinks)..where((sl) => sl.folderId.isIn(folderIds))).go();
+                    await (db.delete(db.folders)..where((f) => f.id.isIn(folderIds))).go();
+                  }
                 });
                 AppLogger.info('Trash emptied: $deletedCount Telegram messages permanently deleted');
                 ref.invalidate(trashedItemsProvider);

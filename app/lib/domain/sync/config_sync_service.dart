@@ -59,7 +59,7 @@ class ConfigSyncService {
       if (configChatId == null) {
         // Create the channel
         AppLogger.info('ConfigSyncService: Creating config channel');
-        final response = await telegramService.createNewChannel(_configChannelName, 'AeroDrive System Channel');
+        final response = await telegramService.createNewChannel(_configChannelName, 'AeroDrive System Channel [AERODRIVE_CONFIG_v1]');
         if (response['@type'] == 'error') {
           AppLogger.error('ConfigSyncService: Failed to create channel: ${response['message']}');
           return;
@@ -78,12 +78,10 @@ class ConfigSyncService {
 
       // Send or update the pinned message
       final history = await telegramService.sendRequest({
-        "@type": "getChatHistory",
+        "@type": "searchChatMessages",
         "chat_id": configChatId,
-        "from_message_id": 0,
-        "offset": 0,
-        "limit": 10,
-        "only_local": false,
+        "query": "WARNING: DO NOT DELETE",
+        "limit": 10
       });
 
       int? existingMessageId;
@@ -99,9 +97,11 @@ class ConfigSyncService {
         }
       }
 
+      bool editedSuccessfully = false;
+
       if (existingMessageId != null) {
         // Edit existing message
-        await telegramService.sendRequest({
+        final editResult = await telegramService.sendRequest({
           "@type": "editMessageText",
           "chat_id": configChatId,
           "message_id": existingMessageId,
@@ -116,7 +116,22 @@ class ConfigSyncService {
             "clear_draft": true
           }
         });
-      } else {
+        
+        if (editResult['@type'] != 'error') {
+          editedSuccessfully = true;
+        } else {
+          AppLogger.warning('ConfigSyncService: editMessageText failed, falling back to new message. Error: ${editResult['message']}');
+          // Try to delete the old message if editing failed
+          await telegramService.sendRequest({
+            "@type": "deleteMessages",
+            "chat_id": configChatId,
+            "message_ids": [existingMessageId],
+            "revoke": true
+          });
+        }
+      }
+
+      if (!editedSuccessfully) {
         // Send new message
         final sentMessage = await telegramService.sendRequest({
           "@type": "sendMessage",
@@ -239,20 +254,26 @@ class ConfigSyncService {
     // Attempt 1: Search on server (very reliable for finding un-cached channels)
     try {
       final searchResponse = await telegramService.sendRequest({
-        "@type": "searchChatsOnServer",
+        "@type": "searchChats",
         "query": "AeroDrive Config",
         "limit": 10
       });
       if (searchResponse['chat_ids'] != null) {
+        int? fallbackId;
         for (final id in searchResponse['chat_ids']) {
            final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": id});
            if (chat['title'] == _configChannelName || chat['title'] == 'AeroDrive Config (Do Not Delete)') {
              final adminCheck = await telegramService.checkAdminStatus(id);
              if (adminCheck['is_admin'] == true) {
-                return id;
+                final description = await telegramService.getChannelDescription(id);
+                if (description != null && description.contains('[AERODRIVE_CONFIG_v1]')) {
+                   return id; // Exact match found
+                }
+                fallbackId ??= id; // Save first valid channel as fallback
              }
            }
         }
+        if (fallbackId != null) return fallbackId;
       }
     } catch (e) {
       AppLogger.warning('searchChatsOnServer failed: $e');

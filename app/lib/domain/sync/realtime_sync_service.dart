@@ -50,6 +50,11 @@ class RealtimeSyncService {
 
   Future<void> _handleDeleteMessages(Map<String, dynamic> event) async {
     try {
+      if (event['from_cache'] == true) {
+        AppLogger.info('RealtimeSync: Ignoring delete messages event because it is only from cache');
+        return;
+      }
+
       final chatId = event['chat_id'] as int?;
       final messageIds = (event['message_ids'] as List<dynamic>?)?.cast<int>();
 
@@ -189,7 +194,7 @@ class RealtimeSyncService {
           }
 
           final document = msg['content']?['document'];
-          final size = document?['document']?['size'] as int? ?? manifest['size'] as int? ?? 0;
+          final size = manifest['size'] as int? ?? document?['document']?['size'] as int? ?? 0;
           
           await db.into(db.files).insertOnConflictUpdate(
             FilesCompanion.insert(

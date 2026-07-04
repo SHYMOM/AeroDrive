@@ -185,7 +185,7 @@ class ZeroDBRecoveryService {
             final existingFile = recoveredFiles.any((f) => f.id.value == fileId);
             if (!existingFile) {
               final document = msg['content']?['document'];
-              final size = document?['document']?['size'] as int? ?? manifest['size'] as int? ?? 0;
+              final size = manifest['size'] as int? ?? document?['document']?['size'] as int? ?? 0;
               recoveredFiles.add(
                 FilesCompanion.insert(
                   id: fileId,

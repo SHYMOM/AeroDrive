@@ -118,7 +118,18 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
                           itemCount: _subfolders.length,
                           itemBuilder: (context, index) {
                             final folder = _subfolders[index];
-                            final color = folder.color != null ? Color(int.parse(folder.color!)) : Colors.blueAccent;
+                             Color color = Colors.blueAccent;
+                             if (folder.color != null && folder.color!.isNotEmpty) {
+                               try {
+                                 var colorStr = folder.color!;
+                                 if (colorStr.startsWith('#')) {
+                                   colorStr = colorStr.replaceFirst('#', '0xFF');
+                                 } else if (!colorStr.startsWith('0x') && !colorStr.startsWith('0X')) {
+                                   colorStr = '0x$colorStr';
+                                 }
+                                 color = Color(int.parse(colorStr));
+                               } catch (_) {}
+                             }
                             
                             return ListTile(
                               leading: Icon(Icons.folder, color: color),

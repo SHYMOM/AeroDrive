@@ -24,7 +24,13 @@ class FolderGridItem extends ConsumerWidget {
     Color folderColor = AppColors.folderDefault;
     if (folder.color != null && folder.color!.isNotEmpty) {
       try {
-        folderColor = Color(int.parse(folder.color!.replaceFirst('#', '0xFF')));
+        var colorStr = folder.color!;
+        if (colorStr.startsWith('#')) {
+          colorStr = colorStr.replaceFirst('#', '0xFF');
+        } else if (!colorStr.startsWith('0x') && !colorStr.startsWith('0X')) {
+          colorStr = '0x$colorStr';
+        }
+        folderColor = Color(int.parse(colorStr));
       } catch (e) {
         // Fallback to default
       }

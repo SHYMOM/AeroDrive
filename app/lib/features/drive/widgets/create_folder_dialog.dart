@@ -156,6 +156,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                 folderName: name,
                 parentFolderId: currentId,
                 masterKey: secretKey,
+                color: _selectedColorHex,
               );
 
               final tempDir = await getTemporaryDirectory();

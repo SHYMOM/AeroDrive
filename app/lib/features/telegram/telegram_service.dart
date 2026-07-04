@@ -739,40 +739,63 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     await Future.delayed(const Duration(milliseconds: 200));
 
     try {
-      final response = await sendRequest({
-        "@type": "getChats",
-        "chat_list": {"@type": "chatListMain"},
-        "limit": 200,
-      });
+      final List<dynamic> allChatIds = [];
+
+      // Query Main Chat List
+      try {
+        final mainResponse = await sendRequest({
+          "@type": "getChats",
+          "chat_list": {"@type": "chatListMain"},
+          "limit": 200,
+        });
+        if (mainResponse.containsKey('chat_ids')) {
+          allChatIds.addAll(mainResponse['chat_ids']);
+        }
+      } catch (e) {
+        AppLogger.warning('Failed to get Main chats: $e');
+      }
+
+      // Query Archive Chat List
+      try {
+        final archiveResponse = await sendRequest({
+          "@type": "getChats",
+          "chat_list": {"@type": "chatListArchive"},
+          "limit": 200,
+        });
+        if (archiveResponse.containsKey('chat_ids')) {
+          allChatIds.addAll(archiveResponse['chat_ids']);
+        }
+      } catch (e) {
+        // Safe to ignore if archive is empty or fails
+      }
+
+      final uniqueChatIds = allChatIds.toSet().toList();
 
       final List<Map<String, dynamic>> adminChannels = [];
-      if (response.containsKey('chat_ids')) {
-        final List<dynamic> chatIds = response['chat_ids'];
-        for (final id in chatIds) {
-          try {
-            final chat = await sendRequest({
-              "@type": "getChat",
-              "chat_id": id,
-            });
+      for (final id in uniqueChatIds) {
+        try {
+          final chat = await sendRequest({
+            "@type": "getChat",
+            "chat_id": id,
+          });
 
-            final chatType = chat['type'];
-            if (chatType != null && chatType['@type'] == 'chatTypeSupergroup') {
-              final isChannel = chatType['is_channel'] ?? false;
-              if (isChannel) {
-                final supergroupId = chatType['supergroup_id'];
-                final sg = await sendRequest({
-                  "@type": "getSupergroup",
-                  "supergroup_id": supergroupId,
-                });
-                final statusType = sg['status']?['@type'];
-                if (statusType == 'chatMemberStatusCreator' || statusType == 'chatMemberStatusAdministrator') {
-                  adminChannels.add(chat);
-                }
+          final chatType = chat['type'];
+          if (chatType != null && chatType['@type'] == 'chatTypeSupergroup') {
+            final isChannel = chatType['is_channel'] ?? false;
+            if (isChannel) {
+              final supergroupId = chatType['supergroup_id'];
+              final sg = await sendRequest({
+                "@type": "getSupergroup",
+                "supergroup_id": supergroupId,
+              });
+              final statusType = sg['status']?['@type'];
+              if (statusType == 'chatMemberStatusCreator' || statusType == 'chatMemberStatusAdministrator') {
+                adminChannels.add(chat);
               }
             }
-          } catch (e) {
-            // Ignore error for a single chat
           }
+        } catch (e) {
+          // Ignore error for a single chat
         }
       }
       return adminChannels;
