@@ -81,7 +81,8 @@ class FolderRepository {
 
   /// Retrieves the immediate children (folders and files) of a given folder.
   Future<List<FolderData>> getSubfolders(String? parentId) {
-    final query = _db.select(_db.folders);
+    final query = _db.select(_db.folders)
+      ..where((f) => f.deletedAt.isNull());
     if (parentId == null) {
       query.where((f) => f.parentId.isNull());
     } else {

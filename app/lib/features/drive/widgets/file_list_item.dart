@@ -31,9 +31,8 @@ class FileListItem extends ConsumerWidget {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  String _getMockDuration() {
-    final hash = file.id.hashCode.abs();
-    final seconds = (hash % 7200) + 15; // 15s to 2h
+  String _formatDuration(int? seconds) {
+    if (seconds == null || seconds <= 0) return '00:00';
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     final s = seconds % 60;
@@ -72,7 +71,7 @@ class FileListItem extends ConsumerWidget {
     // Build subtitle layout: size • duration • date
     String subtitleText;
     if (isVid || isAud) {
-      subtitleText = '$sizeString • ${_getMockDuration()} • $dateString';
+      subtitleText = '$sizeString • ${_formatDuration(file.duration)} • $dateString';
     } else {
       subtitleText = '$sizeString • $dateString';
     }

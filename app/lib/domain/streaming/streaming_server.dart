@@ -231,10 +231,10 @@ class StreamingServer {
       if (ctrIv != null) {
         // AES-CTR Mode range seek:
         // Align chunk range to 16-byte boundaries
-        final int startBlock = chunkStart ~/ 16;
-        final int endBlock = chunkEnd ~/ 16;
-        final int cipherStart = startBlock * 16;
-        final int cipherEnd = (endBlock + 1) * 16;
+        final int startBlock = (startOffset + chunkStart) ~/ 16;
+        final int endBlock = (startOffset + chunkEnd) ~/ 16;
+        final int cipherStart = (chunkStart ~/ 16) * 16;
+        final int cipherEnd = ((chunkEnd ~/ 16) + 1) * 16;
         final int limit = cipherEnd - cipherStart;
 
         // Fetch exact CTR range from Telegram
@@ -319,7 +319,7 @@ class StreamingServer {
         _cacheLocalFilePath(fileId, localPath);
       } else {
         // Poll with getFile until download completes
-        for (var i = 0; i < 60; i++) {
+        for (var i = 0; i < 240; i++) {
           await Future.delayed(const Duration(milliseconds: 500));
           final getFileRes = await telegram.sendRequest({
             "@type": "getFile",

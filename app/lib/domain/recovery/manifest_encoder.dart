@@ -15,6 +15,7 @@ class ManifestEncoder {
     String? ctrIvBase64,
     int? chunkIndex,
     int? totalChunks,
+    int? duration,
     int isChunked = 0,
     int version = 1,
   }) async => CaptionSerializer.serializeFile(
@@ -29,6 +30,7 @@ class ManifestEncoder {
       ctrIvBase64: ctrIvBase64,
       chunkIndex: chunkIndex,
       totalChunks: totalChunks,
+      duration: duration,
       isChunked: isChunked,
       version: version,
     );

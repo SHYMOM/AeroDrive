@@ -592,6 +592,25 @@ class UploadQueueService {
       }
     }
 
+    // Bug Fix: Generate and cache thumbnail immediately during upload
+    Uint8List? finalThumbBytes;
+    Duration? videoDuration;
+
+    if (mimeType.startsWith('image/')) {
+      final payload = _ThumbnailPayload(localFilePath, 256);
+      finalThumbBytes = await compute(_extractImageThumbnailIsolate, payload);
+    } else if (mimeType.startsWith('video/')) {
+      final videoService = _ref.read(videoThumbnailServiceProvider);
+      final result = await videoService.generateSmartThumbnail(localFilePath);
+      finalThumbBytes = result.path != null ? await File(result.path!).readAsBytes() : null;
+      videoDuration = result.duration;
+      if (result.path != null) {
+        try {
+          await File(result.path!).delete(); // cleanup
+        } catch (_) {}
+      }
+    }
+
     // Pre-insert file record to satisfy SQLite foreign key constraints for chunk mapping
     await _db.into(_db.files).insert(
       FilesCompanion.insert(
@@ -606,26 +625,9 @@ class UploadQueueService {
         sha256Hash: const drift.Value(''), // updated on finalize
         createdAt: drift.Value(DateTime.now()),
         photoTakenAt: drift.Value(photoTakenAt),
+        duration: drift.Value(videoDuration?.inSeconds),
       )
     );
-
-    // Bug Fix: Generate and cache thumbnail immediately during upload
-    Uint8List? finalThumbBytes;
-
-    if (mimeType.startsWith('image/')) {
-      final payload = _ThumbnailPayload(localFilePath, 256);
-      finalThumbBytes = await compute(_extractImageThumbnailIsolate, payload);
-    } else if (mimeType.startsWith('video/')) {
-      final videoService = _ref.read(videoThumbnailServiceProvider);
-      final thumbPath = await videoService.generateSmartThumbnail(localFilePath);
-      if (thumbPath != null) {
-        final f = File(thumbPath);
-        if (await f.exists()) {
-          finalThumbBytes = await f.readAsBytes();
-          await f.delete(); // cleanup
-        }
-      }
-    }
 
     if (finalThumbBytes != null && masterKey != null) {
       try {
@@ -720,6 +722,7 @@ class UploadQueueService {
           chunkIndex: i,
           totalChunks: totalChunks,
           isChunked: totalChunks > 1 ? 1 : 0,
+          duration: videoDuration?.inSeconds,
         );
       }
 
@@ -947,11 +950,9 @@ class UploadQueueService {
       // Section 2: Upload encrypted thumbnail to Telegram
       // ─────────────────────────────────────────────────────────────
       if (masterKey != null) {
-        AppLogger.info('Thumbnail upload check: mimeType=$mimeType startsWithImage=${mimeType.startsWith('image/')}');
-        if (mimeType.startsWith('image/')) {
+        AppLogger.info('Thumbnail upload check: mimeType=$mimeType startsWithImage=${mimeType.startsWith('image/')} startsWithVideo=${mimeType.startsWith('video/')}');
+        if (mimeType.startsWith('image/') || mimeType.startsWith('video/')) {
           await _uploadThumbnail(fileId, originalPath, message, masterKey);
-        } else if (mimeType.startsWith('video/')) {
-          AppLogger.info('Video file detected - thumbnail generation requires video decoder; skipping thumbnail upload for $fileId');
         } else {
           AppLogger.info('Non-image/video file - skipping thumbnail upload for $fileId');
         }
@@ -996,29 +997,43 @@ class UploadQueueService {
         return;
       }
 
-      // ── Bug 3 Fix: Safe extraction with 5s timeout ──────────────────
-      // Runs in a background isolate via compute() so large files do NOT
-      // exhaust the Dart VM heap. A 512px max dimension is aggressive enough
-      // to keep memory usage low regardless of the original file resolution.
       Uint8List? thumbnailJpgBytes;
-      try {
-        thumbnailJpgBytes = await Future.any([
-          compute(
-            _extractImageThumbnailIsolate,
-            _ThumbnailPayload(originalPath, 512),
-          ),
-          Future.delayed(
-            const Duration(seconds: 5),
-            () => null, // timeout sentinel
-          ),
-        ]);
-      } catch (e) {
-        AppLogger.warning('_uploadThumbnail: isolate extraction failed — using generic icon fallback. Error: $e');
-        return; // graceful fallback: no thumbnail uploaded, generic icon shown in UI
+      final mimeType = _getMimeType(originalFile.path);
+
+      if (mimeType.startsWith('image/')) {
+        try {
+          thumbnailJpgBytes = await Future.any([
+            compute(
+              _extractImageThumbnailIsolate,
+              _ThumbnailPayload(originalPath, 512),
+            ),
+            Future.delayed(
+              const Duration(seconds: 5),
+              () => null, // timeout sentinel
+            ),
+          ]);
+        } catch (e) {
+          AppLogger.warning('_uploadThumbnail: isolate image extraction failed. Error: $e');
+        }
+      } else if (mimeType.startsWith('video/')) {
+        try {
+          final videoService = _ref.read(videoThumbnailServiceProvider);
+          final result = await videoService.generateSmartThumbnail(originalPath);
+          final thumbPath = result.path;
+          if (thumbPath != null) {
+            final f = File(thumbPath);
+            if (await f.exists()) {
+              thumbnailJpgBytes = await f.readAsBytes();
+              try { await f.delete(); } catch (_) {}
+            }
+          }
+        } catch (e) {
+          AppLogger.warning('_uploadThumbnail: video thumbnail extraction failed. Error: $e');
+        }
       }
 
       if (thumbnailJpgBytes == null) {
-        AppLogger.warning('_uploadThumbnail: extraction timed out or returned null — skipping thumbnail for $fileId');
+        AppLogger.warning('_uploadThumbnail: extraction failed, timed out, or returned null — skipping thumbnail for $fileId');
         return;
       }
 

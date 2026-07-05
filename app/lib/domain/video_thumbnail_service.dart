@@ -11,13 +11,20 @@ import 'package:uuid/uuid.dart';
 
 import '../core/logger.dart';
 
+class VideoThumbnailResult {
+  final String? path;
+  final Duration? duration;
+  VideoThumbnailResult({this.path, this.duration});
+}
+
 class VideoThumbnailService {
   
-  /// Extracts multiple frames, uses ML to score them, and returns the path to the best frame.
-  Future<String?> generateSmartThumbnail(String videoPath) async {
+  /// Extracts multiple frames, uses ML to score them, and returns the path to the best frame and the duration.
+  Future<VideoThumbnailResult> generateSmartThumbnail(String videoPath) async {
     Player? player;
     VideoController? controller;
     final List<File> tempFrames = [];
+    Duration? detectedDuration;
     
     try {
       player = Player();
@@ -35,8 +42,10 @@ class VideoThumbnailService {
       
       if (duration.inSeconds == 0) {
         AppLogger.warning('VideoThumbnailService: Could not determine video duration.');
-        return null; // Fallback to no thumbnail or standard extraction
+        return VideoThumbnailResult(); // Fallback to no thumbnail or standard extraction
       }
+
+      detectedDuration = duration;
 
       final cacheDir = await getTemporaryDirectory();
       final uuid = const Uuid().v4();
@@ -58,7 +67,7 @@ class VideoThumbnailService {
 
       if (tempFrames.isEmpty) {
         AppLogger.warning('VideoThumbnailService: Failed to extract any frames.');
-        return null;
+        return VideoThumbnailResult(duration: detectedDuration);
       }
 
       // Analyze frames with ML Kit
@@ -102,7 +111,7 @@ class VideoThumbnailService {
             if (await f.exists()) await f.delete();
           }
           
-          return finalThumb.path;
+          return VideoThumbnailResult(path: finalThumb.path, duration: detectedDuration);
         }
       }
 
@@ -112,7 +121,7 @@ class VideoThumbnailService {
       player?.dispose();
     }
     
-    return null;
+    return VideoThumbnailResult(duration: detectedDuration);
   }
 }
 

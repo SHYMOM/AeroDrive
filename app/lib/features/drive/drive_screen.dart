@@ -591,6 +591,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.download_rounded, color: Colors.white),
+            tooltip: 'Download',
+            onPressed: () => _handleDownloadSelected(context, selectedItems),
+          ),
+          IconButton(
             icon: const Icon(Icons.copy_rounded, color: Colors.white),
             tooltip: 'Copy',
             onPressed: () => _handleCopySelected(context, selectedItems),
@@ -686,6 +691,70 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ],
       ),
     );
+
+  Future<void> _handleDownloadSelected(BuildContext context, Set<String> selectedIds) async {
+    final db = ref.read(databaseProvider);
+    final List<String> filesToDownload = [];
+    
+    for (final id in selectedIds) {
+      final isFolder = await (db.select(db.folders)..where((f) => f.id.equals(id))).getSingleOrNull() != null;
+      if (isFolder) {
+        filesToDownload.addAll(await _getAllFileIdsInFolder(id, db));
+      } else {
+        filesToDownload.add(id);
+      }
+    }
+    
+    final uniqueFiles = filesToDownload.toSet();
+    if (uniqueFiles.isEmpty) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No files found to download.'))
+        );
+      }
+      return;
+    }
+    
+    for (final fileId in uniqueFiles) {
+      await db.into(db.transferQueue).insert(
+        TransferQueueCompanion.insert(
+          id: const Uuid().v4(),
+          fileId: drift.Value(fileId),
+          type: const drift.Value('DOWNLOAD_FILE'),
+          status: const drift.Value('PENDING'),
+          priority: const drift.Value(1),
+          createdAt: drift.Value(DateTime.now()),
+        )
+      );
+    }
+    
+    ref.read(isSelectionModeProvider.notifier).state = false;
+    ref.read(selectedItemsProvider.notifier).state = {};
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Queued ${uniqueFiles.length} files for download.'))
+      );
+    }
+  }
+
+  Future<List<String>> _getAllFileIdsInFolder(String folderId, AeroDriveDatabase db) async {
+    final List<String> fileIds = [];
+    
+    final files = await (db.select(db.files)
+      ..where((f) => f.folderId.equals(folderId) & f.deletedAt.isNull())
+    ).get();
+    fileIds.addAll(files.map((f) => f.id));
+    
+    final subfolders = await (db.select(db.folders)
+      ..where((f) => f.parentId.equals(folderId) & f.deletedAt.isNull())
+    ).get();
+    for (final sub in subfolders) {
+      fileIds.addAll(await _getAllFileIdsInFolder(sub.id, db));
+    }
+    
+    return fileIds;
+  }
 
   Future<void> _handleDeleteSelected(BuildContext context, Set<String> selectedIds) async {
     final confirmed = await showDialog<bool>(

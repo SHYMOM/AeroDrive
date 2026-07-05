@@ -41,6 +41,7 @@ class Files extends Table {
   DateTimeColumn get updatedAt => dateTime().nullable()();
   DateTimeColumn get deletedAt => dateTime().nullable()();
   DateTimeColumn get photoTakenAt => dateTime().nullable()();
+  IntColumn get duration => integer().nullable()(); // video or audio duration in seconds
 
   @override
   Set<Column> get primaryKey => {id};

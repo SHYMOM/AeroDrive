@@ -188,6 +188,7 @@ class ZeroDBRecoveryService {
               final size = manifest['size'] as int? ?? document?['document']?['size'] as int? ?? 0;
               final isChunkedVal = manifest['chk'] == 1;
               final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
+              final durationVal = manifest['dur'] as int?;
               recoveredFiles.add(
                 FilesCompanion.insert(
                   id: fileId,
@@ -200,6 +201,7 @@ class ZeroDBRecoveryService {
                   totalChunks: drift.Value(totalChunksVal),
                   sha256Hash: drift.Value(wrappedDekString),
                   createdAt: drift.Value(DateTime.now()),
+                  duration: drift.Value(durationVal),
                 ),
               );
             }

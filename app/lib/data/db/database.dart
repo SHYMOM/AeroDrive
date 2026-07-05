@@ -33,7 +33,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -74,6 +74,9 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
         }
         if (from < 8) {
           await m.addColumn(files, files.photoTakenAt);
+        }
+        if (from < 9) {
+          await m.addColumn(files, files.duration);
         }
       },
     );

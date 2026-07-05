@@ -31,9 +31,8 @@ class FileGridItem extends ConsumerWidget {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  String _getMockDuration() {
-    final hash = file.id.hashCode.abs();
-    final seconds = (hash % 7200) + 15; // 15s to 2h
+  String _formatDuration(int? seconds) {
+    if (seconds == null || seconds <= 0) return '00:00';
     final h = seconds ~/ 3600;
     final m = (seconds % 3600) ~/ 60;
     final s = seconds % 60;
@@ -194,7 +193,7 @@ class FileGridItem extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            _getMockDuration(),
+                            _formatDuration(file.duration),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 9,
