@@ -124,6 +124,55 @@ class AutoBackupWatcherService {
     return false;
   }
 
+  Future<String> _resolveBackupFolderId(String filePath, String trackedFolderPath) async {
+    final db = _ref.read(databaseProvider);
+    final relativePath = filePath.substring(trackedFolderPath.length);
+    final parts = relativePath.split(Platform.pathSeparator).where((p) => p.isNotEmpty).toList();
+
+    final String deviceName = Platform.isAndroid 
+        ? "Android Device" 
+        : Platform.isIOS 
+            ? "iOS Device" 
+            : Platform.isWindows 
+                ? "Windows PC" 
+                : Platform.isMacOS 
+                    ? "Mac" 
+                    : "Linux Device";
+
+    final trackedFolderName = trackedFolderPath.split(Platform.pathSeparator).lastWhere((s) => s.isNotEmpty, orElse: () => "Backup");
+
+    final List<String> folderHierarchy = ["Backups", deviceName, trackedFolderName];
+    if (parts.length > 1) {
+      folderHierarchy.addAll(parts.sublist(0, parts.length - 1));
+    }
+
+    String? currentFolderId;
+    for (final folderName in folderHierarchy) {
+      var folder = await (db.select(db.folders)
+        ..where((f) => f.name.equals(folderName) & 
+            (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
+            f.deletedAt.isNull())
+      ).getSingleOrNull();
+
+      if (folder == null) {
+        final newId = _uuid.v4();
+        await db.into(db.folders).insert(
+          FoldersCompanion.insert(
+            id: newId,
+            name: folderName,
+            parentId: drift.Value(currentFolderId),
+            createdAt: drift.Value(DateTime.now()),
+          )
+        );
+        currentFolderId = newId;
+      } else {
+        currentFolderId = folder.id;
+      }
+    }
+
+    return currentFolderId!;
+  }
+
   Future<void> _queueFile(String filePath, Map<String, dynamic> profile) async {
     try {
       final db = _ref.read(databaseProvider);
@@ -131,6 +180,19 @@ class AutoBackupWatcherService {
       if (!await file.exists()) return;
 
       final fileSize = await file.length();
+      final folderId = await _resolveBackupFolderId(filePath, profile['path'] as String);
+
+      // Check if file already exists in target folder with same name and size
+      final fileName = filePath.split(Platform.pathSeparator).last;
+      final existing = await (db.select(db.files)
+        ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & f.folderId.equals(folderId) & f.deletedAt.isNull())
+      ).get();
+
+      if (existing.isNotEmpty) {
+        AppLogger.info('AutoBackupWatcher: File $fileName already backed up, skipping');
+        return;
+      }
+
       final queueId = _uuid.v4();
       await db.into(db.transferQueue).insert(
         TransferQueueCompanion.insert(
@@ -139,7 +201,7 @@ class AutoBackupWatcherService {
           status: const drift.Value('PENDING'),
           priority: const drift.Value(1),
           totalBytes: drift.Value(fileSize),
-          fileId: drift.Value('$filePath|null'),
+          fileId: drift.Value('$filePath|$folderId'),
           createdAt: drift.Value(DateTime.now()),
         ),
       );

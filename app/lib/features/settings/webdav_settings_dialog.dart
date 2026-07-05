@@ -63,7 +63,7 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
           _creds = await _configService.getCredentials();
         }
 
-        await WebDavServer.start(_creds!);
+        await WebDavServer.start(ref, _creds!);
         setState(() => _isRunning = true);
       } else {
         _stopServer();

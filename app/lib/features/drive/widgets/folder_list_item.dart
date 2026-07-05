@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../providers/drive_providers.dart';
 import 'folder_picker_dialog.dart';
+import '../../sharing/share_dialog.dart';
 
 class FolderListItem extends ConsumerWidget {
   
@@ -139,6 +140,11 @@ class FolderListItem extends ConsumerWidget {
       onSelected: (value) async {
         if (value == 'rename') {
           _showRenameDialog(context, ref);
+        } else if (value == 'share') {
+          showDialog(
+            context: context,
+            builder: (ctx) => ShareDialog(folder: folder),
+          );
         } else if (value == 'delete') {
           _showDeleteConfirm(context, ref);
         } else if (value == 'move') {
@@ -151,6 +157,7 @@ class FolderListItem extends ConsumerWidget {
       },
       itemBuilder: (context) => [
         const PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Colors.white))),
         const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
         const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
         PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),

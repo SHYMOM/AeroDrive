@@ -375,6 +375,7 @@ class DownloadQueueService {
     try {
       final dekBytesStr = dbFile.sha256Hash!;
       List<int> dekBytes;
+      List<int>? ctrIv;
       
       final masterKey = _ref.read(masterKeyProvider);
       
@@ -392,6 +393,10 @@ class DownloadQueueService {
             SecretBox(cipherText, nonce: nonce, mac: mac),
             secretKey: secretKey,
           );
+
+          if (parts.length >= 4) {
+            ctrIv = base64Decode(parts[3]);
+          }
         } else {
            throw Exception("Corrupted wrapped DEK payload.");
         }
@@ -415,6 +420,7 @@ class DownloadQueueService {
         dbFile.name,
         dekBytes,
         outputPath: outputPath,
+        ctrIv: ctrIv,
       );
 
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))

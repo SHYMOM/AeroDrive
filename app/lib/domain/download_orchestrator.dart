@@ -13,10 +13,12 @@ class DecryptJobPayload {
     required this.sourceEncryptedPaths,
     required this.outputFilePath,
     required this.dekBytes,
+    this.ctrIv,
   });
   final List<String> sourceEncryptedPaths;
   final String outputFilePath;
   final List<int> dekBytes;
+  final List<int>? ctrIv;
 }
 
 class DownloadOrchestrator {
@@ -90,7 +92,13 @@ class DownloadOrchestrator {
 
   /// Runs the Disk-to-Stream decryption pipeline inside a background Isolate.
   /// Decrypts files and writes them to the organized public download folder.
-  Future<File> processFileForDownload(List<String> encryptedChunkPaths, String originalFileName, List<int> dekBytes, {String? outputPath}) async {
+  Future<File> processFileForDownload(
+    List<String> encryptedChunkPaths,
+    String originalFileName,
+    List<int> dekBytes, {
+    String? outputPath,
+    List<int>? ctrIv,
+  }) async {
     String finalPath;
     if (outputPath != null) {
       finalPath = outputPath;
@@ -105,6 +113,7 @@ class DownloadOrchestrator {
       sourceEncryptedPaths: encryptedChunkPaths,
       outputFilePath: finalPath,
       dekBytes: dekBytes,
+      ctrIv: ctrIv,
     );
 
     await compute(_runDecryptionIsolate, payload);
@@ -152,14 +161,22 @@ class DownloadOrchestrator {
   /// The static isolate entrypoint for the decryption job.
   static Future<void> _runDecryptionIsolate(DecryptJobPayload payload) async {
     final engine = EncryptionEngine();
+    var globalByteOffset = 0;
     
     for (var i = 0; i < payload.sourceEncryptedPaths.length; i++) {
+      final encryptedFile = File(payload.sourceEncryptedPaths[i]);
       await engine.decryptDiskToStream(
-        encryptedChunkFile: File(payload.sourceEncryptedPaths[i]),
+        encryptedChunkFile: encryptedFile,
         outputFile: File(payload.outputFilePath),
         dekBytes: payload.dekBytes,
         append: i > 0,
+        ctrIv: payload.ctrIv,
+        globalByteOffset: globalByteOffset,
       );
+      
+      if (payload.ctrIv != null && await encryptedFile.exists()) {
+        globalByteOffset += await encryptedFile.length();
+      }
     }
   }
 }

@@ -135,6 +135,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                     ),
                     _buildSettingsGroup(
+                      'Sharing',
+                      Icons.share_outlined,
+                      [
+                        _SettingsItem('Shared Links', 'Manage and revoke your active share links', Icons.link, onTap: () => context.push('/settings/shared_links')),
+                      ],
+                    ),
+                    _buildSettingsGroup(
                       'Network',
                       Icons.network_check,
                       [

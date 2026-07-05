@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import 'share_service.dart';
 
 class ShareDialog extends ConsumerStatefulWidget {
-  const ShareDialog({super.key, required this.file});
-  final FileData file;
+  const ShareDialog({super.key, this.file, this.folder});
+  final FileData? file;
+  final FolderData? folder;
 
   @override
   ConsumerState<ShareDialog> createState() => _ShareDialogState();
@@ -14,14 +16,12 @@ class ShareDialog extends ConsumerStatefulWidget {
 
 class _ShareDialogState extends ConsumerState<ShareDialog> {
   bool _isLoading = false;
-  ShareLinkData? _shareLink;
+  String? _shareLink;
   String? _error;
 
   // Options
   final _passwordController = TextEditingController();
   bool _hasPassword = false;
-  bool _burnAfterReading = false;
-  int? _maxDownloads;
 
   @override
   void dispose() {
@@ -34,10 +34,9 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
 
     try {
       final link = await ref.read(shareServiceProvider).generateShareLink(
-        widget.file,
+        file: widget.file,
+        folder: widget.folder,
         password: _hasPassword ? _passwordController.text : null,
-        burnAfterReading: _burnAfterReading,
-        maxDownloads: _maxDownloads,
       );
       if (mounted) setState(() { _shareLink = link; _isLoading = false; });
     } catch (e) {
@@ -45,26 +44,22 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     }
   }
 
-  String _buildShareUrl() {
-    if (_shareLink == null) return '';
-    final token = _shareLink!.token ?? '';
-    return 'aerodrive://share?token=$token';
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final link = _buildShareUrl();
+    final link = _shareLink ?? '';
+    final name = widget.file?.name ?? widget.folder?.name ?? '';
 
     return AlertDialog(
-      title: const Text('Share File'),
+      backgroundColor: AppColors.surfaceElevated,
+      title: Text(widget.folder != null ? 'Share Folder' : 'Share File', style: const TextStyle(color: Colors.white)),
       content: SizedBox(
         width: double.maxFinite,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Sharing: ${widget.file.name}', style: theme.textTheme.bodyMedium),
+            Text('Sharing: $name', style: const TextStyle(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 16),
 
             if (_error != null)
@@ -88,8 +83,8 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               SwitchListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Password protect', style: TextStyle(fontSize: 14)),
-                subtitle: _hasPassword ? null : const Text('Require a password to access', style: TextStyle(fontSize: 12)),
+                title: const Text('Password protect', style: TextStyle(fontSize: 14, color: Colors.white)),
+                subtitle: _hasPassword ? null : const Text('Require a password to access', style: TextStyle(fontSize: 12, color: Colors.white54)),
                 value: _hasPassword,
                 onChanged: (v) => setState(() => _hasPassword = v),
               ),
@@ -99,45 +94,21 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                   child: TextField(
                     controller: _passwordController,
                     obscureText: true,
+                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
                       labelText: 'Password',
+                      labelStyle: TextStyle(color: Colors.white70),
                       hintText: 'Enter a share password',
+                      hintStyle: TextStyle(color: Colors.white30),
                       border: OutlineInputBorder(),
                       isDense: true,
                     ),
                   ),
                 ),
-              SwitchListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Burn after reading', style: TextStyle(fontSize: 14)),
-                subtitle: const Text('Self-destruct after first view', style: TextStyle(fontSize: 12)),
-                value: _burnAfterReading,
-                onChanged: (v) => setState(() => _burnAfterReading = v),
-              ),
-              Row(
-                children: [
-                  const Text('Max downloads: ', style: TextStyle(fontSize: 14)),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 80,
-                    child: TextField(
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: 'Unlimited',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      ),
-                      onChanged: (v) => _maxDownloads = int.tryParse(v),
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 8),
               Text(
                 'This generates a zero-knowledge deep link. Recipients need AeroDrive installed.',
-                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
+                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.5)),
               ),
             ] else ...[
               // Share link display
@@ -145,21 +116,22 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
                         link,
-                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Colors.white),
                         maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.copy),
+                      icon: const Icon(Icons.copy, color: AppColors.primary),
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: link));
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -170,25 +142,6 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                   ],
                 ),
               ),
-              if (_shareLink!.expiresAt != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Expires: ${_shareLink!.expiresAt!.toLocal().toString().substring(0, 19)}',
-                    style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant),
-                  ),
-                ),
-              if (_shareLink!.burnAfterReading)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.whatshot, size: 14, color: Colors.orange.shade400),
-                      const SizedBox(width: 4),
-                      Text('Burn after reading', style: TextStyle(fontSize: 12, color: Colors.orange.shade400)),
-                    ],
-                  ),
-                ),
             ],
           ],
         ),
@@ -196,22 +149,24 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
+          child: const Text('Close', style: TextStyle(color: Colors.white54)),
         ),
         if (_shareLink == null && !_isLoading)
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: _generateLink,
-            child: const Text('Generate Link'),
+            child: const Text('Generate Link', style: TextStyle(color: Colors.black)),
           ),
         if (_shareLink != null)
           FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: link));
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Copied to clipboard')),
               );
             },
-            child: const Text('Copy Link'),
+            child: const Text('Copy Link', style: TextStyle(color: Colors.black)),
           ),
       ],
     );

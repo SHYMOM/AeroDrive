@@ -28,6 +28,7 @@ import '../../features/settings/profile_screen.dart';
 import '../../features/settings/proxy_settings_screen.dart';
 import '../../features/settings/session_screen.dart';
 import '../../features/settings/settings_screen.dart';
+import '../../features/settings/shared_links_screen.dart';
 import '../../features/splash/splash_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
 import '../../features/trash/trash_screen.dart';
@@ -242,6 +243,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'backup/dropbox',
                 builder: (context, state) => const DropboxBackupScreen(),
+              ),
+              GoRoute(
+                path: 'shared_links',
+                builder: (context, state) => const SharedLinksScreen(),
               ),
               GoRoute(
                 path: 'about',
