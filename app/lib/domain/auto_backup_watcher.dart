@@ -59,13 +59,14 @@ class AutoBackupWatcherService {
     _subscriptions.clear();
 
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      final status = await Permission.manageExternalStorage.request();
-      if (status.isDenied || status.isPermanentlyDenied) {
-        AppLogger.warning('AutoBackupWatcher: MANAGE_EXTERNAL_STORAGE permission denied');
-        if (status.isPermanentlyDenied) {
-          openAppSettings();
-        }
-        return;
+      final status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        AppLogger.warning(
+          'AutoBackupWatcher: MANAGE_EXTERNAL_STORAGE permission not granted. '
+          'Please grant "Manage All Files" access in App Settings > Permissions for auto-backup to work.'
+        );
+        // Don't return here — try to continue anyway. Some paths (like app-internal)
+        // may still be accessible. The watcher will log per-folder errors if access fails.
       }
     }
 

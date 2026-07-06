@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:drift/drift.dart' as drift;
@@ -6,6 +7,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/constants.dart';
@@ -1087,6 +1089,41 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
+                    // Request storage permission on Android before accessing folders
+                    if (Platform.isAndroid) {
+                      final status = await Permission.manageExternalStorage.request();
+                      if (status.isDenied || status.isPermanentlyDenied) {
+                        if (context.mounted) {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              backgroundColor: AppColors.surfaceElevated,
+                              title: const Text('Storage Permission Required', style: TextStyle(color: Colors.white)),
+                              content: const Text(
+                                'AeroDrive needs "Manage All Files" access to read and upload folders from your device.\n\n'
+                                'Please grant this permission in your device Settings > Apps > AeroDrive > Permissions.',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    openAppSettings();
+                                  },
+                                  child: const Text('Open Settings'),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                    }
+
                     String? directoryPath;
                     try {
                       directoryPath = await getDirectoryPath();

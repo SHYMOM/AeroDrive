@@ -149,14 +149,18 @@ class ConfigSyncService {
         });
         
         if (sentMessage['@type'] != 'error') {
-          // Pin it
-          await telegramService.sendRequest({
-            "@type": "pinChatMessage",
-            "chat_id": configChatId,
-            "message_id": sentMessage['id'],
-            "disable_notification": true,
-            "only_for_self": false
-          });
+          // Try to pin it — may fail if channel restricts pinning
+          try {
+            await telegramService.sendRequest({
+              "@type": "pinChatMessage",
+              "chat_id": configChatId,
+              "message_id": sentMessage['id'],
+              "disable_notification": true,
+              "only_for_self": false
+            });
+          } catch (pinError) {
+            AppLogger.warning('ConfigSyncService: Could not pin config message (non-fatal): $pinError');
+          }
         }
       }
 

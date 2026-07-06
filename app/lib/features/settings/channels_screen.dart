@@ -402,7 +402,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
+          builder: (dialogContext, setStateDialog) => AlertDialog(
               backgroundColor: AppColors.surfaceElevated,
               title: const Text('Create Private Channel', style: TextStyle(color: Colors.white)),
               content: Column(
@@ -524,7 +524,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       }
                       
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           const SnackBar(
                             content: Text('Channel created, pooled, and bound successfully! Syncing...'),
                             backgroundColor: AppColors.success,
@@ -533,7 +533,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       }
                     } catch (e) {
                       if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        ScaffoldMessenger.of(this.context).showSnackBar(
                           SnackBar(
                             content: Text('Failed to create channel: $e'),
                             backgroundColor: AppColors.error,

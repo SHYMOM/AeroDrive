@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -51,50 +53,106 @@ class TrashScreen extends ConsumerWidget {
               if (confirm == true) {
                 final db = ref.read(databaseProvider);
 
-                // Delete Telegram messages permanently before clearing DB
-                final files = await (db.select(db.files)..where((f) => f.deletedAt.isNotNull())).get();
-                var deletedCount = 0;
-                for (final file in files) {
-                  final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).get();
-                  for (final chunk in chunks) {
-                    if (chunk.channelId == null || chunk.messageId == null) continue;
-                    try {
-                      final telegram = ref.read(telegramManagerProvider.notifier).getClient('primary');
-                      if (telegram.authState == TelegramAuthState.ready) {
-                        await telegram.sendRequest({
-                          '@type': 'deleteMessages',
-                          'chat_id': chunk.channelId,
-                          'message_ids': [chunk.messageId],
-                          'revoke': true,
-                        });
-                        deletedCount++;
-                      }
-                    } catch (e) {
-                      AppLogger.error('Failed to delete Telegram message ${chunk.messageId}', e);
+                // 1. Collect ALL trashed files (including files inside trashed folders)
+                final trashedFiles = await (db.select(db.files)..where((f) => f.deletedAt.isNotNull())).get();
+                final trashedFolders = await (db.select(db.folders)..where((f) => f.deletedAt.isNotNull())).get();
+
+                // Also collect files inside trashed folders that might not have deletedAt set individually
+                final folderIds = trashedFolders.map((f) => f.id).toSet();
+                List<FileData> allFilesToDelete = [...trashedFiles];
+                for (final folderId in folderIds) {
+                  final filesInFolder = await (db.select(db.files)..where((f) => f.folderId.equals(folderId))).get();
+                  for (final file in filesInFolder) {
+                    if (!allFilesToDelete.any((f) => f.id == file.id)) {
+                      allFilesToDelete.add(file);
                     }
                   }
                 }
 
-                await db.transaction(() async {
-                  final fileIds = files.map((f) => f.id).toList();
-                  final foldersInTrash = await (db.select(db.folders)..where((f) => f.deletedAt.isNotNull())).get();
-                  final folderIds = foldersInTrash.map((f) => f.id).toList();
+                // 2. Batch Telegram message deletions by channel ID (much more efficient)
+                // Collect: chunk messages, manifest messages, thumbnail messages
+                final Map<int, List<int>> channelMessageMap = {};
 
-                  if (fileIds.isNotEmpty) {
-                    await (db.delete(db.chunks)..where((c) => c.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.thumbnails)..where((t) => t.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.fileTags)..where((ft) => ft.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.photoFaces)..where((pf) => pf.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.filePlaces)..where((fp) => fp.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.shareLinks)..where((sl) => sl.fileId.isIn(fileIds))).go();
-                    await (db.delete(db.files)..where((f) => f.id.isIn(fileIds))).go();
+                void addToDeleteMap(int channelId, int messageId) {
+                  channelMessageMap.putIfAbsent(channelId, () => []).add(messageId);
+                }
+
+                for (final file in allFilesToDelete) {
+                  // Chunk messages
+                  final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).get();
+                  for (final chunk in chunks) {
+                    if (chunk.channelId != null && chunk.messageId != null) {
+                      addToDeleteMap(chunk.channelId!, chunk.messageId!);
+                    }
+                  }
+
+                  // Manifest message (stored on the file record)
+                  if (file.manifestMessageId != null && chunks.isNotEmpty) {
+                    final channelId = chunks.first.channelId;
+                    if (channelId != null) {
+                      addToDeleteMap(channelId, file.manifestMessageId!);
+                    }
+                  }
+                }
+
+                // 3. Delete all collected messages from Telegram, batched by channel
+                var deletedCount = 0;
+                final telegram = ref.read(telegramManagerProvider.notifier).getClient('primary');
+                if (telegram.authState == TelegramAuthState.ready) {
+                  for (final entry in channelMessageMap.entries) {
+                    final channelId = entry.key;
+                    final messageIds = entry.value.toSet().toList(); // deduplicate
+
+                    // TDLib allows max 100 message_ids per deleteMessages call
+                    for (var i = 0; i < messageIds.length; i += 100) {
+                      final batch = messageIds.sublist(i, i + 100 > messageIds.length ? messageIds.length : i + 100);
+                      try {
+                        await telegram.sendRequest({
+                          '@type': 'deleteMessages',
+                          'chat_id': channelId,
+                          'message_ids': batch,
+                          'revoke': true,
+                        });
+                        deletedCount += batch.length;
+                      } catch (e) {
+                        AppLogger.error('Failed to delete ${batch.length} Telegram messages from channel $channelId', e);
+                      }
+                    }
+                  }
+                }
+
+                // 4. Delete all local DB records for trashed items
+                final allFileIds = allFilesToDelete.map((f) => f.id).toList();
+                await db.transaction(() async {
+                  if (allFileIds.isNotEmpty) {
+                    await (db.delete(db.chunks)..where((c) => c.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.thumbnails)..where((t) => t.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.fileTags)..where((ft) => ft.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.photoFaces)..where((pf) => pf.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.filePlaces)..where((fp) => fp.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.shareLinks)..where((sl) => sl.fileId.isIn(allFileIds))).go();
+                    await (db.delete(db.files)..where((f) => f.id.isIn(allFileIds))).go();
                   }
 
                   if (folderIds.isNotEmpty) {
-                    await (db.delete(db.shareLinks)..where((sl) => sl.folderId.isIn(folderIds))).go();
-                    await (db.delete(db.folders)..where((f) => f.id.isIn(folderIds))).go();
+                    // Also delete files still referencing trashed folders (safety net)
+                    await (db.delete(db.shareLinks)..where((sl) => sl.folderId.isIn(folderIds.toList()))).go();
+                    await (db.delete(db.folders)..where((f) => f.id.isIn(folderIds.toList()))).go();
                   }
                 });
+
+                // 5. Clean up local thumbnail cache files
+                for (final file in allFilesToDelete) {
+                  if (file.thumbnailPath != null) {
+                    try {
+                      final thumbFile = File(file.thumbnailPath!);
+                      if (await thumbFile.exists()) {
+                        await thumbFile.delete();
+                      }
+                    } catch (_) {}
+                  }
+                }
+
                 AppLogger.info('Trash emptied: $deletedCount Telegram messages permanently deleted');
                 ref.invalidate(trashedItemsProvider);
                 if (context.mounted) {
@@ -144,15 +202,26 @@ class TrashScreen extends ConsumerWidget {
                   leading: const Icon(Icons.folder, color: Colors.redAccent),
                   title: Text(folder.name),
                   subtitle: Text('$daysLeft days left'),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      await ref.read(folderRepositoryProvider).restoreFolder(folder.id);
-                      ref.invalidate(trashedItemsProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Folder Restored')));
-                      }
-                    },
-                    child: const Text('Restore'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.restore, color: Colors.blueAccent),
+                        tooltip: 'Restore',
+                        onPressed: () async {
+                          await ref.read(folderRepositoryProvider).restoreFolder(folder.id);
+                          ref.invalidate(trashedItemsProvider);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Folder Restored')));
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                        tooltip: 'Delete Permanently',
+                        onPressed: () => _permanentlyDeleteFolder(context, ref, folder),
+                      ),
+                    ],
                   ),
                 );
               } else {
@@ -163,15 +232,26 @@ class TrashScreen extends ConsumerWidget {
                   leading: const Icon(Icons.insert_drive_file, color: Colors.grey),
                   title: Text(file.name),
                   subtitle: Text('${(file.size ?? 0) ~/ 1024} KB  $daysLeft days left'),
-                  trailing: TextButton(
-                    onPressed: () async {
-                      await ref.read(fileRepositoryProvider).restoreFile(file.id);
-                      ref.invalidate(trashedItemsProvider);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File Restored')));
-                      }
-                    },
-                    child: const Text('Restore'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.restore, color: Colors.blueAccent),
+                        tooltip: 'Restore',
+                        onPressed: () async {
+                          await ref.read(fileRepositoryProvider).restoreFile(file.id);
+                          ref.invalidate(trashedItemsProvider);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File Restored')));
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_forever, color: Colors.redAccent),
+                        tooltip: 'Delete Permanently',
+                        onPressed: () => _permanentlyDeleteFile(context, ref, file),
+                      ),
+                    ],
                   ),
                 );
               }
@@ -181,5 +261,115 @@ class TrashScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _permanentlyDeleteFile(BuildContext context, WidgetRef ref, FileData file) async {
+    final db = ref.read(databaseProvider);
+
+    // Collect all Telegram message IDs to delete
+    final Map<int, List<int>> channelMessageMap = {};
+    void addToMap(int channelId, int messageId) {
+      channelMessageMap.putIfAbsent(channelId, () => []).add(messageId);
+    }
+
+    final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).get();
+    for (final chunk in chunks) {
+      if (chunk.channelId != null && chunk.messageId != null) {
+        addToMap(chunk.channelId!, chunk.messageId!);
+      }
+    }
+    if (file.manifestMessageId != null && chunks.isNotEmpty) {
+      final channelId = chunks.first.channelId;
+      if (channelId != null) {
+        addToMap(channelId, file.manifestMessageId!);
+      }
+    }
+
+    // Delete from Telegram
+    final telegram = ref.read(telegramManagerProvider.notifier).getClient('primary');
+    if (telegram.authState == TelegramAuthState.ready) {
+      for (final entry in channelMessageMap.entries) {
+        final messageIds = entry.value.toSet().toList();
+        try {
+          await telegram.sendRequest({
+            '@type': 'deleteMessages',
+            'chat_id': entry.key,
+            'message_ids': messageIds,
+            'revoke': true,
+          });
+        } catch (e) {
+          AppLogger.error('Failed to delete messages for file ${file.id}', e);
+        }
+      }
+    }
+
+    // Delete from local DB
+    await db.transaction(() async {
+      await (db.delete(db.chunks)..where((c) => c.fileId.equals(file.id))).go();
+      await (db.delete(db.thumbnails)..where((t) => t.fileId.equals(file.id))).go();
+      await (db.delete(db.fileTags)..where((ft) => ft.fileId.equals(file.id))).go();
+      await (db.delete(db.photoFaces)..where((pf) => pf.fileId.equals(file.id))).go();
+      await (db.delete(db.filePlaces)..where((fp) => fp.fileId.equals(file.id))).go();
+      await (db.delete(db.shareLinks)..where((sl) => sl.fileId.equals(file.id))).go();
+      await (db.delete(db.files)..where((f) => f.id.equals(file.id))).go();
+    });
+
+    // Clean up local thumbnail cache
+    if (file.thumbnailPath != null) {
+      try {
+        final thumbFile = File(file.thumbnailPath!);
+        if (await thumbFile.exists()) await thumbFile.delete();
+      } catch (_) {}
+    }
+
+    ref.invalidate(trashedItemsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${file.name} permanently deleted')));
+    }
+  }
+
+  Future<void> _permanentlyDeleteFolder(BuildContext context, WidgetRef ref, FolderData folder) async {
+    final db = ref.read(databaseProvider);
+
+    // Recursively collect all file IDs inside this folder tree
+    Future<List<FileData>> getAllFilesInFolderTree(String folderId) async {
+      final List<FileData> result = [];
+      final files = await (db.select(db.files)..where((f) => f.folderId.equals(folderId))).get();
+      result.addAll(files);
+      final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId))).get();
+      for (final sub in subfolders) {
+        result.addAll(await getAllFilesInFolderTree(sub.id));
+      }
+      return result;
+    }
+
+    final allFiles = await getAllFilesInFolderTree(folder.id);
+
+    // Delete all files in this folder from Telegram
+    for (final file in allFiles) {
+      await _permanentlyDeleteFile(context, ref, file);
+    }
+
+    // Delete the folder tree from DB
+    // Get all subfolder IDs recursively
+    Future<List<String>> getAllSubfolderIds(String folderId) async {
+      final List<String> ids = [folderId];
+      final subfolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folderId))).get();
+      for (final sub in subfolders) {
+        ids.addAll(await getAllSubfolderIds(sub.id));
+      }
+      return ids;
+    }
+
+    final allFolderIds = await getAllSubfolderIds(folder.id);
+    await db.transaction(() async {
+      await (db.delete(db.shareLinks)..where((sl) => sl.folderId.isIn(allFolderIds))).go();
+      await (db.delete(db.folders)..where((f) => f.id.isIn(allFolderIds))).go();
+    });
+
+    ref.invalidate(trashedItemsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Folder "${folder.name}" permanently deleted')));
+    }
   }
 }

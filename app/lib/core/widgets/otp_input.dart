@@ -44,11 +44,17 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
       _focusNodes[i].addListener(() {
         if (_focusNodes[i].hasFocus) {
           _glowControllers[i].forward();
+          // Select all text when focused so typing replaces it
+          if (_controllers[i].text.isNotEmpty) {
+            _controllers[i].selection = TextSelection(
+              baseOffset: 0,
+              extentOffset: _controllers[i].text.length,
+            );
+          }
         } else {
           _glowControllers[i].reverse();
         }
       });
-      _controllers[i].addListener(() => _onControllerChanged(i));
     }
   }
 
@@ -66,39 +72,49 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _onControllerChanged(int index) {
+  void _onChanged(int index, String value) {
     if (_isUpdating) return;
-    final text = _controllers[index].text;
+    _isUpdating = true;
 
-    if (text.length > 1) {
-      _isUpdating = true;
-      final cleaned = text.replaceAll(RegExp('[^0-9]'), '');
+    // Handle paste: if multiple digits were entered, distribute them
+    final cleaned = value.replaceAll(RegExp('[^0-9]'), '');
+    if (cleaned.length > 1) {
       final chars = cleaned.split('');
-
       for (var i = 0; i < chars.length; i++) {
         final targetIndex = index + i;
         if (targetIndex < widget.length) {
           _controllers[targetIndex].text = chars[i];
+          _controllers[targetIndex].selection = TextSelection.collapsed(offset: 1);
         }
       }
-
+      final nextIndex = (index + chars.length).clamp(0, widget.length - 1);
+      _focusNodes[nextIndex].requestFocus();
       _isUpdating = false;
-
-      final nextIndex = (index + chars.length) < widget.length ? (index + chars.length) : widget.length - 1;
-      if (chars.isNotEmpty && _focusNodes[nextIndex].canRequestFocus) {
-        _focusNodes[nextIndex].requestFocus();
-      }
       _checkCompleted();
       return;
     }
 
-    if (text.isEmpty && index > 0) {
-      _focusNodes[index - 1].requestFocus();
-    } else if (text.isNotEmpty && index < widget.length - 1) {
-      _focusNodes[index + 1].requestFocus();
+    // Single digit entered: keep only last char and move forward
+    if (cleaned.isNotEmpty) {
+      _controllers[index].text = cleaned.substring(cleaned.length - 1);
+      _controllers[index].selection = TextSelection.collapsed(offset: 1);
+      if (index < widget.length - 1) {
+        _focusNodes[index + 1].requestFocus();
+      }
     }
 
+    _isUpdating = false;
     _checkCompleted();
+  }
+
+  void _onKeyEvent(int index, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.backspace &&
+        _controllers[index].text.isEmpty &&
+        index > 0) {
+      _controllers[index - 1].clear();
+      _focusNodes[index - 1].requestFocus();
+    }
   }
 
   void _checkCompleted() {
@@ -130,6 +146,8 @@ class _OtpInputState extends State<OtpInput> with TickerProviderStateMixin {
             activeColor: widget.activeColor,
             inactiveColor: widget.inactiveColor,
             textColor: widget.textColor,
+            onChanged: (value) => _onChanged(index, value),
+            onKeyEvent: (event) => _onKeyEvent(index, event),
           ),
         )),
     );
@@ -141,6 +159,8 @@ class _OtpBox extends StatefulWidget {
     required this.controller,
     required this.focusNode,
     required this.glowController,
+    required this.onChanged,
+    required this.onKeyEvent,
     this.activeColor,
     this.inactiveColor,
     this.textColor,
@@ -148,6 +168,8 @@ class _OtpBox extends StatefulWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
   final AnimationController glowController;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<KeyEvent> onKeyEvent;
   final Color? activeColor;
   final Color? inactiveColor;
   final Color? textColor;
@@ -160,7 +182,7 @@ class _OtpBoxState extends State<_OtpBox> {
   @override
   void initState() {
     super.initState();
-    widget.focusNode.onKeyEvent = _onKeyEvent;
+    widget.focusNode.onKeyEvent = _handleKeyEvent;
   }
 
   @override
@@ -169,12 +191,11 @@ class _OtpBoxState extends State<_OtpBox> {
     super.dispose();
   }
 
-  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is KeyDownEvent &&
         event.logicalKey == LogicalKeyboardKey.backspace &&
         widget.controller.text.isEmpty) {
-      final focusScope = FocusScope.of(context);
-      focusScope.previousFocus();
+      widget.onKeyEvent(event);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -213,8 +234,9 @@ class _OtpBoxState extends State<_OtpBox> {
             textAlign: TextAlign.center,
             inputFormatters: [
               FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(2), // Allow 2 so we can detect input and trim
             ],
-            maxLength: 1,
+            onChanged: widget.onChanged,
             style: TextStyle(
               color: text,
               fontSize: 22,

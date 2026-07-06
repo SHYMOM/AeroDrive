@@ -242,13 +242,17 @@ class ShareService {
         });
         
         if (sent['@type'] != 'error') {
-          await telegram.sendRequest({
-            "@type": "pinChatMessage",
-            "chat_id": configChatId,
-            "message_id": sent['id'],
-            "disable_notification": true,
-            "only_for_self": false
-          });
+          try {
+            await telegram.sendRequest({
+              "@type": "pinChatMessage",
+              "chat_id": configChatId,
+              "message_id": sent['id'],
+              "disable_notification": true,
+              "only_for_self": false
+            });
+          } catch (pinError) {
+            AppLogger.warning('ShareService: Could not pin registry message (non-fatal): $pinError');
+          }
         }
       } else {
         final tempDir = await getTemporaryDirectory();
@@ -271,13 +275,17 @@ class ShareService {
         );
 
         if (sent['@type'] != 'error') {
-          await telegram.sendRequest({
-            "@type": "pinChatMessage",
-            "chat_id": configChatId,
-            "message_id": sent['id'],
-            "disable_notification": true,
-            "only_for_self": false
-          });
+          try {
+            await telegram.sendRequest({
+              "@type": "pinChatMessage",
+              "chat_id": configChatId,
+              "message_id": sent['id'],
+              "disable_notification": true,
+              "only_for_self": false
+            });
+          } catch (pinError) {
+            AppLogger.warning('ShareService: Could not pin registry message (non-fatal): $pinError');
+          }
         }
 
         if (await tempFile.exists()) {
@@ -358,8 +366,10 @@ class ShareService {
     }
 
     final inviteRes = await telegram.sendRequest({
-      "@type": "exportChatInviteLink",
+      "@type": "createChatInviteLink",
       "chat_id": chatId,
+      "name": "AeroDrive Public Share",
+      "creates_join_request": false,
     });
     final inviteLink = inviteRes['invite_link'] as String?;
 
