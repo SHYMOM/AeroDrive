@@ -12,13 +12,13 @@ class ImportLinkDialog extends ConsumerWidget {
     final controller = TextEditingController();
     return AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
-      title: const Text('Import Link', style: TextStyle(color: AppColors.onSurface)),
+      title: Text('Import Link', style: TextStyle(color: AppColors.onSurface)),
       content: TextField(
         controller: controller,
-        style: const TextStyle(color: AppColors.onSurface),
+        style: TextStyle(color: AppColors.onSurface),
         decoration: InputDecoration(
           hintText: 'aerodrive://share?...',
-          hintStyle: const TextStyle(color: AppColors.onSurfaceVariant),
+          hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
           filled: true,
           fillColor: AppColors.surfaceVariant,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -27,7 +27,7 @@ class ImportLinkDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
@@ -57,11 +57,11 @@ class ImportLinkDialog extends ConsumerWidget {
             showDialog(
               context: context,
               barrierDismissible: false,
-              builder: (ctx) => const PopScope(
+              builder: (ctx) => PopScope(
                 canPop: false,
                 child: AlertDialog(
                   backgroundColor: AppColors.surfaceElevated,
-                  content: Row(
+                  content: const Row(
                     children: [
                       CircularProgressIndicator(),
                       SizedBox(width: 20),

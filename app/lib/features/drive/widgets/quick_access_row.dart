@@ -35,7 +35,7 @@ class QuickAccessRow extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Quick Access',
                 style: TextStyle(
                   color: AppColors.onSurface,
@@ -104,7 +104,7 @@ class QuickAccessRow extends ConsumerWidget {
                             const SizedBox(height: 12),
                             Text(
                               cat.title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: AppColors.onSurface,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,

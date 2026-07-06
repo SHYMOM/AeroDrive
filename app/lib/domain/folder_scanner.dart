@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:archive/archive_io.dart';
+import 'package:archive/archive_io.dart' hide File;
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
@@ -116,7 +116,7 @@ class FolderScanner {
   /// Bug #4 fix: Added error handling per-entity so a single failure won't stall
   /// the entire folder upload. Added logging for debugging stalls.
   Future<void> _walkAndQueueDirectory(Directory dir, String? parentFolderId) async {
-    final folderName = dir.path.split(Platform.pathSeparator).last;
+    final folderName = dir.path.contains('/') ? dir.path.split('/').last : dir.path.split('\\').last;
 
     // Create DB folder entry
     final folderId = _uuid.v4();
@@ -174,7 +174,7 @@ class FolderScanner {
     ZipProgressCallback? onProgress,
   }) async {
     final rootDirPath = rootDir.path;
-    final folderName = rootDirPath.split(Platform.pathSeparator).last;
+    final folderName = rootDirPath.contains('/') ? rootDirPath.split('/').last : rootDirPath.split('\\').last;
 
     // Create a folder entry in DB
     final folderId = _uuid.v4();
@@ -242,7 +242,8 @@ class FolderScanner {
 
     for (final entity in allFiles) {
       final file = entity as File;
-      final relativePath = file.path.substring(sourceDir.length + (sourceDir.endsWith(Platform.pathSeparator) ? 0 : 1));
+      final endsWithSeparator = sourceDir.endsWith('/') || sourceDir.endsWith('\\');
+      final relativePath = file.path.substring(sourceDir.length + (endsWithSeparator ? 0 : 1));
       final fileSize = await file.length();
 
       // Bug #3 fix: Skip files larger than 200 MB in ZIP — they should be

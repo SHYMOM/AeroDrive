@@ -92,7 +92,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const PopScope(
+      builder: (ctx) => PopScope(
         canPop: false,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
@@ -125,7 +125,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           child: AlertDialog(
             backgroundColor: AppColors.surfaceElevated,
             title: const Text('Creating Sync Channel', style: TextStyle(color: Colors.white)),
-            content: const Text(
+            content: Text(
               'We are creating a private Telegram channel named "AeroDrive Config" in your account. '
               'It will be placed in your Archive folder. This channel stores your storage configuration securely so you can sync across devices.\n\n'
               '⚠️ Please NEVER delete this channel, or you will lose your sync configuration!',
@@ -139,7 +139,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   showDialog(
                     context: context,
                     barrierDismissible: false,
-                    builder: (dialogCtx) => const PopScope(
+                    builder: (dialogCtx) => PopScope(
                       canPop: false,
                       child: AlertDialog(
                         backgroundColor: AppColors.surfaceElevated,
@@ -175,7 +175,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
           title: const Text('Configuration Found', style: TextStyle(color: Colors.white)),
-          content: const Text(
+          content: Text(
             'We found a previous storage configuration saved in your AeroDrive Config channel. '
             'Would you like to restore these channels and rebuild your database?',
             style: TextStyle(color: AppColors.onSurface),
@@ -258,7 +258,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
         title: const Text('Welcome to AeroDrive!', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        content: Text(
           'To start uploading and syncing your files securely, you need to connect at least one Telegram storage channel.',
           style: TextStyle(color: AppColors.onSurface),
         ),
@@ -420,17 +420,17 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                               ? Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+                                      icon: Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
                                       onPressed: () => ref.read(isFavoriteOnlyProvider.notifier).state = false,
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                                    Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                   ],
                                 )
                               : isRoot
-                                  ? const Text(
+                                  ? Text(
                                       'My Drive',
                                       style: TextStyle(
                                         color: AppColors.onSurface,
@@ -447,11 +447,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         Row(
                           children: [
                             _buildLayoutSelector(context, isGridView),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: () => _showSortBottomSheet(context),
-                              icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
-                            ),
+                            SizedBox(width: 8),
+                             IconButton(
+                               onPressed: () => _showSortBottomSheet(context),
+                               icon: Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
+                             ),
                           ],
                         ),
                       ],
@@ -462,15 +462,29 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
 
                 if (isGridView) ...[
                   // Grid Layout
-                  if (folders.isNotEmpty)
+                  if (folders.isNotEmpty) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: Text(
+                          'Folders',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
-                          childAspectRatio: 0.82,
+                          maxCrossAxisExtent: 180,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 2.6,
                         ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FolderGridItem(folder: folders[index]),
@@ -478,16 +492,31 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         ),
                       ),
                     ),
+                  ],
                   if (folders.isNotEmpty && files.isNotEmpty)
-                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                  if (files.isNotEmpty)
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                  if (files.isNotEmpty) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: Text(
+                          'Files',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 220,
-                          mainAxisSpacing: 16,
-                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
                           childAspectRatio: 0.82,
                         ),
                         delegate: SliverChildBuilderDelegate(
@@ -496,9 +525,24 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         ),
                       ),
                     ),
+                  ],
                 ] else ...[
                   // List Layout
-                  if (folders.isNotEmpty)
+                  if (folders.isNotEmpty) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: Text(
+                          'Folders',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverList(
@@ -508,9 +552,24 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         ),
                       ),
                     ),
+                  ],
                   if (folders.isNotEmpty && files.isNotEmpty)
                     const SliverToBoxAdapter(child: SizedBox(height: 16)),
-                  if (files.isNotEmpty)
+                  if (files.isNotEmpty) ...[
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: Text(
+                          'Files',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverList(
@@ -520,22 +579,23 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         ),
                       ),
                     ),
+                  ],
                 ],
 
                 if (folders.isEmpty && files.isEmpty)
-                  const SliverFillRemaining(
+                  SliverFillRemaining(
                     child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.folder_open, size: 64, color: AppColors.outline),
-                          SizedBox(height: 16),
+                          const SizedBox(height: 16),
                           Text('No items', style: TextStyle(color: AppColors.onSurfaceVariant)),
                         ],
                       ),
                     ),
                   ),
-                const SliverToBoxAdapter(child: SizedBox(height: 100)), // Padding for FAB
+                const SliverToBoxAdapter(child: SizedBox(height: 140)), // Padding for FAB
               ],
             ),
           );
@@ -618,12 +678,12 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       backgroundColor: AppColors.background,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.menu, color: AppColors.onSurface),
+        icon: Icon(Icons.menu, color: AppColors.onSurface),
         onPressed: () {
           Scaffold.of(context).openDrawer();
         },
       ),
-      title: const Row(
+      title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_outlined, color: AppColors.primary, size: 28),
@@ -641,14 +701,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       centerTitle: false,
       actions: [
         IconButton(
-          icon: const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+          icon: Icon(Icons.search, color: AppColors.onSurfaceVariant),
           onPressed: () => context.push('/search'),
         ),
       ],
     );
   }
 
-  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) => SingleChildScrollView(
+  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) {
+    final isRootCurrent = currentFolderId == null;
+    return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
@@ -657,19 +719,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               ref.read(navigationStackProvider.notifier).state = [];
               ref.read(currentFolderIdProvider.notifier).state = null;
             },
-            child: const Text(
+            child: Text(
               'My Drive',
               style: TextStyle(
-                color: AppColors.primary,
+                color: isRootCurrent ? Colors.white : Colors.white38,
                 fontSize: 14,
-                fontWeight: FontWeight.bold,
+                fontWeight: isRootCurrent ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
           for (final folder in breadcrumbs) ...[
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(Icons.chevron_right, size: 16, color: AppColors.onSurfaceVariant),
+              child: Icon(Icons.chevron_right, size: 14, color: Colors.white24),
             ),
             GestureDetector(
               onTap: () {
@@ -681,7 +743,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               child: Text(
                 folder.name,
                 style: TextStyle(
-                  color: folder.id == currentFolderId ? AppColors.onSurface : AppColors.primary,
+                  color: folder.id == currentFolderId ? Colors.white : Colors.white38,
                   fontSize: 14,
                   fontWeight: folder.id == currentFolderId ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -691,6 +753,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ],
       ),
     );
+  }
 
   Future<void> _handleDownloadSelected(BuildContext context, Set<String> selectedIds) async {
     final db = ref.read(databaseProvider);
@@ -1024,7 +1087,14 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
-                    final String? directoryPath = await getDirectoryPath();
+                    String? directoryPath;
+                    try {
+                      directoryPath = await getDirectoryPath();
+                    } catch (e) {
+                      if (context.mounted) {
+                        _showFolderSelectionError(context, e);
+                      }
+                    }
                     if (directoryPath != null) {
                       final scanner = ref.read(folderScannerProvider);
                       await scanner.scanAndQueueDirectory(directoryPath, currentFolderId);
@@ -1037,6 +1107,28 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
             ),
           ),
         ),
+    );
+  }
+
+  void _showFolderSelectionError(BuildContext context, dynamic error) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Text('Folder Selection Error', style: TextStyle(color: Colors.white)),
+        content: Text(
+          'Selecting folders in certain directories (like Downloads or Android/data) is not supported by Android\'s storage system.\n\n'
+          'Please select a folder from another storage location (e.g. Device storage root or Documents).\n\n'
+          'Error details: $error',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1084,8 +1176,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       const Divider(color: Colors.white10),
                       
                       // Sort Criteria
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Sort By', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortCriteriaItem(context, 'Name', DriveSortCriteria.name, activeSort, setModalState),
@@ -1095,8 +1187,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       
                       const Divider(color: Colors.white10),
                       // Sort Order
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Order', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortOrderItem(context, 'Ascending', DriveSortOrder.ascending, activeSort, setModalState),
@@ -1104,8 +1196,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       
                       const Divider(color: Colors.white10),
                       // Prioritize Type
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Prioritize Category', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortCategoryItem(context, 'None', DriveSortCategory.none, activeSort, setModalState),
@@ -1171,98 +1263,39 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       },
     );
 
-  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => Container(
-      padding: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () async {
-              ref.read(isGridViewProvider.notifier).state = true;
-              await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', true);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isGridView ? const Color(0xFF1E293B) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: isGridView 
-                    ? Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4))
-                    : Border.all(color: Colors.transparent),
-                boxShadow: isGridView ? [
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                    blurRadius: 8,
-                  )
-                ] : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.grid_view_rounded,
-                    size: 14,
-                    color: isGridView ? const Color(0xFF38BDF8) : Colors.white60,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Grid',
-                    style: TextStyle(
-                      color: isGridView ? Colors.white : Colors.white60,
-                      fontSize: 11,
-                      fontWeight: isGridView ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(
+            Icons.grid_view_rounded,
+            size: 20,
+            color: isGridView ? const Color(0xFF38BDF8) : Colors.white38,
           ),
-          GestureDetector(
-            onTap: () async {
-              ref.read(isGridViewProvider.notifier).state = false;
-              await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', false);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: !isGridView ? const Color(0xFF1E293B) : Colors.transparent,
-                borderRadius: BorderRadius.circular(8),
-                border: !isGridView 
-                    ? Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.4))
-                    : Border.all(color: Colors.transparent),
-                boxShadow: !isGridView ? [
-                  BoxShadow(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                    blurRadius: 8,
-                  )
-                ] : null,
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.list_rounded,
-                    size: 14,
-                    color: !isGridView ? const Color(0xFF38BDF8) : Colors.white60,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'List',
-                    style: TextStyle(
-                      color: !isGridView ? Colors.white : Colors.white60,
-                      fontSize: 11,
-                      fontWeight: !isGridView ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          onPressed: () async {
+            ref.read(isGridViewProvider.notifier).state = true;
+            await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', true);
+          },
+          tooltip: 'Grid view',
+        ),
+        const SizedBox(width: 12),
+        IconButton(
+          icon: Icon(
+            Icons.list_rounded,
+            size: 22,
+            color: !isGridView ? const Color(0xFF38BDF8) : Colors.white38,
           ),
-        ],
-      ),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          onPressed: () async {
+            ref.read(isGridViewProvider.notifier).state = false;
+            await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', false);
+          },
+          tooltip: 'List view',
+        ),
+      ],
     );
 
   void _showNoChannelDialog(BuildContext context) {
@@ -1270,8 +1303,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('No Storage Channel', style: TextStyle(color: AppColors.onSurface)),
-        content: const Text('Please select a Telegram channel in Settings before uploading.', style: TextStyle(color: AppColors.onSurfaceVariant)),
+        title: Text('No Storage Channel', style: TextStyle(color: AppColors.onSurface)),
+        content: Text('Please select a Telegram channel in Settings before uploading.', style: TextStyle(color: AppColors.onSurfaceVariant)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1288,7 +1321,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
         title: const Text('Encryption Error', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        content: Text(
           'Your encryption keys could not be initialized properly. Please try restarting the app or logging out and logging back in.',
           style: TextStyle(color: AppColors.onSurfaceVariant),
         ),

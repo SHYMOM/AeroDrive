@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../providers/drive_providers.dart';
 import 'folder_picker_dialog.dart';
+import 'marquee_text.dart';
 import '../../sharing/share_dialog.dart';
 
 class FolderListItem extends ConsumerWidget {
@@ -53,6 +54,13 @@ class FolderListItem extends ConsumerWidget {
     final selectedItems = ref.watch(selectedItemsProvider);
     final isSelected = selectedItems.contains(folder.id);
 
+    final itemsCountAsync = ref.watch(folderItemsCountProvider(folder.id));
+    final itemsCountText = itemsCountAsync.when(
+      data: (count) => '$count item${count == 1 ? "" : "s"}',
+      loading: () => '...',
+      error: (_, _) => '0 items',
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -79,11 +87,10 @@ class FolderListItem extends ConsumerWidget {
         title: Row(
           children: [
             Expanded(
-              child: Text(
-                folder.name, 
+              child: MarqueeText(
+                text: folder.name,
+                alignment: Alignment.centerLeft,
                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
             if (folder.isFavorite)
@@ -96,8 +103,8 @@ class FolderListItem extends ConsumerWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
-            '$sizeText • $dateString',
-            style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+            itemsCountText,
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
         ),
         trailing: isSelectionMode

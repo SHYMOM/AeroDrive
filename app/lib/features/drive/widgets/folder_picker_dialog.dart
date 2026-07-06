@@ -1,13 +1,22 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/providers/repository_providers.dart';
+import '../../../core/providers/security_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
+import '../../../domain/recovery/manifest_encoder.dart';
+import '../../telegram/telegram_service.dart';
 
-class FolderPickerDialog extends ConsumerStatefulWidget { // Don't allow picking a folder or its nested subfolders
-
+class FolderPickerDialog extends ConsumerStatefulWidget {
   const FolderPickerDialog({
     super.key,
     required this.title,
@@ -61,7 +70,6 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
     
     // Exclude folder if defined
     if (widget.excludeFolderId != null) {
-      // Find all recursively nested subfolders of excludeFolderId
       final Set<String> excludedIds = {widget.excludeFolderId!};
       await _findNestedFolderIds(widget.excludeFolderId!, excludedIds, db);
       subs = subs.where((f) => !excludedIds.contains(f.id)).toList();
@@ -86,6 +94,90 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
     }
   }
 
+  Future<void> _handleCreateFolder(BuildContext context) async {
+    final nameController = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New Folder'),
+        content: TextField(
+          controller: nameController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Folder name',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, nameController.text.trim()),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+
+    if (name == null || name.isEmpty) return;
+
+    final activeChannelStr = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+    final masterKey = ref.read(masterKeyProvider);
+
+    if (activeChannelStr == null || masterKey == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vault is locked or active channel is not set. Cannot create folder.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return;
+    }
+
+    final folderRepo = ref.read(folderRepositoryProvider);
+    final newFolderId = await folderRepo.createFolder(
+      name: name,
+      parentId: _currentFolderId,
+      color: '0xFF60A5FA', // Default Blue
+    );
+
+    // Refresh directory view immediately
+    await _loadCurrentFolderContents();
+
+    // Trigger manifest upload in background (non-blocking)
+    unawaited(() async {
+      try {
+        final chatId = int.parse(activeChannelStr);
+        final cipher = AesGcm.with256bits();
+        final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+        final manifestCaption = await ManifestEncoder.encodeFolderManifest(
+          folderId: newFolderId,
+          folderName: name,
+          parentFolderId: _currentFolderId,
+          masterKey: secretKey,
+          color: '0xFF60A5FA',
+        );
+
+        final tempDir = await getTemporaryDirectory();
+        final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
+        final pngBytes = Uint8List.fromList([
+          137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+        ]);
+        await tempFile.writeAsBytes(pngBytes);
+
+        final telegram = ref.read(telegramServiceProvider.notifier);
+        await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      } catch (_) {}
+    }());
+  }
+
   @override
   Widget build(BuildContext context) => Dialog(
       backgroundColor: AppColors.background,
@@ -95,10 +187,25 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
         height: 450,
         child: Column(
           children: [
-            // Title
-            Text(
-              widget.title,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+            // Title Header with Create Folder option
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.create_new_folder_outlined, color: AppColors.primary),
+                  onPressed: () => _handleCreateFolder(context),
+                  tooltip: 'Create New Folder',
+                  constraints: const BoxConstraints(),
+                  padding: const EdgeInsets.all(8),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             
@@ -111,30 +218,30 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _subfolders.isEmpty
-                      ? const Center(
-                          child: Text('No subfolders found.', style: TextStyle(color: Colors.white38, fontSize: 13)),
+                      ? Center(
+                          child: Text('No subfolders found.', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13)),
                         )
                       : ListView.builder(
                           itemCount: _subfolders.length,
                           itemBuilder: (context, index) {
                             final folder = _subfolders[index];
-                             Color color = Colors.blueAccent;
-                             if (folder.color != null && folder.color!.isNotEmpty) {
-                               try {
-                                 var colorStr = folder.color!;
-                                 if (colorStr.startsWith('#')) {
-                                   colorStr = colorStr.replaceFirst('#', '0xFF');
-                                 } else if (!colorStr.startsWith('0x') && !colorStr.startsWith('0X')) {
-                                   colorStr = '0x$colorStr';
-                                 }
-                                 color = Color(int.parse(colorStr));
-                               } catch (_) {}
-                             }
+                            Color color = Colors.blueAccent;
+                            if (folder.color != null && folder.color!.isNotEmpty) {
+                              try {
+                                var colorStr = folder.color!;
+                                if (colorStr.startsWith('#')) {
+                                  colorStr = colorStr.replaceFirst('#', '0xFF');
+                                } else if (!colorStr.startsWith('0x') && !colorStr.startsWith('0X')) {
+                                  colorStr = '0x$colorStr';
+                                }
+                                color = Color(int.parse(colorStr));
+                              } catch (_) {}
+                            }
                             
                             return ListTile(
                               leading: Icon(Icons.folder, color: color),
-                              title: Text(folder.name, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                              trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                              title: Text(folder.name, style: TextStyle(color: AppColors.onSurface, fontSize: 14)),
+                              trailing: Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant.withOpacity(0.5)),
                               onTap: () {
                                 setState(() {
                                   _currentFolderId = folder.id;
@@ -154,7 +261,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
               children: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                  child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
@@ -166,7 +273,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Select folder', style: TextStyle(color: Colors.black)),
+                  child: Text('Select folder', style: TextStyle(color: AppColors.onPrimary)),
                 ),
               ],
             ),
@@ -190,7 +297,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
             child: const Text('My Drive', style: TextStyle(color: AppColors.primary, fontSize: 13)),
           ),
           for (final crumb in _breadcrumbs) ...[
-            const Icon(Icons.chevron_right, color: Colors.white38, size: 16),
+            Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant.withOpacity(0.5), size: 16),
             InkWell(
               onTap: () {
                 setState(() {

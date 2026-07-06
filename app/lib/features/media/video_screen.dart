@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,8 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../drive/providers/drive_providers.dart';
+import '../drive/widgets/press_and_hold_preview.dart';
+import '../gallery/thumbnail_service.dart';
 import '../preview/preview_router.dart';
 
 class VideosScreen extends ConsumerWidget {
@@ -21,7 +24,7 @@ class VideosScreen extends ConsumerWidget {
         backgroundColor: AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
+          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -57,30 +60,62 @@ class VideosScreen extends ConsumerWidget {
   }
 }
 
-class _VideoItem extends StatelessWidget {
+class _VideoItem extends ConsumerWidget {
 
   const _VideoItem({required this.file, required this.siblings});
   final FileData file;
   final List<FileData> siblings;
 
   @override
-  Widget build(BuildContext context) => ListTile(
-      leading: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.fileVideo.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+  Widget build(BuildContext context, WidgetRef ref) => PressAndHoldPreview(
+        file: file,
+        child: ListTile(
+          leading: SizedBox(
+            width: 44,
+            height: 44,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: FutureBuilder<File?>(
+                future: ref.read(thumbnailServiceProvider).getThumbnail(file),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.file(snapshot.data!, fit: BoxFit.cover),
+                        Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: Colors.black45,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Colors.white,
+                              size: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  return Container(
+                    color: AppColors.fileVideo.withValues(alpha: 0.1),
+                    child: const Icon(Icons.videocam_outlined, color: AppColors.fileVideo, size: 22),
+                  );
+                },
+              ),
+            ),
+          ),
+          title: Text(file.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
+          subtitle: Text(
+            file.size != null ? _formatFileSize(file.size!) : 'Unknown size',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+          ),
+          onTap: () => PreviewRouter.openPreview(context, file, siblings: siblings),
         ),
-        child: const Icon(Icons.videocam_outlined, color: AppColors.fileVideo, size: 22),
-      ),
-      title: Text(file.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
-      subtitle: Text(
-        file.size != null ? _formatFileSize(file.size!) : 'Unknown size',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
-      ),
-      onTap: () => PreviewRouter.openPreview(context, file, siblings: siblings),
-    );
+      );
 
   String _formatFileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';

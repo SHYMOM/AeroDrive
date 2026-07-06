@@ -84,7 +84,7 @@ class _SharedLinksScreenState extends ConsumerState<SharedLinksScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const PopScope(
+      builder: (ctx) => PopScope(
         canPop: false,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceElevated,

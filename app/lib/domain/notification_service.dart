@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/logger.dart';
@@ -18,7 +19,10 @@ class NotificationService {
 
   bool _initialized = false;
 
+  bool get _isSupported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+
   Future<void> initialize() async {
+    if (!_isSupported) return;
     if (_initialized) return;
 
     const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -73,6 +77,7 @@ class NotificationService {
   }
 
   Future<void> requestPermissions() async {
+    if (!_isSupported) return;
     if (Platform.isAndroid) {
       final status = await Permission.notification.status;
       if (status.isDenied) {
@@ -82,6 +87,7 @@ class NotificationService {
   }
 
   Future<void> showUploadProgress(int id, String fileName, int progress, int total) async {
+    if (!_isSupported) return;
     final int percent = total > 0 ? ((progress / total) * 100).toInt() : 0;
     final androidDetails = AndroidNotificationDetails(
       'aerodrive_uploads',
@@ -112,6 +118,7 @@ class NotificationService {
   }
 
   Future<void> showUploadComplete(int id, String fileName) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_uploads',
       'Uploads',
@@ -127,6 +134,7 @@ class NotificationService {
   }
 
   Future<void> showUploadFailed(int id, String fileName, String reason) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_uploads',
       'Uploads',
@@ -144,6 +152,7 @@ class NotificationService {
   }
 
   Future<void> showDownloadProgress(int id, String fileName, int progress, int total) async {
+    if (!_isSupported) return;
     final int percent = total > 0 ? ((progress / total) * 100).toInt() : 0;
     final androidDetails = AndroidNotificationDetails(
       'aerodrive_downloads',
@@ -167,6 +176,7 @@ class NotificationService {
   }
 
   Future<void> showDownloadComplete(int id, String fileName, String filePath) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_downloads',
       'Downloads',
@@ -183,6 +193,7 @@ class NotificationService {
   }
 
   Future<void> showDownloadFailed(int id, String fileName, String reason) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_downloads',
       'Downloads',
@@ -200,6 +211,7 @@ class NotificationService {
   }
 
   Future<void> showBackupComplete(String filePath) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_backup',
       'Backups',
@@ -218,6 +230,7 @@ class NotificationService {
   }
 
   Future<void> showSyncStatus(String message) async {
+    if (!_isSupported) return;
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_sync',
       'Sync Status',

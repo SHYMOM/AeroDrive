@@ -150,7 +150,7 @@ class FileListItem extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             subtitleText,
-            style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+            style: const TextStyle(color: Colors.white54, fontSize: 11),
           ),
         ),
         trailing: isSelectionMode

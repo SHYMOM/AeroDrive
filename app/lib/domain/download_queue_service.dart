@@ -194,8 +194,13 @@ class DownloadQueueService {
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
           .write(const TransferQueueCompanion(status: drift.Value('PROCESSING')));
 
+    // Extract actual fileId and custom path if present
+    final parts = item.fileId!.split('|');
+    final actualFileId = parts[0];
+    final String? customOutputPath = parts.length > 1 ? parts[1] : null;
+
     // 3. Fetch File and Chunk metadata
-    final dbFile = await (_db.select(_db.files)..where((f) => f.id.equals(item.fileId!))).getSingleOrNull();
+    final dbFile = await (_db.select(_db.files)..where((f) => f.id.equals(actualFileId))).getSingleOrNull();
     if (dbFile == null) {
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
           .write(const TransferQueueCompanion(status: drift.Value('FAILED'), errorMessage: drift.Value('File not found in DB.')));
@@ -203,7 +208,7 @@ class DownloadQueueService {
     }
 
     final dbChunks = await (_db.select(_db.chunks)
-      ..where((c) => c.fileId.equals(item.fileId!))
+      ..where((c) => c.fileId.equals(actualFileId))
       ..orderBy([(c) => drift.OrderingTerm.asc(c.chunkIndex)])
     ).get();
 
@@ -222,11 +227,11 @@ class DownloadQueueService {
     }
 
     final totalChunks = dbFile.totalChunks ?? validChunks.length;
-    _downloadedChunkPaths[item.fileId!] = {};
-    _downloadProgress[item.fileId!] = {};
+    _downloadedChunkPaths[actualFileId] = {};
+    _downloadProgress[actualFileId] = {};
 
     final fileSize = dbFile.size ?? 0;
-    _fileTotalBytes[item.fileId!] = fileSize;
+    _fileTotalBytes[actualFileId] = fileSize;
 
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
         .write(TransferQueueCompanion(
@@ -273,7 +278,7 @@ class DownloadQueueService {
 
             _activeDownloads[remoteFileId] = ActiveDownloadInfo(
               queueId: item.id,
-              fileId: item.fileId!,
+              fileId: actualFileId,
               chunkIndex: dbChunk.chunkIndex ?? 0,
               totalChunks: totalChunks,
               fileName: dbFile.name,
@@ -289,7 +294,7 @@ class DownloadQueueService {
               // If event listener already removed this from activeDownloads, skip
               if (!_activeDownloads.containsKey(remoteFileId)) {
                 // Check if chunk path was stored by the event listener
-                localPath = _downloadedChunkPaths[item.fileId!]?[dbChunk.chunkIndex ?? 0];
+                localPath = _downloadedChunkPaths[actualFileId]?[dbChunk.chunkIndex ?? 0];
                 break;
               }
               try {
@@ -301,12 +306,12 @@ class DownloadQueueService {
                   final totalSize = fileInfo['expected_size'] as int? ?? fileInfo['size'] as int? ?? 0;
 
                   // Update progress
-                  _downloadProgress.putIfAbsent(item.fileId!, () => {})[dbChunk.chunkIndex ?? 0] = downloadedSize;
-                  final totalDownloaded = _downloadProgress[item.fileId!]!.values.fold<int>(0, (a, b) => a + b);
+                  _downloadProgress.putIfAbsent(actualFileId, () => {})[dbChunk.chunkIndex ?? 0] = downloadedSize;
+                  final totalDownloaded = _downloadProgress[actualFileId]!.values.fold<int>(0, (a, b) => a + b);
                   await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
                       .write(TransferQueueCompanion(
                         bytesTransferred: drift.Value(totalDownloaded),
-                        totalBytes: drift.Value(_fileTotalBytes[item.fileId!] ?? totalSize),
+                        totalBytes: drift.Value(_fileTotalBytes[actualFileId] ?? totalSize),
                       ));
 
                   if (isCompleted) {
@@ -322,20 +327,20 @@ class DownloadQueueService {
             _activeDownloads.remove(remoteFileId);
 
             if (localPath != null && localPath.isNotEmpty) {
-              _downloadedChunkPaths.putIfAbsent(item.fileId!, () => {})[dbChunk.chunkIndex ?? 0] = localPath;
+              _downloadedChunkPaths.putIfAbsent(actualFileId, () => {})[dbChunk.chunkIndex ?? 0] = localPath;
 
-              final completedMap = _downloadedChunkPaths[item.fileId!]!;
+              final completedMap = _downloadedChunkPaths[actualFileId]!;
               if (completedMap.length == totalChunks) {
                 try {
                   final sortedPaths = List<String>.generate(totalChunks, (index) => completedMap[index]!);
-                  await _finalizeDownload(item.id, item.fileId!, sortedPaths);
+                  await _finalizeDownload(item.id, actualFileId, sortedPaths);
                 } catch (e) {
-                  AppLogger.error('Failed to finalize download for ${item.fileId}', e);
+                  AppLogger.error('Failed to finalize download for $actualFileId', e);
                   await _markQueueFailed(item.id, 'Finalization failed: $e');
                 }
-                _downloadedChunkPaths.remove(item.fileId);
-                _downloadProgress.remove(item.fileId);
-                _fileTotalBytes.remove(item.fileId);
+                _downloadedChunkPaths.remove(actualFileId);
+                _downloadProgress.remove(actualFileId);
+                _fileTotalBytes.remove(actualFileId);
               }
             } else {
               AppLogger.error('Download chunk ${dbChunk.chunkIndex} failed to download after 30s');
@@ -411,8 +416,11 @@ class DownloadQueueService {
         }
       }
 
+      final queueParts = item.fileId?.split('|');
+      final String? customOutputPath = (queueParts != null && queueParts.length > 1) ? queueParts[1] : null;
+
       final targetDir = await DownloadOrchestrator.ensureDownloadDirectory(dbFile.mimeType);
-      final rawOutputPath = '${targetDir.path}${Platform.pathSeparator}${dbFile.name}';
+      final rawOutputPath = customOutputPath ?? '${targetDir.path}${Platform.pathSeparator}${dbFile.name}';
       final outputPath = await DownloadOrchestrator.dedupFilePath(rawOutputPath);
 
       final decryptedFile = await _orchestrator.processFileForDownload(

@@ -13,6 +13,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../providers/drive_providers.dart';
 import 'folder_picker_dialog.dart';
+import 'marquee_text.dart';
 import '../../sharing/share_dialog.dart';
 
 class FolderGridItem extends ConsumerWidget {
@@ -53,6 +54,13 @@ class FolderGridItem extends ConsumerWidget {
     final selectedItems = ref.watch(selectedItemsProvider);
     final isSelected = selectedItems.contains(folder.id);
 
+    final itemsCountAsync = ref.watch(folderItemsCountProvider(folder.id));
+    final itemsCountText = itemsCountAsync.when(
+      data: (count) => '$count item${count == 1 ? "" : "s"}',
+      loading: () => '...',
+      error: (_, _) => '0 items',
+    );
+
     return InkWell(
       onTap: () {
         if (isSelectionMode) {
@@ -80,86 +88,99 @@ class FolderGridItem extends ConsumerWidget {
           ref.read(selectedItemsProvider.notifier).state = {folder.id};
         }
       },
-      borderRadius: BorderRadius.circular(16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: folderColor.withValues(alpha: 0.15),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Icon(
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E2D),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF38BDF8)
+                : Colors.white.withValues(alpha: 0.08),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: [
+            if (isSelected)
+              BoxShadow(
+                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                blurRadius: 10,
+              )
+            else
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 8,
+              ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(
                   Icons.folder_rounded,
-                  size: 85,
+                  size: 28,
                   color: folderColor,
                 ),
-              ),
-              if (isSelectionMode)
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : Colors.black45,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                    child: Icon(
-                      isSelected ? Icons.check : Icons.add,
-                      size: 12,
-                      color: isSelected ? Colors.black : Colors.transparent,
+                if (isSelectionMode)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: isSelected ? AppColors.primary : Colors.black45,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.0),
+                      ),
+                      child: Icon(
+                        isSelected ? Icons.check : Icons.add,
+                        size: 8,
+                        color: isSelected ? Colors.black : Colors.transparent,
+                      ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    folder.name, 
-                    textAlign: TextAlign.center, 
-                    maxLines: 1, 
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    folder.name,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: AppColors.onSurface,
+                      color: Colors.white,
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    itemsCountText,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
                 if (folder.isFavorite)
                   const Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 14),
                 if (!isSelectionMode)
                   _buildOptionsMenu(context, ref),
               ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '$dateString\n$sizeText',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.onSurfaceVariant,
-              fontSize: 10,
-              height: 1.3,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -77,7 +77,7 @@ class ProfileScreen extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     primary.phoneNumber ?? 'Not authenticated',
-                    style: const TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
+                    style: TextStyle(fontSize: 14, color: AppColors.onSurfaceVariant),
                   ),
                   if (primary.username != null && primary.username!.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -122,7 +122,7 @@ class ProfileScreen extends ConsumerWidget {
                 margin: const EdgeInsets.symmetric(vertical: 6),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppColors.outline),
+                  side: BorderSide(color: AppColors.outline),
                 ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(12),
@@ -148,13 +148,13 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               )),
           ] else ...[
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 48),
+                padding: const EdgeInsets.symmetric(vertical: 48),
                 child: Column(
                   children: [
                     Icon(Icons.people_outline, size: 48, color: AppColors.onSurfaceVariant),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
                       'No secondary accounts linked yet',
                       style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),

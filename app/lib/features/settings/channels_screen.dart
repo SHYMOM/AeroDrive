@@ -111,12 +111,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         content: Text(
           'Would you like to automatically add and promote all your other logged-in Telegram accounts as administrators of "$channelTitle"?\n\n'
           'This allows AeroDrive to pool bandwidth across all accounts for faster, load-balanced uploads and downloads.',
-          style: const TextStyle(color: AppColors.onSurface),
+          style: TextStyle(color: AppColors.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('No, only this account', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('No, only this account', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -235,12 +235,12 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         title: const Text('Add Storage Channel', style: TextStyle(color: Colors.white)),
         content: Text(
           'Are you sure you want to bind "$title" as a storage backend for account "$accountId"?',
-          style: const TextStyle(color: AppColors.onSurface),
+          style: TextStyle(color: AppColors.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -284,7 +284,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                     _showLinkExistingChannelDialog();
                   },
                 ),
-                const Divider(color: AppColors.outline),
+                Divider(color: AppColors.outline),
                 ListTile(
                   leading: const Icon(Icons.add_circle_outline, color: AppColors.secondaryLight),
                   title: const Text('Create Private Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -324,7 +324,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                     }).toList();
 
                     if (filteredAvailable.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           'No available admin channels found. Ensure you are an administrator of the channels.',
                           textAlign: TextAlign.center,
@@ -347,7 +347,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
-                            side: const BorderSide(color: AppColors.outline),
+                            side: BorderSide(color: AppColors.outline),
                           ),
                           child: ListTile(
                             leading: const Icon(Icons.campaign, color: AppColors.primaryLight),
@@ -384,7 +384,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Close', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  child: Text('Close', style: TextStyle(color: AppColors.onSurfaceVariant)),
                 ),
               ],
             );
@@ -412,20 +412,20 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                   TextField(
                     controller: titleController,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Channel Title',
                       labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: descController,
                     style: const TextStyle(color: Colors.white),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Description (Optional)',
                       labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -453,7 +453,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                  child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
                 ),
                 FilledButton(
                   onPressed: () async {

@@ -63,8 +63,8 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
     Clipboard.setData(ClipboardData(text: buffer.toString()));
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
+      SnackBar(
+        content: const Row(
           children: [
             Icon(Icons.check_circle_outline, color: AppColors.success),
             SizedBox(width: 8),
@@ -72,7 +72,7 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
           ],
         ),
         backgroundColor: AppColors.surfaceElevated,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -305,13 +305,13 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
                         },
                       ),
                       if (_isLogsExpanded) ...[
-                        const Divider(height: 1),
+                        Divider(height: 1),
                         Container(
                           height: 250,
                           width: double.infinity,
-                          color: const Color(0xFF070814),
+                          color: Color(0xFF070814),
                           child: widget.logs.isEmpty
-                              ? const Center(
+                              ? Center(
                                   child: Text(
                                     'No logs in buffer.',
                                     style: TextStyle(fontFamily: 'monospace', color: AppColors.onSurfaceVariant),
@@ -406,7 +406,7 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
                     backgroundColor: AppColors.surfaceVariant,
                     foregroundColor: AppColors.onSurface,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppColors.outline),
+                    side: BorderSide(color: AppColors.outline),
                   ),
                 ),
                 const SizedBox(height: 24),

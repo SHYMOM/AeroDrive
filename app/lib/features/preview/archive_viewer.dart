@@ -179,7 +179,7 @@ class _ArchiveViewerState extends ConsumerState<ArchiveViewer> {
                   ),
                   subtitle: isDir ? null : Text(
                     _formatSize(entry.size),
-                    style: const TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                    style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                   ),
                   trailing: isDir ? null : IconButton(
                     icon: const Icon(Icons.download, size: 16),

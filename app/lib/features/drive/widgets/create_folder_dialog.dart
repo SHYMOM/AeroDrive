@@ -33,17 +33,17 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
-      title: const Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
+      title: Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _nameController,
             autofocus: true,
-            style: const TextStyle(color: AppColors.onSurface),
+            style: TextStyle(color: AppColors.onSurface),
             decoration: InputDecoration(
               hintText: 'Folder name',
-              hintStyle: const TextStyle(color: AppColors.onSurfaceVariant),
+              hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
               filled: true,
               fillColor: AppColors.surfaceVariant,
               border: OutlineInputBorder(
@@ -53,7 +53,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
             ),
           ),
           const SizedBox(height: 24),
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Folder Color',
@@ -94,7 +94,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
         ),
         ElevatedButton(
           onPressed: () async {

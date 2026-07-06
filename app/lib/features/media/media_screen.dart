@@ -226,7 +226,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
+                  icon: Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
                   onPressed: () {
                     ref.invalidate(allMediaFilesProvider);
                     ref.invalidate(allMediaFoldersProvider);
@@ -261,7 +261,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   )
                 else ...[
                   IconButton(
-                    icon: const Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
+                    icon: Icon(Icons.refresh, color: AppColors.onSurfaceVariant),
                     onPressed: () {
                       ref.invalidate(allMediaFilesProvider);
                       ref.invalidate(allMediaFoldersProvider);
@@ -306,7 +306,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             ),
             const SizedBox(width: 8),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
+              icon: Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
               color: AppColors.surfaceElevated,
               onSelected: (val) {
                 if (val == 'refresh_ai') {
@@ -382,7 +382,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     final columnsCount = ref.watch(mediaColumnCountProvider);
 
     return PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
+      icon: Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
       color: AppColors.surfaceElevated,
       onSelected: (value) {
         if (value == 'sort_newest') {
@@ -867,7 +867,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                                 ),
                                 Text(
                                   '${folderFiles.length}',
-                                  style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10),
+                                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10),
                                 ),
                               ],
                             ),
@@ -1331,7 +1331,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   }
 
   Widget _buildBottomSubNavBar() => DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.background,
         border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 0.5)),
       ),
@@ -1375,7 +1375,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         children: [
           Icon(icon, size: 64, color: AppColors.outline),
           const SizedBox(height: 16),
-          Text(message, style: const TextStyle(color: AppColors.onSurfaceVariant)),
+          Text(message, style: TextStyle(color: AppColors.onSurfaceVariant)),
         ],
       ),
     );

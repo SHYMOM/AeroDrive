@@ -169,7 +169,7 @@ class SearchScreen extends ConsumerWidget {
         ),
         actions: [
           PopupMenuButton<SearchSortBy>(
-            icon: const Icon(Icons.sort, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.sort, color: AppColors.onSurfaceVariant),
             tooltip: 'Sort',
             color: AppColors.surfaceElevated,
             onSelected: (value) {
@@ -199,7 +199,7 @@ class SearchScreen extends ConsumerWidget {
             ],
           ),
           PopupMenuButton<SearchFilterType>(
-            icon: const Icon(Icons.filter_list, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.filter_list, color: AppColors.onSurfaceVariant),
             tooltip: 'Filter',
             color: AppColors.surfaceElevated,
             onSelected: (value) {
@@ -272,7 +272,7 @@ class SearchScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Sort: ${sortBy.name}',
-                      style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                      style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                     ),
                     const SizedBox(width: 8),
                     if (filterType != SearchFilterType.all)
@@ -351,9 +351,9 @@ class SearchScreen extends ConsumerWidget {
                     child: CustomScrollView(
                       slivers: [
                         if (folders.isNotEmpty) ...[
-                          const SliverToBoxAdapter(
+                          SliverToBoxAdapter(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Folders',
                                 style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
@@ -383,9 +383,9 @@ class SearchScreen extends ConsumerWidget {
                           const SliverToBoxAdapter(child: SizedBox(height: 24)),
                         ],
                         if (files.isNotEmpty) ...[
-                          const SliverToBoxAdapter(
+                          SliverToBoxAdapter(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Files',
                                 style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),

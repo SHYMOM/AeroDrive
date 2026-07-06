@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
@@ -79,15 +80,15 @@ class FileGridItem extends ConsumerWidget {
           ref.read(selectedItemsProvider.notifier).state = {file.id};
         }
       },
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(12),
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A).withValues(alpha: 0.6), // Dark slate theme
-          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xFF1E1E2D), // Slightly lighter surface #1E1E2D
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected 
                 ? const Color(0xFF38BDF8) // Glow cyan
-                : Colors.white.withValues(alpha: 0.05),
+                : Colors.white.withValues(alpha: 0.08), // Subtle 1px stroke
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: [
@@ -104,7 +105,7 @@ class FileGridItem extends ConsumerWidget {
           ],
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -125,9 +126,9 @@ class FileGridItem extends ConsumerWidget {
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
                           colors: [
-                            Colors.black.withValues(alpha: 0.4),
+                            Colors.black.withValues(alpha: 0.3),
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.4),
+                            Colors.black.withValues(alpha: 0.3),
                           ],
                         ),
                       ),
@@ -164,19 +165,29 @@ class FileGridItem extends ConsumerWidget {
                       ),
                     ),
 
-                    // Video Play overlay button in the middle
+                    // Video Play overlay button in the middle (with frosted glass effect)
                     if (isVid)
                       Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: Colors.black,
-                            size: 24,
+                        child: ClipOval(
+                          child: BackdropFilter(
+                            filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 1.2,
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -251,31 +262,15 @@ class FileGridItem extends ConsumerWidget {
                           _buildOptionsMenu(context, ref),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Text(
-                          sizeString,
-                          style: const TextStyle(
-                            color: AppColors.onSurfaceVariant,
-                            fontSize: 10,
-                          ),
-                        ),
-                        const Spacer(),
-                        const Icon(
-                          Icons.calendar_today_outlined,
-                          size: 10,
-                          color: AppColors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          dateString,
-                          style: const TextStyle(
-                            color: AppColors.onSurfaceVariant,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      '$dateString • $sizeString',
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 10,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

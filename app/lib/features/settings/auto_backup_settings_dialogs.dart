@@ -1,10 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:workmanager/workmanager.dart';
 
+import '../../core/providers.dart';
 import '../../core/providers/repository_providers.dart';
+import '../../domain/auto_backup_watcher.dart';
+import '../drive/widgets/folder_picker_dialog.dart';
 
 class ManageBackupFoldersScreen extends ConsumerStatefulWidget {
   const ManageBackupFoldersScreen({super.key});
@@ -42,8 +48,40 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
     }
   }
 
+  Future<void> _updateWorkmanagerConstraints() async {
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      try {
+        final wifiOnly = _profiles.any((p) => p['wifiOnly'] == true);
+        await Workmanager().cancelAll();
+        
+        final enabled = await ref.read(settingsRepositoryProvider).getSetting('master_autobackup_enabled');
+        if (enabled == 'true' && _profiles.isNotEmpty) {
+          await Workmanager().registerPeriodicTask(
+            'aero_drive_backup',
+            'aero_drive_scheduled_backup',
+            frequency: const Duration(minutes: 15),
+            constraints: Constraints(
+              networkType: wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+              requiresBatteryNotLow: true,
+              requiresCharging: true,
+            ),
+            existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+          );
+          debugPrint('[AeroDrive] Workmanager constraints updated. wifiOnly=$wifiOnly');
+        }
+      } catch (e) {
+        debugPrint('[AeroDrive] Failed to update Workmanager constraints: $e');
+      }
+    }
+  }
+
   Future<void> _saveProfiles() async {
     await ref.read(settingsRepositoryProvider).setSetting('tracked_backup_folders', jsonEncode(_profiles));
+    await _updateWorkmanagerConstraints();
+    
+    // Notify the watcher to refresh watchers instantly
+    ref.read(autoBackupWatcherProvider).start();
+
     if (mounted) setState(() {});
   }
 
@@ -83,10 +121,24 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
                     if (profile['include_documents'] == true) types.add('Docs');
                     if (profile['include_all'] == true) types.add('All Files');
 
+                    final dest = profile['destinationFolderName'] ?? 'My Drive (Root)';
+                    final mode = profile['backupMode'] == 'drive_to_local'
+                        ? 'Download Only'
+                        : profile['backupMode'] == 'both'
+                            ? 'Sync'
+                            : 'Upload Only';
+                    final del = profile['deleteBehavior'] == 'sync_deletions'
+                        ? 'Delete on Dest'
+                        : 'Keep on Dest';
+                    final net = profile['wifiOnly'] == true ? 'Wi-Fi' : 'Any Net';
+
                     return ListTile(
                       leading: const Icon(Icons.folder, color: Colors.blueAccent),
                       title: Text(path, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('Types: ${types.join(', ')} • Quality: ${profile['quality']}'),
+                      subtitle: Text(
+                        'To: $dest • $mode ($del) • $net\nTypes: ${types.join(', ')} • Quality: ${profile['quality']}'
+                      ),
+                      isThreeLine: true,
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                         onPressed: () => _removeProfile(index),
@@ -111,27 +163,84 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
     );
 }
 
-class AddBackupProfileDialog extends StatefulWidget {
+class AddBackupProfileDialog extends ConsumerStatefulWidget {
   const AddBackupProfileDialog({super.key});
 
   @override
-  State<AddBackupProfileDialog> createState() => _AddBackupProfileDialogState();
+  ConsumerState<AddBackupProfileDialog> createState() => _AddBackupProfileDialogState();
 }
 
-class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
+class _AddBackupProfileDialogState extends ConsumerState<AddBackupProfileDialog> {
   String? _selectedPath;
+  String? _destinationFolderId;
+  String _destinationFolderName = 'My Drive (Root)';
   bool _incImages = true;
   bool _incVideos = false;
   bool _incDocs = false;
   bool _incAll = false;
   String _quality = 'High';
+  String _backupMode = 'local_to_drive';
+  String _deleteBehavior = 'dont_delete';
+  bool _wifiOnly = true;
 
   Future<void> _pickFolder() async {
-    final String? result = await getDirectoryPath();
+    try {
+      final String? result = await getDirectoryPath();
+      if (result != null) {
+        setState(() {
+          _selectedPath = result;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showFolderSelectionError(context, e);
+      }
+    }
+  }
+
+  void _showFolderSelectionError(BuildContext context, dynamic error) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Folder Selection Error'),
+        content: Text(
+          'Selecting folders in certain directories (like Downloads or Android/data) is not supported by Android\'s storage system.\n\n'
+          'Please select a folder from another storage location (e.g. Device storage root or Documents).\n\n'
+          'Error details: $error',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDestinationFolder() async {
+    final String? result = await showDialog<String?>(
+      context: context,
+      builder: (context) => const FolderPickerDialog(
+        title: 'Select Destination Folder',
+      ),
+    );
     if (result != null) {
-      setState(() {
-        _selectedPath = result;
-      });
+      if (result == '__root__') {
+        setState(() {
+          _destinationFolderId = null;
+          _destinationFolderName = 'My Drive (Root)';
+        });
+      } else {
+        final db = ref.read(databaseProvider);
+        final folder = await (db.select(db.folders)..where((f) => f.id.equals(result))).getSingleOrNull();
+        if (folder != null) {
+          setState(() {
+            _destinationFolderId = folder.id;
+            _destinationFolderName = folder.name;
+          });
+        }
+      }
     }
   }
 
@@ -143,7 +252,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Folder to Track', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text('Local Folder to Track', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -158,11 +267,70 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
                 IconButton(
                   icon: const Icon(Icons.folder_open),
                   onPressed: _pickFolder,
-                  tooltip: 'Browse',
+                  tooltip: 'Browse Local',
                 ),
               ],
             ),
-            const Divider(height: 32),
+            const Divider(height: 24),
+
+            const Text('Drive Destination Folder', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _destinationFolderName,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.cloud_upload_outlined),
+                  onPressed: _pickDestinationFolder,
+                  tooltip: 'Choose Drive Folder',
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+
+            const Text('Sync Mode', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _backupMode,
+              decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+              items: const [
+                DropdownMenuItem(value: 'local_to_drive', child: Text('Local to Drive (Upload only)')),
+                DropdownMenuItem(value: 'drive_to_local', child: Text('Drive to Local (Download only)')),
+                DropdownMenuItem(value: 'both', child: Text('Bidirectional Sync (Both directions)')),
+              ],
+              onChanged: (v) => setState(() => _backupMode = v!),
+            ),
+            const SizedBox(height: 16),
+
+            const Text('Deletions Policy', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: _deleteBehavior,
+              decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
+              items: const [
+                DropdownMenuItem(value: 'dont_delete', child: Text('Keep files on destination (DCIM-style)')),
+                DropdownMenuItem(value: 'sync_deletions', child: Text('Delete files on destination')),
+              ],
+              onChanged: (v) => setState(() => _deleteBehavior = v!),
+            ),
+            const SizedBox(height: 16),
+
+            SwitchListTile(
+              title: const Text('Back up on Wi-Fi only', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              subtitle: const Text('Prevents using mobile data for sync', style: TextStyle(fontSize: 11)),
+              value: _wifiOnly,
+              onChanged: (v) => setState(() => _wifiOnly = v),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            const Divider(height: 24),
+
             const Text('File Types to Backup', style: TextStyle(fontWeight: FontWeight.bold)),
             CheckboxListTile(
               title: const Text('Images (JPG, PNG, etc.)'),
@@ -170,6 +338,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
               onChanged: _incAll ? null : (v) => setState(() => _incImages = v!),
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
             CheckboxListTile(
               title: const Text('Videos (MP4, MKV, etc.)'),
@@ -177,6 +346,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
               onChanged: _incAll ? null : (v) => setState(() => _incVideos = v!),
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
             CheckboxListTile(
               title: const Text('Documents (PDF, DOCX, etc.)'),
@@ -184,6 +354,7 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
               onChanged: _incAll ? null : (v) => setState(() => _incDocs = v!),
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
             CheckboxListTile(
               title: const Text('All Files'),
@@ -200,12 +371,13 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
               },
               dense: true,
               controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
             ),
-            const Divider(height: 32),
+            const Divider(height: 24),
             const Text('Upload Quality', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              initialValue: _quality,
+              value: _quality,
               decoration: const InputDecoration(border: OutlineInputBorder(), isDense: true),
               items: const [
                 DropdownMenuItem(value: 'Original', child: Text('Original')),
@@ -231,6 +403,11 @@ class _AddBackupProfileDialogState extends State<AddBackupProfileDialog> {
                     'include_documents': _incDocs,
                     'include_all': _incAll,
                     'quality': _quality,
+                    'destinationFolderId': _destinationFolderId,
+                    'destinationFolderName': _destinationFolderName,
+                    'backupMode': _backupMode,
+                    'deleteBehavior': _deleteBehavior,
+                    'wifiOnly': _wifiOnly,
                   });
                 },
           child: const Text('Save Profile'),

@@ -236,7 +236,7 @@ final class _MobileLayout extends StatelessWidget {
               children: [
                 const GlobalProgressBar(),
                 DecoratedBox(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.background,
                     border: Border(top: BorderSide(color: AppColors.outlineVariant)),
                   ),

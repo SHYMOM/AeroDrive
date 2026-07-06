@@ -82,16 +82,16 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: AppColors.outline),
                   ),
-                  child: Text(_successPath!, style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12), textAlign: TextAlign.center),
+                  child: Text(_successPath!, style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12), textAlign: TextAlign.center),
                 ),
               ],
             )
           : _isLoading
-              ? const Column(
+              ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: AppColors.primary),
-                    SizedBox(height: 16),
+                    const CircularProgressIndicator(color: AppColors.primary),
+                    const SizedBox(height: 16),
                     Text('Exporting backup data...', style: TextStyle(color: AppColors.onSurfaceVariant)),
                   ],
                 )
@@ -99,14 +99,14 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                const Text(
+                Text(
                   'Select what you want to export to a secure backup file:',
                   style: TextStyle(color: AppColors.onSurface),
                 ),
                 const SizedBox(height: 16),
                 CheckboxListTile(
                   title: const Text('Database Data', style: TextStyle(color: Colors.white)),
-                  subtitle: const Text('Files, folders, chunks, channels, accounts, faces', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
+                  subtitle: Text('Files, folders, chunks, channels, accounts, faces', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
                   value: _exportDatabase,
                   activeColor: AppColors.primary,
                   checkColor: Colors.white,
@@ -119,7 +119,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                 ),
                 CheckboxListTile(
                   title: const Text('Application Settings', style: TextStyle(color: Colors.white)),
-                  subtitle: const Text('Preferences, timeouts, toggles', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
+                  subtitle: Text('Preferences, timeouts, toggles', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
                   value: _exportSettings,
                   activeColor: AppColors.primary,
                   checkColor: Colors.white,
@@ -145,7 +145,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               : [
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+                    child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
                   ),
               FilledButton(
                 style: FilledButton.styleFrom(
@@ -537,14 +537,14 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         content = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Select a .aerobackup file from your local storage to restore your data or settings.',
               style: TextStyle(color: AppColors.onSurface),
             ),
             const SizedBox(height: 24),
             OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.outline),
+                side: BorderSide(color: AppColors.outline),
                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -557,7 +557,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         actions = [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
         ];
 
@@ -591,7 +591,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                     const SizedBox(height: 8),
                     Text(
                       'Path: ${_selectedFilePath != null ? p.basename(_selectedFilePath!) : ""}',
-                      style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                      style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -599,7 +599,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Select elements to import:',
                 style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold),
               ),
@@ -608,7 +608,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Database Data', style: TextStyle(color: Colors.white)),
-                  subtitle: Text('$_fileCount files, $_folderCount folders', style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
+                  subtitle: Text('$_fileCount files, $_folderCount folders', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: _importDatabase,
                   activeColor: AppColors.primary,
                   checkColor: Colors.white,
@@ -625,7 +625,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Application Settings', style: TextStyle(color: Colors.white)),
-                  subtitle: Text('$_settingsCount configuration keys', style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
+                  subtitle: Text('$_settingsCount configuration keys', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: _importSettings,
                   activeColor: AppColors.primary,
                   checkColor: Colors.white,
@@ -640,9 +640,9 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 ),
               if (_importDatabase) ...[
                 const SizedBox(height: 16),
-                const Divider(color: AppColors.outline),
+                Divider(color: AppColors.outline),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'Database Import Mode:',
                   style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold),
                 ),
@@ -650,7 +650,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 RadioListTile<bool>(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Merge with local database', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Safely combines data; updates matching IDs, preserves rest', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
+                  subtitle: Text('Safely combines data; updates matching IDs, preserves rest', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: true,
                   groupValue: _mergeDatabase,
                   activeColor: AppColors.secondary,
@@ -659,7 +659,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 RadioListTile<bool>(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Overwrite current database', style: TextStyle(color: Colors.white, fontSize: 14)),
-                  subtitle: const Text('Wipes existing files, folders, and history before restore', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
+                  subtitle: Text('Wipes existing files, folders, and history before restore', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: false,
                   groupValue: _mergeDatabase,
                   activeColor: AppColors.error,
@@ -700,7 +700,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
               _backupData = null;
               _selectedFilePath = null;
             }),
-            child: const Text('Back', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Back', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -715,11 +715,11 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         ];
 
       case ImportStage.loading:
-        content = const Column(
+        content = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppColors.primary),
-            SizedBox(height: 16),
+            const CircularProgressIndicator(color: AppColors.primary),
+            const SizedBox(height: 16),
             Text(
               'Importing backup data...',
               style: TextStyle(color: AppColors.onSurfaceVariant),

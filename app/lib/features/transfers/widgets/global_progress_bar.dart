@@ -60,7 +60,7 @@ class GlobalProgressBar extends ConsumerWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.surface,
-            border: const Border(
+            border: Border(
               top: BorderSide(color: AppColors.outlineVariant),
             ),
             boxShadow: [
@@ -85,7 +85,7 @@ class GlobalProgressBar extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.onSurface,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -94,7 +94,7 @@ class GlobalProgressBar extends ConsumerWidget {
                     ),
                     Text(
                       '${(progress * 100).toStringAsFixed(1)}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: AppColors.onSurfaceVariant,
                         fontSize: 12,
                       ),

@@ -63,14 +63,14 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
         title: const Text('Clear History', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        content: Text(
           'Are you sure you want to clear all completed and failed transfer records from history?',
           style: TextStyle(color: AppColors.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -119,7 +119,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.delete_sweep_outlined, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.delete_sweep_outlined, color: AppColors.onSurfaceVariant),
             tooltip: 'Clear History',
             onPressed: () => _clearHistory(context),
           ),
@@ -215,7 +215,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                                   const SizedBox(height: 4),
                                   Text(
                                     isUpload ? 'Upload' : 'Download',
-                                    style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                                    style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                                   ),
                                 ],
                               ),
@@ -301,7 +301,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           const SizedBox(height: 8),
           Text(
             _getFilterEmptyText(),
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.onSurfaceVariant,
               fontSize: 13,
             ),

@@ -318,23 +318,43 @@ class ShareService {
     }
 
     final int chatId = response['id'];
+    int? supergroupId;
+    if (response['type'] != null && response['type']['@type'] == 'chatTypeSupergroup') {
+      supergroupId = response['type']['supergroup_id'] as int?;
+    }
+
+    if (supergroupId == null) {
+      try {
+        final chat = await telegram.sendRequest({'@type': 'getChat', 'chat_id': chatId});
+        if (chat['type'] != null && chat['type']['@type'] == 'chatTypeSupergroup') {
+          supergroupId = chat['type']['supergroup_id'] as int?;
+        }
+      } catch (e) {
+        AppLogger.error('Failed to resolve supergroup_id for chat $chatId', e);
+      }
+    }
+
     await Future.delayed(const Duration(seconds: 1));
 
     var finalUsername = '';
-    for (var attempt = 0; attempt < 5; attempt++) {
-      final randSuffix = const Uuid().v4().replaceAll('-', '').substring(0, 10);
-      final testUsername = 'aerodrive_shares_$randSuffix';
-      
-      final res = await telegram.sendRequest({
-        "@type": "setChatUsername",
-        "chat_id": chatId,
-        "username": testUsername,
-      });
+    if (supergroupId != null) {
+      for (var attempt = 0; attempt < 5; attempt++) {
+        final randSuffix = const Uuid().v4().replaceAll('-', '').substring(0, 10);
+        final testUsername = 'aerodrive_shares_$randSuffix';
+        
+        final res = await telegram.sendRequest({
+          "@type": "setSupergroupUsername",
+          "supergroup_id": supergroupId,
+          "username": testUsername,
+        });
 
-      if (res['@type'] != 'error') {
-        finalUsername = testUsername;
-        break;
+        if (res['@type'] != 'error') {
+          finalUsername = testUsername;
+          break;
+        }
       }
+    } else {
+      AppLogger.error('Cannot set username: supergroup_id is null for chat $chatId');
     }
 
     final inviteRes = await telegram.sendRequest({

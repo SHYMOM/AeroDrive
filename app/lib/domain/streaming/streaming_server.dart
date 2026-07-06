@@ -176,18 +176,35 @@ class StreamingServer {
   ) async* {
     final telegram = ref.read(telegramServiceProvider.notifier);
 
+    final isCtr = ctrIv != null;
+
     // Calculate cumulative chunk boundaries
     var currentOffset = 0;
     final List<Map<String, dynamic>> chunkInfos = [];
     for (final chunk in chunks) {
-      // If chunk size is not stored, fall back to the standard 20MB threshold
-      final size = chunk.size ?? (20 * 1024 * 1024);
+      int plainSize;
+      if (chunk.size != null) {
+        if (isCtr) {
+          plainSize = chunk.size!;
+        } else {
+          const int plainBlockSize = 4 * 1024 * 1024;
+          const int cryptoBlockSize = plainBlockSize + 12 + 16; // 4MB + 12B nonce + 16B MAC
+          final size = chunk.size!;
+          final fullBlocks = size ~/ cryptoBlockSize;
+          final remainder = size % cryptoBlockSize;
+          final remainderPlain = remainder > 28 ? remainder - 28 : 0;
+          plainSize = (fullBlocks * plainBlockSize) + remainderPlain;
+        }
+      } else {
+        plainSize = 20 * 1024 * 1024;
+      }
+
       chunkInfos.add({
         'chunk': chunk,
         'start': currentOffset,
-        'end': currentOffset + size - 1,
+        'end': currentOffset + plainSize - 1,
       });
-      currentOffset += size;
+      currentOffset += plainSize;
     }
 
     final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);

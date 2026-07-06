@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
@@ -12,6 +13,7 @@ import '../core/logger.dart';
 import '../core/providers.dart';
 import '../core/providers/repository_providers.dart';
 import '../data/db/database.dart';
+import '../features/drive/providers/drive_providers.dart';
 
 class AutoBackupWatcherService {
 
@@ -27,6 +29,16 @@ class AutoBackupWatcherService {
     _isRunning = true;
     AppLogger.info('AutoBackupWatcher: Starting watcher service');
     await _refreshWatchers();
+
+    // Start periodic background scanner/sync while app is open (every 5 minutes)
+    _pollTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      await runAllSyncProfiles();
+    });
+
+    // Run initial sync right away
+    Future.delayed(const Duration(seconds: 5), () async {
+      await runAllSyncProfiles();
+    });
   }
 
   Future<void> stop() async {
@@ -45,7 +57,6 @@ class AutoBackupWatcherService {
       await sub.cancel();
     }
     _subscriptions.clear();
-    _pollTimer?.cancel();
 
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       final status = await Permission.manageExternalStorage.request();
@@ -95,10 +106,24 @@ class AutoBackupWatcherService {
 
   void _watchDirectory(Directory dir, Map<String, dynamic> profile) {
     try {
-      final sub = dir.watch(recursive: true, events: FileSystemEvent.create | FileSystemEvent.modify).listen((event) {
-        final entity = File(event.path);
-        if (entity.existsSync() && _matchesFilter(event.path, profile)) {
-          unawaited(_queueFile(event.path, profile));
+      final sub = dir.watch(recursive: true).listen((event) {
+        final path = event.path;
+        final mode = profile['backupMode'] as String? ?? 'local_to_drive';
+        final deleteBehavior = profile['deleteBehavior'] as String? ?? 'dont_delete';
+
+        if (event is FileSystemModifyEvent || event is FileSystemCreateEvent) {
+          final entity = File(path);
+          if (entity.existsSync() && _matchesFilter(path, profile)) {
+            if (mode == 'local_to_drive' || mode == 'both') {
+              unawaited(_queueFile(path, profile));
+            }
+          }
+        } else if (event is FileSystemDeleteEvent) {
+          if (deleteBehavior == 'sync_deletions') {
+            if (mode == 'local_to_drive' || mode == 'both') {
+              unawaited(_handleLocalDelete(path, profile));
+            }
+          }
         }
       });
       _subscriptions.add(sub);
@@ -124,10 +149,44 @@ class AutoBackupWatcherService {
     return false;
   }
 
-  Future<String> _resolveBackupFolderId(String filePath, String trackedFolderPath) async {
+  Future<String?> _resolveBackupFolderId(String filePath, String trackedFolderPath, String? destinationFolderId) async {
     final db = _ref.read(databaseProvider);
-    final relativePath = filePath.substring(trackedFolderPath.length);
-    final parts = relativePath.split(Platform.pathSeparator).where((p) => p.isNotEmpty).toList();
+    
+    // Normalize paths to ensure substring matching is correct
+    final normalizedFilePath = filePath.replaceAll('\\', '/');
+    final normalizedTrackedPath = trackedFolderPath.replaceAll('\\', '/');
+    
+    final relativePath = normalizedFilePath.substring(normalizedTrackedPath.length);
+    final parts = relativePath.split('/').where((p) => p.isNotEmpty).toList();
+
+    if (destinationFolderId != null) {
+      String? currentFolderId = destinationFolderId;
+      if (parts.length > 1) {
+        for (final folderName in parts.sublist(0, parts.length - 1)) {
+          var folder = await (db.select(db.folders)
+            ..where((f) => f.name.equals(folderName) & 
+                (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
+                f.deletedAt.isNull())
+          ).getSingleOrNull();
+
+          if (folder == null) {
+            final newId = _uuid.v4();
+            await db.into(db.folders).insert(
+              FoldersCompanion.insert(
+                id: newId,
+                name: folderName,
+                parentId: drift.Value(currentFolderId),
+                createdAt: drift.Value(DateTime.now()),
+              )
+            );
+            currentFolderId = newId;
+          } else {
+            currentFolderId = folder.id;
+          }
+        }
+      }
+      return currentFolderId;
+    }
 
     final String deviceName = Platform.isAndroid 
         ? "Android Device" 
@@ -139,7 +198,7 @@ class AutoBackupWatcherService {
                     ? "Mac" 
                     : "Linux Device";
 
-    final trackedFolderName = trackedFolderPath.split(Platform.pathSeparator).lastWhere((s) => s.isNotEmpty, orElse: () => "Backup");
+    final trackedFolderName = trackedFolderPath.contains('/') ? trackedFolderPath.split('/').lastWhere((s) => s.isNotEmpty, orElse: () => "Backup") : trackedFolderPath.split('\\').lastWhere((s) => s.isNotEmpty, orElse: () => "Backup");
 
     final List<String> folderHierarchy = ["Backups", deviceName, trackedFolderName];
     if (parts.length > 1) {
@@ -170,7 +229,7 @@ class AutoBackupWatcherService {
       }
     }
 
-    return currentFolderId!;
+    return currentFolderId;
   }
 
   Future<void> _queueFile(String filePath, Map<String, dynamic> profile) async {
@@ -180,16 +239,19 @@ class AutoBackupWatcherService {
       if (!await file.exists()) return;
 
       final fileSize = await file.length();
-      final folderId = await _resolveBackupFolderId(filePath, profile['path'] as String);
+      final targetFolderId = (profile['destinationFolderId'] == null || profile['destinationFolderId'] == 'null' || profile['destinationFolderId'] == '__root__')
+          ? null
+          : profile['destinationFolderId'] as String?;
+
+      final folderId = await _resolveBackupFolderId(filePath, profile['path'] as String, targetFolderId);
 
       // Check if file already exists in target folder with same name and size
-      final fileName = filePath.split(Platform.pathSeparator).last;
+      final fileName = filePath.contains('/') ? filePath.split('/').last : filePath.split('\\').last;
       final existing = await (db.select(db.files)
-        ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & f.folderId.equals(folderId) & f.deletedAt.isNull())
+        ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & (folderId == null ? f.folderId.isNull() : f.folderId.equals(folderId)) & f.deletedAt.isNull())
       ).get();
 
       if (existing.isNotEmpty) {
-        AppLogger.info('AutoBackupWatcher: File $fileName already backed up, skipping');
         return;
       }
 
@@ -201,7 +263,7 @@ class AutoBackupWatcherService {
           status: const drift.Value('PENDING'),
           priority: const drift.Value(1),
           totalBytes: drift.Value(fileSize),
-          fileId: drift.Value('$filePath|$folderId'),
+          fileId: drift.Value('$filePath|${folderId ?? ''}'),
           createdAt: drift.Value(DateTime.now()),
         ),
       );
@@ -211,35 +273,193 @@ class AutoBackupWatcherService {
     }
   }
 
-  Future<int> scanAllTrackedNow() async {
-    var count = 0;
+  Future<void> _handleLocalDelete(String filePath, Map<String, dynamic> profile) async {
+    try {
+      final db = _ref.read(databaseProvider);
+      final trackedFolderPath = profile['path'] as String;
+      final targetFolderId = (profile['destinationFolderId'] == null || profile['destinationFolderId'] == 'null' || profile['destinationFolderId'] == '__root__')
+          ? null
+          : profile['destinationFolderId'] as String?;
+
+      final folderId = await _resolveBackupFolderId(filePath, trackedFolderPath, targetFolderId);
+      final fileName = filePath.contains('/') ? filePath.split('/').last : filePath.split('\\').last;
+
+      final existing = await (db.select(db.files)
+        ..where((f) => f.name.equals(fileName) & (folderId == null ? f.folderId.isNull() : f.folderId.equals(folderId)) & f.deletedAt.isNull())
+      ).getSingleOrNull();
+
+      if (existing != null) {
+        await _ref.read(fileRepositoryProvider).softDelete(existing.id);
+        _ref.read(dbRebuildVersionProvider.notifier).state++;
+        AppLogger.info('AutoBackupWatcher: Soft-deleted file in Drive because it was deleted locally: $fileName');
+      }
+    } catch (e) {
+      AppLogger.error('AutoBackupWatcher: Failed to handle local deletion for $filePath', e);
+    }
+  }
+
+  Future<bool> _isWifiOrWifiNotRequired(Map<String, dynamic> profile) async {
+    if (profile['wifiOnly'] != true) return true;
+    if (kIsWeb) return true;
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS) {
+        final interfaces = await NetworkInterface.list();
+        var cellularActive = false;
+        var wifiActive = false;
+
+        for (final interface in interfaces) {
+          final name = interface.name.toLowerCase();
+          if (name.contains('wlan') || name.contains('en') || name.contains('eth') || name.contains('wifi')) {
+            wifiActive = true;
+          }
+          if (name.contains('rmnet') || name.contains('pdp') || name.contains('ccmni') || name.contains('cellular')) {
+            cellularActive = true;
+          }
+        }
+
+        if (cellularActive && !wifiActive) {
+          AppLogger.warning('AutoBackupWatcher: Wi-Fi only constraint active, but device is on cellular. Skipping sync.');
+          return false;
+        }
+      }
+    } catch (_) {}
+    return true;
+  }
+
+  Future<void> runAllSyncProfiles() async {
     final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final enabled = await settingsRepo.getSetting('master_autobackup_enabled');
+    if (enabled != 'true') return;
+
     final raw = await settingsRepo.getSetting('tracked_backup_folders');
-    if (raw == null || raw.isEmpty) return 0;
+    if (raw == null || raw.isEmpty) return;
 
     final List<dynamic> decoded;
     try {
       decoded = jsonDecode(raw);
     } catch (e) {
-      AppLogger.error('AutoBackup: failed to parse profiles count JSON', e);
-      return 0;
+      return;
     }
 
     for (final profile in decoded) {
-      final path = profile['path'] as String?;
-      if (path == null || path.isEmpty) continue;
-      final dir = Directory(path);
-      if (!await dir.exists()) continue;
-
-      await for (final entity in dir.list(recursive: true, followLinks: false)) {
-        if (entity is File && _matchesFilter(entity.path, Map<String, dynamic>.from(profile))) {
-          unawaited(_queueFile(entity.path, Map<String, dynamic>.from(profile)));
-          count++;
-        }
+      final mapProfile = Map<String, dynamic>.from(profile);
+      if (await _isWifiOrWifiNotRequired(mapProfile)) {
+        await runProfileSync(mapProfile);
       }
     }
-    AppLogger.info('AutoBackupWatcher: Scanned and queued $count files from all tracked folders');
-    return count;
+  }
+
+  Future<void> runProfileSync(Map<String, dynamic> profile) async {
+    try {
+      final path = profile['path'] as String?;
+      if (path == null || path.isEmpty) return;
+
+      final localDir = Directory(path);
+      if (!await localDir.exists()) return;
+
+      final db = _ref.read(databaseProvider);
+      final targetFolderId = (profile['destinationFolderId'] == null || profile['destinationFolderId'] == 'null' || profile['destinationFolderId'] == '__root__')
+          ? null
+          : profile['destinationFolderId'] as String?;
+
+      final mode = profile['backupMode'] as String? ?? 'local_to_drive';
+      final deleteBehavior = profile['deleteBehavior'] as String? ?? 'dont_delete';
+
+      // 1. Local to Drive Sync (Uploads)
+      if (mode == 'local_to_drive' || mode == 'both') {
+        await for (final entity in localDir.list(recursive: true, followLinks: false)) {
+          if (entity is File && _matchesFilter(entity.path, profile)) {
+            final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
+            final resolvedFolderId = await _resolveBackupFolderId(entity.path, path, targetFolderId);
+
+            final existing = await (db.select(db.files)
+              ..where((f) => f.name.equals(fileName) & f.size.equals(entity.lengthSync()) & (resolvedFolderId == null ? f.folderId.isNull() : f.folderId.equals(resolvedFolderId)) & f.deletedAt.isNull())
+            ).get();
+
+            if (existing.isEmpty) {
+              await _queueFile(entity.path, profile);
+            }
+          }
+        }
+      }
+
+      // 2. Drive to Local Sync (Downloads)
+      if (mode == 'drive_to_local' || mode == 'both') {
+        final targetId = targetFolderId;
+        // Fetch all files on Drive under targetId
+        final dbFiles = await (db.select(db.files)
+          ..where((f) => targetId == null ? f.folderId.isNull() : f.folderId.equals(targetId))
+          ..where((f) => f.deletedAt.isNull())
+        ).get();
+
+        for (final dbFile in dbFiles) {
+          final localFilePath = p.join(path, dbFile.name);
+          final localFile = File(localFilePath);
+          if (!await localFile.exists()) {
+            // Queue download with output path encoded
+            await db.into(db.transferQueue).insert(
+              TransferQueueCompanion.insert(
+                id: _uuid.v4(),
+                fileId: drift.Value('${dbFile.id}|$localFilePath'),
+                type: const drift.Value('DOWNLOAD_FILE'),
+                status: const drift.Value('PENDING'),
+                priority: const drift.Value(1),
+                createdAt: drift.Value(DateTime.now()),
+              )
+            );
+            AppLogger.info('AutoBackupWatcher: Queued file for download: ${dbFile.name}');
+          }
+        }
+      }
+
+      // 3. Deletions Policy Sync
+      if (deleteBehavior == 'sync_deletions') {
+        // Local deleted -> Delete on Drive
+        if (mode == 'local_to_drive' || mode == 'both') {
+          final targetId = targetFolderId;
+          final dbFiles = await (db.select(db.files)
+            ..where((f) => targetId == null ? f.folderId.isNull() : f.folderId.equals(targetId))
+            ..where((f) => f.deletedAt.isNull())
+          ).get();
+
+          for (final dbFile in dbFiles) {
+            final localFilePath = p.join(path, dbFile.name);
+            final localFile = File(localFilePath);
+            if (!await localFile.exists()) {
+              await _ref.read(fileRepositoryProvider).softDelete(dbFile.id);
+              _ref.read(dbRebuildVersionProvider.notifier).state++;
+              AppLogger.info('AutoBackupWatcher: Deleted file on Drive because it was deleted locally: ${dbFile.name}');
+            }
+          }
+        }
+
+        // Drive deleted -> Delete locally
+        if (mode == 'drive_to_local' || mode == 'both') {
+          await for (final entity in localDir.list(recursive: true, followLinks: false)) {
+            if (entity is File && _matchesFilter(entity.path, profile)) {
+              final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
+              final targetId = targetFolderId;
+              final dbFile = await (db.select(db.files)
+                ..where((f) => f.name.equals(fileName) & (targetId == null ? f.folderId.isNull() : f.folderId.equals(targetId)) & f.deletedAt.isNull())
+              ).getSingleOrNull();
+
+              if (dbFile == null) {
+                await entity.delete();
+                AppLogger.info('AutoBackupWatcher: Deleted local file because it was deleted on Drive: ${entity.path}');
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.error('AutoBackupWatcher: runProfileSync failed', e);
+    }
+  }
+
+  Future<int> scanAllTrackedNow() async {
+    await runAllSyncProfiles();
+    return 0;
   }
 
   void dispose() {

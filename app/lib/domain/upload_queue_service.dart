@@ -546,8 +546,7 @@ class UploadQueueService {
     final fileLength = await sourceFile.length();
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
         .write(TransferQueueCompanion(totalBytes: drift.Value(fileLength)));
-
-    final fileName = sourceFile.path.split(Platform.pathSeparator).last;
+    final fileName = sourceFile.path.contains('/') ? sourceFile.path.split('/').last : sourceFile.path.split('\\').last;
     final mimeType = _getMimeType(fileName);
     final isVideo = mimeType.startsWith('video/');
 
@@ -882,7 +881,7 @@ class UploadQueueService {
       final originalFileId = item.fileId;
       if (originalFileId == null) return;
       final originalPath = originalFileId.split('|')[0];
-      final fileName = originalPath.split(Platform.pathSeparator).last;
+      final fileName = originalPath.contains('/') ? originalPath.split('/').last : originalPath.split('\\').last;
       final mimeType = _getMimeType(fileName);
 
       // Check if file already inserted (placeholder) and update or fallback insert

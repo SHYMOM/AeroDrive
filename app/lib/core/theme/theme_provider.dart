@@ -1,10 +1,11 @@
-import 'dart:async';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logger.dart';
 import '../providers/repository_providers.dart';
+import 'app_colors.dart';
 
 class AeroThemeState {
 
@@ -56,9 +57,25 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
     fontScale: 1,
     highContrast: false,
   )) {
+    _updateAppColors(ThemeMode.system);
     _loadTheme();
+    PlatformDispatcher.instance.onPlatformBrightnessChanged = () {
+      if (state.themeMode == ThemeMode.system) {
+        _updateAppColors(ThemeMode.system);
+        state = state.copyWith();
+      }
+    };
   }
   final Ref _ref;
+
+  void _updateAppColors(ThemeMode mode) {
+    if (mode == ThemeMode.system) {
+      final brightness = PlatformDispatcher.instance.platformBrightness;
+      AppColors.isDark = brightness == Brightness.dark;
+    } else {
+      AppColors.isDark = mode == ThemeMode.dark;
+    }
+  }
 
   Future<void> _loadTheme() async {
     try {
@@ -94,6 +111,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
         fontScale: scale,
         highContrast: contrast,
       );
+      _updateAppColors(mode);
     } catch (e, s) {
       AppLogger.error('Failed to load theme from DB, using defaults', e, s);
     }
@@ -101,6 +119,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   Future<void> setThemeMode(ThemeMode mode) async {
     state = state.copyWith(themeMode: mode);
+    _updateAppColors(mode);
     var themeStr = 'system';
     if (mode == ThemeMode.light) themeStr = 'light';
     if (mode == ThemeMode.dark) themeStr = 'dark';

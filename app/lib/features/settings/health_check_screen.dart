@@ -172,9 +172,9 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                       ),
-                      child: const Column(
+                      child: Column(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.warning_amber_rounded,
                             size: 64,
                             color: AppColors.error,

@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -55,54 +56,111 @@ void callbackDispatcher() {
         const uuid = Uuid();
         var queuedCount = 0;
 
-        for (final p in profiles) {
-          final profile = p as Map<String, dynamic>;
+        for (final pProfile in profiles) {
+          final profile = pProfile as Map<String, dynamic>;
           final path = profile['path'] as String?;
           if (path == null || path.isEmpty) continue;
 
-          // Bug 10 fix: read destination folder ID from profile; treat missing/null as
-          // empty string which the upload service interprets as root (SQL NULL folder).
-          // Previously this was hardcoded as the literal string "null" which broke FK
-          // constraints in the Drift database.
-          final destinationFolderId = profile['destinationFolderId'] as String?;
-          final folderIdPart = (destinationFolderId == null || destinationFolderId.isEmpty)
-              ? '' // empty = root
-              : destinationFolderId;
+          // Background Wi-Fi only constraint check (as a fallback)
+          if (profile['wifiOnly'] == true) {
+            try {
+              final interfaces = await NetworkInterface.list();
+              var cellularActive = false;
+              var wifiActive = false;
+
+              for (final interface in interfaces) {
+                final name = interface.name.toLowerCase();
+                if (name.contains('wlan') || name.contains('en') || name.contains('eth') || name.contains('wifi')) {
+                  wifiActive = true;
+                }
+                if (name.contains('rmnet') || name.contains('pdp') || name.contains('ccmni') || name.contains('cellular')) {
+                  cellularActive = true;
+                }
+              }
+
+              if (cellularActive && !wifiActive) {
+                debugPrint('[AeroDrive] Background backup: Skipping wifiOnly profile on cellular');
+                continue;
+              }
+            } catch (_) {}
+          }
+
+          final destinationFolderId = (profile['destinationFolderId'] == null || profile['destinationFolderId'] == 'null' || profile['destinationFolderId'] == '__root__')
+              ? null
+              : profile['destinationFolderId'] as String?;
+          final folderIdPart = destinationFolderId ?? '';
+
+          final mode = profile['backupMode'] as String? ?? 'local_to_drive';
+          final deleteBehavior = profile['deleteBehavior'] as String? ?? 'dont_delete';
 
           final dir = Directory(path);
           if (!await dir.exists()) continue;
 
-          await for (final entity in dir.list(recursive: true, followLinks: false)) {
-            if (entity is! File) continue;
-            final ext = entity.path.split('.').last.toLowerCase();
+          // 1. Upload files
+          if (mode == 'local_to_drive' || mode == 'both') {
+            await for (final entity in dir.list(recursive: true, followLinks: false)) {
+              if (entity is! File) continue;
+              final ext = entity.path.split('.').last.toLowerCase();
 
-            var matches = profile['include_all'] == true;
-            if (!matches && profile['include_images'] == true) {
-              matches = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif'].contains(ext);
-            }
-            if (!matches && profile['include_videos'] == true) {
-              matches = ['mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v', '3gp'].contains(ext);
-            }
-            if (!matches && profile['include_documents'] == true) {
-              matches = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'json', 'xml', 'md'].contains(ext);
-            }
+              var matches = profile['include_all'] == true;
+              if (!matches && profile['include_images'] == true) {
+                matches = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg', 'heic', 'heif'].contains(ext);
+              }
+              if (!matches && profile['include_videos'] == true) {
+                matches = ['mp4', 'mkv', 'mov', 'avi', 'wmv', 'flv', 'webm', 'm4v', '3gp'].contains(ext);
+              }
+              if (!matches && profile['include_documents'] == true) {
+                matches = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'json', 'xml', 'md'].contains(ext);
+              }
 
-            if (!matches) continue;
-            final fileSize = await entity.length();
-            await db.into(db.transferQueue).insert(
-              TransferQueueCompanion.insert(
-                id: uuid.v4(),
-                type: const drift.Value('UPLOAD_FILE'),
-                status: const drift.Value('PENDING'),
-                priority: const drift.Value(1),
-                totalBytes: drift.Value(fileSize),
-                // Format: "localFilePath|destinationFolderId"
-                // Empty string after | means root folder (SQL NULL).
-                fileId: drift.Value('${entity.path}|$folderIdPart'),
-                createdAt: drift.Value(DateTime.now()),
-              ),
-            );
-            queuedCount++;
+              if (!matches) continue;
+              final fileSize = await entity.length();
+
+              final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
+
+              // Resolve target folder hierarchy
+              final resolvedFolderId = await _resolveBackupFolderIdInDispatcher(db, entity.path, path, destinationFolderId);
+              final targetFolderIdPart = resolvedFolderId ?? '';
+
+              // Check if file already exists in target folder with same name and size
+              final existing = await (db.select(db.files)
+                ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & (resolvedFolderId == null ? f.folderId.isNull() : f.folderId.equals(resolvedFolderId)) & f.deletedAt.isNull())
+              ).get();
+
+              if (existing.isEmpty) {
+                await db.into(db.transferQueue).insert(
+                  TransferQueueCompanion.insert(
+                    id: uuid.v4(),
+                    type: const drift.Value('UPLOAD_FILE'),
+                    status: const drift.Value('PENDING'),
+                    priority: const drift.Value(1),
+                    totalBytes: drift.Value(fileSize),
+                    fileId: drift.Value('${entity.path}|$targetFolderIdPart'),
+                    createdAt: drift.Value(DateTime.now()),
+                  ),
+                );
+                queuedCount++;
+              }
+            }
+          }
+
+          // 2. Sync deletions from Local to Drive
+          if (deleteBehavior == 'sync_deletions' && (mode == 'local_to_drive' || mode == 'both')) {
+            final dbFiles = await (db.select(db.files)
+              ..where((f) => destinationFolderId == null ? f.folderId.isNull() : f.folderId.equals(destinationFolderId))
+              ..where((f) => f.deletedAt.isNull())
+            ).get();
+
+            for (final dbFile in dbFiles) {
+              final localFilePath = p.join(path, dbFile.name);
+              final localFile = File(localFilePath);
+              if (!await localFile.exists()) {
+                // Deleted locally, so soft delete on Drive
+                await (db.update(db.files)..where((f) => f.id.equals(dbFile.id))).write(
+                  FilesCompanion(deletedAt: drift.Value(DateTime.now())),
+                );
+              }
+            }
           }
         }
 
@@ -117,6 +175,94 @@ void callbackDispatcher() {
     }
     return true;
   });
+}
+
+Future<String?> _resolveBackupFolderIdInDispatcher(
+  AeroDriveDatabase db,
+  String filePath,
+  String trackedFolderPath,
+  String? destinationFolderId,
+) async {
+  const uuid = Uuid();
+  final normalizedFilePath = filePath.replaceAll('\\', '/');
+  final normalizedTrackedPath = trackedFolderPath.replaceAll('\\', '/');
+  
+  final relativePath = normalizedFilePath.substring(normalizedTrackedPath.length);
+  final parts = relativePath.split('/').where((p) => p.isNotEmpty).toList();
+
+  if (destinationFolderId != null) {
+    String? currentFolderId = destinationFolderId;
+    if (parts.length > 1) {
+      for (final folderName in parts.sublist(0, parts.length - 1)) {
+        var folder = await (db.select(db.folders)
+          ..where((f) => f.name.equals(folderName) & 
+              (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
+              f.deletedAt.isNull())
+        ).getSingleOrNull();
+
+        if (folder == null) {
+          final newId = uuid.v4();
+          await db.into(db.folders).insert(
+            FoldersCompanion.insert(
+              id: newId,
+              name: folderName,
+              parentId: drift.Value(currentFolderId),
+              createdAt: drift.Value(DateTime.now()),
+            )
+          );
+          currentFolderId = newId;
+        } else {
+          currentFolderId = folder.id;
+        }
+      }
+    }
+    return currentFolderId;
+  }
+
+  final String deviceName = Platform.isAndroid 
+      ? "Android Device" 
+      : Platform.isIOS 
+          ? "iOS Device" 
+          : Platform.isWindows 
+              ? "Windows PC" 
+              : Platform.isMacOS 
+                  ? "Mac" 
+                  : "Linux Device";
+
+  final trackedFolderName = trackedFolderPath.contains('/') 
+      ? trackedFolderPath.split('/').lastWhere((s) => s.isNotEmpty, orElse: () => "Backup") 
+      : trackedFolderPath.split('\\').lastWhere((s) => s.isNotEmpty, orElse: () => "Backup");
+
+  final List<String> folderHierarchy = ["Backups", deviceName, trackedFolderName];
+  if (parts.length > 1) {
+    folderHierarchy.addAll(parts.sublist(0, parts.length - 1));
+  }
+
+  String? currentFolderId;
+  for (final folderName in folderHierarchy) {
+    var folder = await (db.select(db.folders)
+      ..where((f) => f.name.equals(folderName) & 
+          (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
+          f.deletedAt.isNull())
+    ).getSingleOrNull();
+
+    if (folder == null) {
+      final newId = uuid.v4();
+      await db.into(db.folders).insert(
+        FoldersCompanion.insert(
+          id: newId,
+          name: folderName,
+          parentId: drift.Value(currentFolderId),
+          createdAt: drift.Value(DateTime.now()),
+        )
+      );
+      currentFolderId = newId;
+    } else {
+      currentFolderId = folder.id;
+    }
+  }
+
+  return currentFolderId;
 }
 
 /// AeroDrive application entry point.
