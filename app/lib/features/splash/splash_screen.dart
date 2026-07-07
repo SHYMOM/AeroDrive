@@ -5,9 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 
 import '../../core/theme/app_colors.dart';
 import '../../widgets/aerodrive_logo.dart';
+import 'testing_ended_screen.dart';
+
+/// Remote gate URL — returns "UNBLOCKED" or "BLOCKED"
+const _kGateUrl = 'https://pastebin.com/raw/Y9JuWHza';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -29,9 +34,38 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _runSync() async {
-    // Initialization complete
+    // ── Step 1: Gate check ─────────────────────────────────────────
+    if (mounted) setState(() { _statusText = 'Checking access...'; _progress = 0.1; });
+
+    bool isBlocked = false;
+    try {
+      final response = await http
+          .get(Uri.parse(_kGateUrl))
+          .timeout(const Duration(seconds: 8));
+      final body = response.body.trim().toUpperCase();
+      isBlocked = body == 'BLOCKED';
+    } catch (_) {
+      // Network error — allow access so offline users aren't locked out
+      isBlocked = false;
+    }
+
+    if (!mounted) return;
+
+    if (isBlocked) {
+      // Replace the entire navigator stack with the block screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const TestingEndedScreen()),
+      );
+      return;
+    }
+
+    // ── Step 2: Continue to normal auth flow ───────────────────────
+    if (mounted) setState(() { _statusText = 'Loading...'; _progress = 0.8; });
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+
     if (mounted) context.go('/auth');
   }
+
 
   @override
   Widget build(BuildContext context) => Scaffold(
