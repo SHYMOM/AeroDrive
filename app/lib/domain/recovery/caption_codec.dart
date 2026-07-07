@@ -39,6 +39,7 @@ class CaptionSerializer {
     int? chunkIndex,
     int? totalChunks,
     int? duration,
+    DateTime? photoTakenAt,
     int version = 1,
     int isEncrypted = 1,
     int isChunked = 0,
@@ -62,6 +63,7 @@ class CaptionSerializer {
       if (wrappedDekBase64 != null) "k": wrappedDekBase64,
       if (ctrIvBase64 != null) "iv": ctrIvBase64,
       if (duration != null) "dur": duration,
+      if (photoTakenAt != null) "pt": photoTakenAt.millisecondsSinceEpoch ~/ 1000,
     };
 
     final jsonStr = jsonEncode(jsonMap);

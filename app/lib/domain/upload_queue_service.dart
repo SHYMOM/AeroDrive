@@ -313,7 +313,7 @@ class UploadQueueService {
               ));
               
             NotificationService.instance.showUploadFailed(
-              int.parse(info.queueId.hashCode.toString().substring(0, 8)),
+              NotificationService.instance.getSafeNotificationId(info.queueId),
               'File Upload',
               'Telegram rejected the upload.',
             );
@@ -350,7 +350,7 @@ class UploadQueueService {
 
             if (totalFileBytes > 0) {
               NotificationService.instance.showUploadProgress(
-                int.parse(info.queueId.hashCode.toString().substring(0, 8)),
+                NotificationService.instance.getSafeNotificationId(info.queueId),
                 'File Upload',
                 totalUploaded,
                 totalFileBytes,
@@ -722,6 +722,7 @@ class UploadQueueService {
           totalChunks: totalChunks,
           isChunked: totalChunks > 1 ? 1 : 0,
           duration: videoDuration?.inSeconds,
+          photoTakenAt: photoTakenAt,
         );
       }
 
@@ -941,7 +942,7 @@ class UploadQueueService {
       AppLogger.info('Upload Completed and Finalized for $fileName!');
       
       NotificationService.instance.showUploadComplete(
-        int.parse(queueId.hashCode.toString().substring(0, 8)),
+        NotificationService.instance.getSafeNotificationId(queueId),
         fileName,
       );
 

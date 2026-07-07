@@ -14,6 +14,7 @@ import '../core/providers.dart';
 import '../core/providers/repository_providers.dart';
 import '../data/db/database.dart';
 import '../features/drive/providers/drive_providers.dart';
+import 'folder_scanner.dart';
 
 class AutoBackupWatcherService {
 
@@ -180,6 +181,11 @@ class AutoBackupWatcherService {
                 createdAt: drift.Value(DateTime.now()),
               )
             );
+            try {
+              unawaited(_ref.read(folderScannerProvider).uploadFolderManifest(newId, folderName, currentFolderId));
+            } catch (e) {
+              AppLogger.error('AutoBackupWatcher: Failed to upload folder manifest: $e');
+            }
             currentFolderId = newId;
           } else {
             currentFolderId = folder.id;
@@ -224,6 +230,11 @@ class AutoBackupWatcherService {
             createdAt: drift.Value(DateTime.now()),
           )
         );
+        try {
+          unawaited(_ref.read(folderScannerProvider).uploadFolderManifest(newId, folderName, currentFolderId));
+        } catch (e) {
+          AppLogger.error('AutoBackupWatcher: Failed to upload folder manifest: $e');
+        }
         currentFolderId = newId;
       } else {
         currentFolderId = folder.id;
@@ -256,6 +267,16 @@ class AutoBackupWatcherService {
         return;
       }
 
+      // Check if file is already in the transfer queue (PENDING or PROCESSING)
+      final targetFileId = '$filePath|${folderId ?? ''}';
+      final inQueue = await (db.select(db.transferQueue)
+        ..where((q) => q.fileId.equals(targetFileId) & (q.status.equals('PENDING') | q.status.equals('PROCESSING')))
+      ).get();
+
+      if (inQueue.isNotEmpty) {
+        return;
+      }
+
       final queueId = _uuid.v4();
       await db.into(db.transferQueue).insert(
         TransferQueueCompanion.insert(
@@ -264,7 +285,7 @@ class AutoBackupWatcherService {
           status: const drift.Value('PENDING'),
           priority: const drift.Value(1),
           totalBytes: drift.Value(fileSize),
-          fileId: drift.Value('$filePath|${folderId ?? ''}'),
+          fileId: drift.Value(targetFileId),
           createdAt: drift.Value(DateTime.now()),
         ),
       );

@@ -5,6 +5,7 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -27,6 +28,7 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
+import '../sharing/share_service.dart';
 
 class DriveScreen extends ConsumerStatefulWidget {
   const DriveScreen({super.key});
@@ -75,6 +77,12 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           _checkAndRecreateConfigBackup();
         }
       }
+      
+      // Cleanup any temp joined sharing channels that were left joined due to interruption
+      ref.read(shareServiceProvider).cleanupInterruptedTempChannels();
+      
+      // Check for interrupted imports on startup
+      _checkForInterruptedImports();
     });
   }
 
@@ -218,6 +226,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       if (publicShareChannelInvite.isNotEmpty) {
                         await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
                       }
+                      final tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
+                      await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
                     } else {
                       await settingsRepo.setSetting('storage_channels_list', jsonConfig);
                       final List<dynamic> decoded = jsonDecode(jsonConfig);
@@ -1136,7 +1146,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pop(ctx);
-                                    Permission.manageExternalStorage.request();
+                                    const MethodChannel('com.aerodrive.aerodrive/settings')
+                                        .invokeMethod('openManageAllFilesSettings');
                                   },
                                   child: const Text('Open Settings'),
                                 ),
@@ -1394,5 +1405,114 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ],
       ),
     );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  Future<void> _checkForInterruptedImports() async {
+    final shareService = ref.read(shareServiceProvider);
+    final interruptedTask = await shareService.getInterruptedImportTask();
+    if (interruptedTask != null && mounted) {
+      final totalSize = interruptedTask['totalSize'] as int? ?? 0;
+      final bytesTransferred = interruptedTask['bytesTransferred'] as int? ?? 0;
+      final remainingBytes = totalSize - bytesTransferred;
+      
+      final speedBytesPerSec = 1.5 * 1024 * 1024; // Default baseline
+      final double totalTransferred = remainingBytes.toDouble() * 2;
+      final double durationSec = speedBytesPerSec > 0 ? totalTransferred / speedBytesPerSec : 0;
+      final int durationMin = (durationSec / 60).ceil();
+
+      final resume = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          title: const Text('Resume Interrupted Import', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: Text(
+            'An import of "${interruptedTask['name']}" was interrupted. '
+            'Remaining: ${_formatBytes(remainingBytes)} (approx $durationMin min). '
+            'Would you like to resume importing?',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Discard', style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Resume', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+
+      if (resume == true) {
+        _resumeImport(interruptedTask['taskId'] as String);
+      } else {
+        await shareService.discardImportTask(interruptedTask['taskId'] as String);
+      }
+    }
+  }
+
+  Future<void> _resumeImport(String taskId) async {
+    if (!mounted) return;
+    
+    // Show a loading progress indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          backgroundColor: AppColors.surfaceElevated,
+          content: const Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 20),
+              Expanded(
+                child: Text(
+                  'Resuming import and copying chunks...',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await ref.read(shareServiceProvider).resumeImport(taskId);
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+        ref.invalidate(folderContentsProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Successfully completed resumed import.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppColors.surfaceElevated,
+            title: const Text('Resume Failed', style: TextStyle(color: Colors.white)),
+            content: Text(e.toString(), style: const TextStyle(color: Colors.white70)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+              )
+            ],
+          ),
+        );
+      }
+    }
   }
 }

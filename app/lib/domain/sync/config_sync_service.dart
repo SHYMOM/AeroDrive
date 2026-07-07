@@ -43,6 +43,7 @@ class ConfigSyncService {
     final publicShareChannelId = await settingsRepo.getSetting('public_share_channel_id');
     final publicShareChannelUsername = await settingsRepo.getSetting('public_share_channel_username');
     final publicShareChannelInvite = await settingsRepo.getSetting('public_share_channel_invite');
+    final tempJoined = await settingsRepo.getSetting('temp_joined_sharing_channels');
 
     final configMap = {
       'storage_channels_list': rawChannels ?? '[]',
@@ -50,6 +51,7 @@ class ConfigSyncService {
       'public_share_channel_id': publicShareChannelId ?? '',
       'public_share_channel_username': publicShareChannelUsername ?? '',
       'public_share_channel_invite': publicShareChannelInvite ?? '',
+      'temp_joined_sharing_channels': tempJoined ?? '[]',
     };
     final String configToSync = jsonEncode(configMap);
 

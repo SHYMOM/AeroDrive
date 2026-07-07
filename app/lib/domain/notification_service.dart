@@ -119,10 +119,15 @@ class NotificationService {
 
   Future<void> showUploadComplete(int id, String fileName) async {
     if (!_isSupported) return;
+    try {
+      await _plugin.cancel(id);
+    } catch (_) {}
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_uploads',
       'Uploads',
       channelDescription: 'Upload complete',
+      importance: Importance.low,
+      priority: Priority.low,
     );
     const details = NotificationDetails(android: androidDetails);
     await _plugin.show(
@@ -177,10 +182,15 @@ class NotificationService {
 
   Future<void> showDownloadComplete(int id, String fileName, String filePath) async {
     if (!_isSupported) return;
+    try {
+      await _plugin.cancel(id);
+    } catch (_) {}
     const androidDetails = AndroidNotificationDetails(
       'aerodrive_downloads',
       'Downloads',
       channelDescription: 'Download complete',
+      importance: Importance.low,
+      priority: Priority.low,
     );
     const details = NotificationDetails(android: androidDetails);
     await _plugin.show(
@@ -246,6 +256,10 @@ class NotificationService {
       message,
       details,
     );
+  }
+
+  int getSafeNotificationId(String id) {
+    return id.hashCode.abs() % 100000000;
   }
 
   String _formatBytes(int bytes) {

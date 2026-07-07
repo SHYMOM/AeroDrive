@@ -19,6 +19,7 @@ import '../../data/crypto/encryption_engine.dart';
 import '../../domain/recovery/manifest_encoder.dart';
 import '../../domain/sync/config_sync_service.dart';
 import '../../features/telegram/telegram_service.dart';
+import '../../features/telegram/telegram_manager.dart';
 
 class SharePasswordRequiredException implements Exception {
   final String message;
@@ -365,11 +366,25 @@ class ShareService {
     final storedInvite = await settingsRepo.getSetting('public_share_channel_invite');
 
     if (storedId != null && storedId.isNotEmpty) {
-      return {
-        'id': int.parse(storedId),
-        'username': storedUser,
-        'invite': storedInvite,
-      };
+      try {
+        final chatId = int.parse(storedId);
+        final check = await telegram.checkAdminStatus(chatId);
+        if (check['is_admin'] == true) {
+          return {
+            'id': chatId,
+            'username': storedUser,
+            'invite': storedInvite,
+          };
+        } else {
+          AppLogger.warning('Stored public share channel $storedId is no longer admin-accessible. Re-creating...');
+        }
+      } catch (e) {
+        AppLogger.warning('Failed to verify stored public share channel: $e. Re-creating...');
+      }
+      // Clear invalid stored channel settings
+      await settingsRepo.setSetting('public_share_channel_id', '');
+      await settingsRepo.setSetting('public_share_channel_username', '');
+      await settingsRepo.setSetting('public_share_channel_invite', '');
     }
 
     final response = await telegram.createNewChannel(
@@ -403,26 +418,8 @@ class ShareService {
     await _archiveAndMute(telegram, chatId);
     await _setChannelIcon(telegram, chatId);
 
-    var finalUsername = '';
-    if (supergroupId != null) {
-      for (var attempt = 0; attempt < 5; attempt++) {
-        final randSuffix = const Uuid().v4().replaceAll('-', '').substring(0, 10);
-        final testUsername = 'aerodrive_shares_$randSuffix';
-        
-        final res = await telegram.sendRequest({
-          "@type": "setSupergroupUsername",
-          "supergroup_id": supergroupId,
-          "username": testUsername,
-        });
-
-        if (res['@type'] != 'error') {
-          finalUsername = testUsername;
-          break;
-        }
-      }
-    } else {
-      AppLogger.error('Cannot set username: supergroup_id is null for chat $chatId');
-    }
+    // Keep the supergroup/channel private by default - no username set.
+    const String finalUsername = '';
 
     final inviteRes = await telegram.sendRequest({
       "@type": "createChatInviteLink",
@@ -433,9 +430,7 @@ class ShareService {
     final inviteLink = inviteRes['invite_link'] as String?;
 
     await settingsRepo.setSetting('public_share_channel_id', chatId.toString());
-    if (finalUsername.isNotEmpty) {
-      await settingsRepo.setSetting('public_share_channel_username', finalUsername);
-    }
+    await settingsRepo.setSetting('public_share_channel_username', finalUsername);
     if (inviteLink != null) {
       await settingsRepo.setSetting('public_share_channel_invite', inviteLink);
     }
@@ -449,7 +444,7 @@ class ShareService {
 
     return {
       'id': chatId,
-      'username': finalUsername.isNotEmpty ? finalUsername : null,
+      'username': null,
       'invite': inviteLink,
     };
   }
@@ -943,15 +938,12 @@ class ShareService {
 
     // 3. Derive Encryption Key & Encrypt the Share Manifest
     final List<int> keyBytes;
-    final String shareKeyFragment;
     final bool hasPassword = password != null && password.isNotEmpty;
 
     if (hasPassword) {
       keyBytes = await _deriveKeyFromPassword(password);
-      shareKeyFragment = '';
     } else {
-      keyBytes = List<int>.generate(32, (_) => Uuid().v4().codeUnitAt(0) % 256);
-      shareKeyFragment = base64UrlEncode(keyBytes);
+      keyBytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
     }
 
     final encryptedManifestBase64 = await _encryptData(jsonEncode(manifestPayload), keyBytes);
@@ -993,15 +985,19 @@ class ShareService {
       'channelId': shareChatId,
       'manifest': manifestMessageId,
       'id': shareId,
+      if (!hasPassword) 'manifestKey': base64Url.encode(keyBytes),
     };
     final payloadStr = jsonEncode(payloadMap);
-    final encryptedPayloadStr = await _encryptData(payloadStr, keyBytes);
+    
+    // Encrypt the URL query payload map using the global app key!
+    final globalAppKey = await _getGlobalAppKey();
+    final encryptedPayloadStr = await _encryptData(payloadStr, globalAppKey);
     final pParam = Uri.encodeComponent(encryptedPayloadStr);
 
     if (hasPassword) {
       publicUrl = 'aerodrive://share?p=$pParam&hasPassword=1';
     } else {
-      publicUrl = 'aerodrive://share?p=$pParam#$shareKeyFragment';
+      publicUrl = 'aerodrive://share?p=$pParam';
     }
 
     // 6. Update the Config Channel Share Registry Pointer
@@ -1021,7 +1017,148 @@ class ShareService {
     return publicUrl;
   }
 
-  Future<void> importShareLink(String url, {String? password, String? targetFolderId}) async {
+  static const String _globalAppPassphrase = "AeroDrive_Global_Secure_Sharing_Key_2026!";
+  
+  Future<List<int>> _getGlobalAppKey() async {
+    final bytes = utf8.encode(_globalAppPassphrase);
+    final hash = await Sha256().hash(bytes);
+    return hash.bytes;
+  }
+
+  Future<void> _addTempJoinedChannel(int chatId) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final tempJoinedStr = await settingsRepo.getSetting('temp_joined_sharing_channels') ?? '[]';
+    final List<dynamic> joinedList = jsonDecode(tempJoinedStr);
+    if (!joinedList.contains(chatId)) {
+      joinedList.add(chatId);
+      await settingsRepo.setSetting('temp_joined_sharing_channels', jsonEncode(joinedList));
+      try {
+        await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _removeTempJoinedChannel(int chatId) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final tempJoinedStr = await settingsRepo.getSetting('temp_joined_sharing_channels') ?? '[]';
+    final List<dynamic> joinedList = jsonDecode(tempJoinedStr);
+    if (joinedList.contains(chatId)) {
+      joinedList.remove(chatId);
+      await settingsRepo.setSetting('temp_joined_sharing_channels', jsonEncode(joinedList));
+      try {
+        await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveImportState(String taskId, Map<String, dynamic> state) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    await settingsRepo.setSetting('import_task_${taskId}_state', jsonEncode(state));
+
+    final activeTasksStr = await settingsRepo.getSetting('active_import_tasks') ?? '[]';
+    final List<dynamic> activeTasks = jsonDecode(activeTasksStr);
+    if (!activeTasks.contains(taskId)) {
+      activeTasks.add(taskId);
+      await settingsRepo.setSetting('active_import_tasks', jsonEncode(activeTasks));
+    }
+    try {
+      await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+    } catch (_) {}
+  }
+
+  Future<void> discardImportTask(String taskId) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final stateStr = await settingsRepo.getSetting('import_task_${taskId}_state');
+    if (stateStr != null) {
+      try {
+        final Map<String, dynamic> state = jsonDecode(stateStr);
+        final int? shareChannelId = state['channelId'] as int?;
+        if (shareChannelId != null) {
+          final readyClients = _ref.read(telegramManagerProvider)
+              .where((c) => c.authState == TelegramAuthState.ready)
+              .toList();
+          for (final client in readyClients) {
+            try {
+              await client.sendRequest({
+                "@type": "leaveChat",
+                "chat_id": shareChannelId,
+              });
+            } catch (_) {}
+          }
+          await _removeTempJoinedChannel(shareChannelId);
+        }
+      } catch (_) {}
+    }
+
+    await settingsRepo.setSetting('import_task_${taskId}_state', '');
+    final activeTasksStr = await settingsRepo.getSetting('active_import_tasks') ?? '[]';
+    final List<dynamic> activeTasks = jsonDecode(activeTasksStr);
+    if (activeTasks.contains(taskId)) {
+      activeTasks.remove(taskId);
+      await settingsRepo.setSetting('active_import_tasks', jsonEncode(activeTasks));
+    }
+    try {
+      await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> getInterruptedImportTask() async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final activeTasksStr = await settingsRepo.getSetting('active_import_tasks') ?? '[]';
+    final List<dynamic> activeTasks = jsonDecode(activeTasksStr);
+    if (activeTasks.isEmpty) return null;
+
+    final String taskId = activeTasks.first as String;
+    final stateStr = await settingsRepo.getSetting('import_task_${taskId}_state');
+    if (stateStr == null || stateStr.isEmpty) return null;
+
+    final Map<String, dynamic> state = jsonDecode(stateStr);
+    if (state['status'] == 'running' || state['status'] == 'interrupted') {
+      state['status'] = 'interrupted';
+      return state;
+    }
+    return null;
+  }
+
+  Future<void> cleanupInterruptedTempChannels() async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    try {
+      final tempJoinedStr = await settingsRepo.getSetting('temp_joined_sharing_channels');
+      if (tempJoinedStr != null && tempJoinedStr.isNotEmpty) {
+        final List<dynamic> joinedIds = jsonDecode(tempJoinedStr);
+        if (joinedIds.isNotEmpty) {
+          AppLogger.info('ShareService: Cleaning up ${joinedIds.length} interrupted temporary channels...');
+          final readyClients = _ref.read(telegramManagerProvider)
+              .where((c) => c.authState == TelegramAuthState.ready)
+              .toList();
+
+          for (final chatId in joinedIds) {
+            for (final client in readyClients) {
+              try {
+                await client.sendRequest({
+                  "@type": "leaveChat",
+                  "chat_id": chatId,
+                });
+              } catch (_) {}
+            }
+          }
+          await settingsRepo.setSetting('temp_joined_sharing_channels', '[]');
+          try {
+            await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      AppLogger.error('ShareService: Failed to clean up temp sharing channels', e);
+    }
+  }
+
+  Future<void> importShareLink(
+    String url, {
+    String? password,
+    String? targetFolderId,
+    Future<bool> Function(int totalSize, double speedBytesPerSec)? onConfirm,
+  }) async {
     final uri = Uri.parse(url);
     if (uri.scheme != 'aerodrive' || uri.host != 'share') {
       if (!url.startsWith('aerodrive://share')) {
@@ -1037,7 +1174,22 @@ class ShareService {
     final encryptedPayloadStr = Uri.decodeComponent(pParam);
     final hasPassword = uri.queryParameters['hasPassword'] == '1';
 
-    // 1. Resolve Decryption Key
+    // 1. Decrypt Payload using the global app key
+    final globalAppKey = await _getGlobalAppKey();
+    final String decryptedPayloadJson;
+    try {
+      decryptedPayloadJson = await _decryptData(encryptedPayloadStr, globalAppKey);
+    } catch (_) {
+      throw Exception("Failed to decrypt share link. Link might be corrupted or generated by an incompatible version.");
+    }
+
+    final Map<String, dynamic> payload = jsonDecode(decryptedPayloadJson);
+    final inviteLink = payload['invite'] as String?;
+    final int shareChannelId = payload['channelId'] as int;
+    final int manifestMessageId = payload['manifest'] as int;
+    final String shareId = payload['id'] as String;
+
+    // 2. Resolve Decryption Key
     final List<int> keyBytes;
     if (hasPassword) {
       if (password == null || password.isEmpty) {
@@ -1045,104 +1197,639 @@ class ShareService {
       }
       keyBytes = await _deriveKeyFromPassword(password);
     } else {
-      final fragment = uri.fragment;
-      if (fragment.isEmpty) {
-        throw Exception("Invalid link: missing share fragment key");
+      final manifestKeyBase64 = payload['manifestKey'] as String?;
+      if (manifestKeyBase64 == null) {
+        throw Exception("Invalid link: missing manifest key");
       }
-      keyBytes = base64Url.decode(fragment);
+      keyBytes = base64Url.decode(manifestKeyBase64);
     }
 
-    // 2. Decrypt Payload
-    final String decryptedPayloadJson;
-    try {
-      decryptedPayloadJson = await _decryptData(encryptedPayloadStr, keyBytes);
-    } catch (_) {
-      throw Exception(hasPassword ? "Incorrect password. Please try again." : "Failed to decrypt share link. Key might be invalid.");
+    // 3. Auto-Join Telegram Channel with all ready accounts
+    final readyClients = _ref.read(telegramManagerProvider)
+        .where((c) => c.authState == TelegramAuthState.ready)
+        .toList();
+    if (readyClients.isEmpty) {
+      throw Exception("No active Telegram accounts logged in.");
     }
 
-    final Map<String, dynamic> payload = jsonDecode(decryptedPayloadJson);
-    final inviteLink = payload['invite'] as String?;
-    final int shareChannelId = payload['channelId'] as int;
-    final int manifestMessageId = payload['manifest'] as int;
-
-    // 3. Auto-Join Telegram Channel
-    final telegram = _ref.read(telegramServiceProvider.notifier);
     if (inviteLink != null && inviteLink.isNotEmpty) {
-      try {
-        await telegram.sendRequest({
-          "@type": "joinChatByInviteLink",
-          "invite_link": inviteLink,
-        });
-      } catch (e) {
-        AppLogger.warning('ShareService: Join share channel failed (User might already be a member): $e');
+      for (final client in readyClients) {
+        try {
+          final joinRes = await client.sendRequest({
+            "@type": "joinChatByInviteLink",
+            "invite_link": inviteLink,
+          });
+          if (joinRes['@type'] != 'error') {
+            await _archiveAndMute(client, shareChannelId);
+          }
+        } catch (e) {
+          AppLogger.warning('ShareService: Account failed to join sharing channel: $e');
+        }
       }
+      await _addTempJoinedChannel(shareChannelId);
     }
 
-    // 4. Fetch the Share Manifest message from the Public Share Channel
-    final manifestMsg = await telegram.sendRequest({
-      "@type": "getMessage",
-      "chat_id": shareChannelId,
-      "message_id": manifestMessageId,
-    });
-
-    if (manifestMsg['@type'] == 'error') {
-      throw Exception("Failed to retrieve share manifest. The share link might have been revoked by the owner.");
-    }
-
-    final content = manifestMsg['content'];
-    if (content == null || content['@type'] != 'messageText') {
-      throw Exception("Invalid manifest message format on Telegram.");
-    }
-
-    final text = content['text']?['text'] as String?;
-    if (text == null || !text.contains('SHARE_MANIFEST_v1')) {
-      throw Exception("The message retrieved is not a valid AeroDrive share manifest.");
-    }
-
-    final lines = text.split('\n');
-    final manifestPayloadCipher = lines.lastWhere((l) => l.trim().isNotEmpty).trim();
-
-    // 5. Decrypt Manifest using keyBytes
-    final String decryptedJson;
     try {
-      decryptedJson = await _decryptData(manifestPayloadCipher, keyBytes);
-    } catch (_) {
-      throw Exception("Failed to decrypt share manifest.");
+      // 4. Fetch the Share Manifest message from the Public Share Channel
+      final primaryClient = readyClients.first;
+      final manifestMsg = await primaryClient.sendRequest({
+        "@type": "getMessage",
+        "chat_id": shareChannelId,
+        "message_id": manifestMessageId,
+      });
+
+      if (manifestMsg['@type'] == 'error') {
+        throw Exception("Failed to retrieve share manifest. The share link might have been revoked by the owner.");
+      }
+
+      final content = manifestMsg['content'];
+      if (content == null || content['@type'] != 'messageText') {
+        throw Exception("Invalid manifest message format on Telegram.");
+      }
+
+      final text = content['text']?['text'] as String?;
+      if (text == null || !text.contains('SHARE_MANIFEST_v1')) {
+        throw Exception("The message retrieved is not a valid AeroDrive share manifest.");
+      }
+
+      final lines = text.split('\n');
+      final manifestPayloadCipher = lines.lastWhere((l) => l.trim().isNotEmpty).trim();
+
+      // 5. Decrypt Manifest using keyBytes
+      final String decryptedJson;
+      try {
+        decryptedJson = await _decryptData(manifestPayloadCipher, keyBytes);
+      } catch (_) {
+        throw Exception("Failed to decrypt share manifest.");
+      }
+
+      final Map<String, dynamic> manifest = jsonDecode(decryptedJson);
+
+      // 6. Gather target structures and confirm with user
+      final type = manifest['type'] as String;
+      final String name = type == 'file' ? manifest['name'] as String : manifest['folder']['name'] as String;
+      
+      final List<Map<String, dynamic>> foldersToCreate = [];
+      final Map<String, Map<String, dynamic>> filesToCopy = {};
+
+      if (type == 'file') {
+        final fileId = manifest['id'] as String;
+        final chunks = (manifest['chunks'] as List? ?? []).map((c) {
+          final cMap = Map<String, dynamic>.from(c as Map);
+          return {
+            'index': cMap['index'],
+            'size': cMap['size'],
+            'message_id': cMap['message_id'],
+            'channel_id': cMap['channel_id'],
+            'status': 'pending',
+            'receiver_message_id': null,
+            'receiver_channel_id': null,
+          };
+        }).toList();
+
+        filesToCopy[fileId] = {
+          'id': fileId,
+          'name': manifest['name'],
+          'size': manifest['size'],
+          'mime_type': manifest['mime_type'],
+          'dek': manifest['dek'],
+          'ctr_iv': manifest['ctr_iv'],
+          'folderId': targetFolderId,
+          'chunks': chunks,
+          'status': 'pending',
+        };
+      } else {
+        final folderMetadata = manifest['folder'] as Map<String, dynamic>;
+        _buildFlatImportList(folderMetadata, targetFolderId, foldersToCreate, filesToCopy);
+      }
+
+      // Calculate total size
+      var totalSize = 0;
+      for (final f in filesToCopy.values) {
+        totalSize += (f['size'] as int? ?? 0);
+      }
+
+      // Measure internet speed
+      double speedBytesPerSec = 1.5 * 1024 * 1024; // Default: 1.5 MB/s
+      if (onConfirm != null) {
+        try {
+          final stopwatch = Stopwatch()..start();
+          final client = HttpClient();
+          client.connectionTimeout = const Duration(seconds: 3);
+          final request = await client.getUrl(Uri.parse('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'));
+          final response = await request.close();
+          if (response.statusCode == 200) {
+            var bytesRead = 0;
+            await for (final chunk in response) {
+              bytesRead += chunk.length;
+              if (bytesRead >= 500 * 1024) break; // 500KB is enough
+            }
+            stopwatch.stop();
+            final durationMs = stopwatch.elapsedMilliseconds;
+            if (durationMs > 0) {
+              speedBytesPerSec = (bytesRead / durationMs) * 1000;
+            }
+          }
+        } catch (e) {
+          AppLogger.warning('ShareService: Speed test failed: $e');
+        }
+
+        final confirmed = await onConfirm(totalSize, speedBytesPerSec);
+        if (!confirmed) {
+          // Leave channels and abort
+          for (final client in readyClients) {
+            try {
+              await client.sendRequest({
+                "@type": "leaveChat",
+                "chat_id": shareChannelId,
+              });
+            } catch (_) {}
+          }
+          await _removeTempJoinedChannel(shareChannelId);
+          return;
+        }
+      }
+
+      // Save initial state to resume later if interrupted
+      final Map<String, dynamic> state = {
+        'taskId': shareId,
+        'inviteLink': inviteLink ?? '',
+        'channelId': shareChannelId,
+        'manifestMessageId': manifestMessageId,
+        'targetFolderId': targetFolderId,
+        'name': name,
+        'totalSize': totalSize,
+        'bytesTransferred': 0,
+        'manifestKey': base64Url.encode(keyBytes),
+        'status': 'running',
+        'foldersToCreate': foldersToCreate,
+        'filesToCopy': filesToCopy,
+      };
+      await _saveImportState(shareId, state);
+
+      // Reconstruct Database records and download/re-encrypt chunks
+      final db = _ref.read(databaseProvider);
+      final receiverMasterKey = _ref.read(masterKeyProvider);
+      if (receiverMasterKey == null) throw Exception("Vault is locked. Cannot import.");
+
+      final settingsRepo = _ref.read(settingsRepositoryProvider);
+      final activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+      if (activeChannelStr == null || activeChannelStr.isEmpty) {
+        throw Exception("No active storage channel configured. Cannot import file.");
+      }
+      final int receiverChannelId = int.parse(activeChannelStr);
+
+      // Execute import loop
+      await _executeImportLoop(state, db, receiverMasterKey, receiverChannelId);
+
+      // Success cleanup
+      state['status'] = 'completed';
+      await settingsRepo.setSetting('import_task_${shareId}_state', '');
+      final activeTasksStr = await settingsRepo.getSetting('active_import_tasks') ?? '[]';
+      final List<dynamic> activeTasks = jsonDecode(activeTasksStr);
+      activeTasks.remove(shareId);
+      await settingsRepo.setSetting('active_import_tasks', jsonEncode(activeTasks));
+
+      // Leave channel
+      for (final client in readyClients) {
+        try {
+          await client.sendRequest({
+            "@type": "leaveChat",
+            "chat_id": shareChannelId,
+          });
+        } catch (_) {}
+      }
+      await _removeTempJoinedChannel(shareChannelId);
+      
+    } catch (e) {
+      // Clean up temp joined channel on failure
+      for (final client in readyClients) {
+        try {
+          await client.sendRequest({
+            "@type": "leaveChat",
+            "chat_id": shareChannelId,
+          });
+        } catch (_) {}
+      }
+      await _removeTempJoinedChannel(shareChannelId);
+      rethrow;
     }
+  }
 
-    final Map<String, dynamic> manifest = jsonDecode(decryptedJson);
+  Future<void> resumeImport(String taskId) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final stateStr = await settingsRepo.getSetting('import_task_${taskId}_state');
+    if (stateStr == null || stateStr.isEmpty) return;
 
-    // 6. Reconstruct Database records and download/re-encrypt chunks
+    final Map<String, dynamic> state = jsonDecode(stateStr);
+    state['status'] = 'running';
+    await _saveImportState(taskId, state);
+
     final db = _ref.read(databaseProvider);
     final receiverMasterKey = _ref.read(masterKeyProvider);
     if (receiverMasterKey == null) throw Exception("Vault is locked. Cannot import.");
 
-    final settingsRepo = _ref.read(settingsRepositoryProvider);
     final activeChannelStr = await settingsRepo.getSetting('active_channel_id');
     if (activeChannelStr == null || activeChannelStr.isEmpty) {
       throw Exception("No active storage channel configured. Cannot import file.");
     }
     final int receiverChannelId = int.parse(activeChannelStr);
 
-    final type = manifest['type'] as String;
-    if (type == 'file') {
-      await _copyAndReEncryptFile(
-        manifest,
-        targetFolderId,
-        db,
-        receiverMasterKey,
-        receiverChannelId,
-      );
-    } else {
-      final folderMetadata = manifest['folder'] as Map<String, dynamic>;
-      await _importFolderMetadata(
-        folderMetadata,
-        targetFolderId,
-        db,
-        receiverMasterKey,
-        receiverChannelId,
+    final inviteLink = state['inviteLink'] as String?;
+    final int shareChannelId = state['channelId'] as int;
+
+    // Join channels again in case we left
+    final readyClients = _ref.read(telegramManagerProvider)
+        .where((c) => c.authState == TelegramAuthState.ready)
+        .toList();
+    if (readyClients.isEmpty) throw Exception("No active Telegram accounts logged in.");
+
+    if (inviteLink != null && inviteLink.isNotEmpty) {
+      for (final client in readyClients) {
+        try {
+          final joinRes = await client.sendRequest({
+            "@type": "joinChatByInviteLink",
+            "invite_link": inviteLink,
+          });
+          if (joinRes['@type'] != 'error') {
+            await _archiveAndMute(client, shareChannelId);
+          }
+        } catch (_) {}
+      }
+      await _addTempJoinedChannel(shareChannelId);
+    }
+
+    try {
+      await _executeImportLoop(state, db, receiverMasterKey, receiverChannelId);
+
+      // Clean up state
+      state['status'] = 'completed';
+      await settingsRepo.setSetting('import_task_${taskId}_state', '');
+      final activeTasksStr = await settingsRepo.getSetting('active_import_tasks') ?? '[]';
+      final List<dynamic> activeTasks = jsonDecode(activeTasksStr);
+      activeTasks.remove(taskId);
+      await settingsRepo.setSetting('active_import_tasks', jsonEncode(activeTasks));
+
+      // Leave channel
+      for (final client in readyClients) {
+        try {
+          await client.sendRequest({
+            "@type": "leaveChat",
+            "chat_id": shareChannelId,
+          });
+        } catch (_) {}
+      }
+      await _removeTempJoinedChannel(shareChannelId);
+    } catch (e) {
+      // Keep state as interrupted to resume later
+      state['status'] = 'interrupted';
+      await _saveImportState(taskId, state);
+      
+      // Leave chat so we don't sit in it when not active
+      for (final client in readyClients) {
+        try {
+          await client.sendRequest({
+            "@type": "leaveChat",
+            "chat_id": shareChannelId,
+          });
+        } catch (_) {}
+      }
+      await _removeTempJoinedChannel(shareChannelId);
+      rethrow;
+    }
+  }
+
+  Future<void> _executeImportLoop(
+    Map<String, dynamic> state,
+    AeroDriveDatabase db,
+    List<int> receiverMasterKey,
+    int receiverChannelId,
+  ) async {
+    final taskId = state['taskId'] as String;
+    final foldersToCreate = state['foldersToCreate'] as List;
+    final filesToCopy = state['filesToCopy'] as Map<String, dynamic>;
+
+    // 1. Create folders in the DB (insertOrIgnore)
+    for (final folderObj in foldersToCreate) {
+      final fMap = folderObj as Map<String, dynamic>;
+      await db.into(db.folders).insert(
+        FoldersCompanion.insert(
+          id: fMap['id'] as String,
+          name: fMap['name'] as String,
+          parentId: drift.Value(fMap['parentId'] as String?),
+          createdAt: drift.Value(DateTime.now()),
+        ),
+        mode: drift.InsertMode.insertOrIgnore,
       );
     }
+
+    // 2. Copy files one by one with throttled processing
+    for (final entry in filesToCopy.entries) {
+      final fileId = entry.key;
+      final fileData = entry.value as Map<String, dynamic>;
+
+      if (fileData['status'] == 'completed') continue;
+
+      await _copyAndReEncryptFileResumable(
+        taskId,
+        fileId,
+        state,
+        db,
+        receiverMasterKey,
+        receiverChannelId,
+      );
+
+      fileData['status'] = 'completed';
+      await _saveImportState(taskId, state);
+    }
+  }
+
+  void _buildFlatImportList(
+    Map<String, dynamic> node,
+    String? currentParentId,
+    List<Map<String, dynamic>> foldersToCreate,
+    Map<String, Map<String, dynamic>> filesToCopy,
+  ) {
+    final folderId = node['id'] as String;
+    final folderName = node['name'] as String;
+    foldersToCreate.add({
+      'id': folderId,
+      'name': folderName,
+      'parentId': currentParentId,
+    });
+
+    final files = node['files'] as List? ?? [];
+    for (final f in files) {
+      final fJson = Map<String, dynamic>.from(f as Map);
+      final fileId = fJson['id'] as String;
+      
+      final chunks = (fJson['chunks'] as List? ?? []).map((c) {
+        final cMap = Map<String, dynamic>.from(c as Map);
+        return {
+          'index': cMap['index'],
+          'size': cMap['size'],
+          'message_id': cMap['message_id'],
+          'channel_id': cMap['channel_id'],
+          'status': 'pending',
+          'receiver_message_id': null,
+          'receiver_channel_id': null,
+          'receiver_size': null,
+        };
+      }).toList();
+
+      filesToCopy[fileId] = {
+        'id': fileId,
+        'name': fJson['name'],
+        'size': fJson['size'],
+        'mime_type': fJson['mime_type'],
+        'dek': fJson['dek'],
+        'ctr_iv': fJson['ctr_iv'],
+        'folderId': folderId,
+        'chunks': chunks,
+        'status': 'pending',
+      };
+    }
+
+    final subs = node['subfolders'] as List? ?? [];
+    for (final sub in subs) {
+      _buildFlatImportList(
+        Map<String, dynamic>.from(sub as Map),
+        folderId,
+        foldersToCreate,
+        filesToCopy,
+      );
+    }
+  }
+
+  Future<void> _copyAndReEncryptFileResumable(
+    String taskId,
+    String fileId,
+    Map<String, dynamic> state,
+    AeroDriveDatabase db,
+    List<int> receiverMasterKey,
+    int receiverChannelId,
+  ) async {
+    final filesToCopy = state['filesToCopy'] as Map<String, dynamic>;
+    final fileData = filesToCopy[fileId] as Map<String, dynamic>;
+    final fileName = fileData['name'] as String;
+    final fileSize = fileData['size'] as int?;
+    final fileMimeType = fileData['mime_type'] as String?;
+    final senderDekBytes = base64Decode(fileData['dek'] as String);
+    final senderCtrIvBytes = fileData['ctr_iv'] != null ? base64Decode(fileData['ctr_iv'] as String) : null;
+    final chunks = fileData['chunks'] as List;
+
+    final random = Random.secure();
+    final receiverDekBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    final isVideo = fileMimeType != null && fileMimeType.startsWith('video/');
+    final List<int>? receiverCtrIvBytes = isVideo ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
+
+    final tempDir = await getTemporaryDirectory();
+    final engine = EncryptionEngine();
+
+    final readyClients = _ref.read(telegramManagerProvider)
+        .where((c) => c.authState == TelegramAuthState.ready)
+        .toList();
+    if (readyClients.isEmpty) throw Exception("No active Telegram accounts logged in.");
+
+    var globalByteOffset = 0;
+
+    for (var i = 0; i < chunks.length; i++) {
+      final chunkData = chunks[i] as Map<String, dynamic>;
+      final chunkSize = chunkData['size'] as int? ?? 0;
+
+      if (chunkData['status'] == 'completed') {
+        globalByteOffset += chunkSize;
+        continue;
+      }
+
+      // Concurrency Throttling: chunk-by-chunk processing keeps local storage bounded.
+      final client = readyClients[i % readyClients.length];
+      final senderChannelId = chunkData['channel_id'] as int;
+      final senderMessageId = chunkData['message_id'] as int;
+
+      final File senderChunkFile = await _downloadTelegramMessageDocumentWithClient(client, senderChannelId, senderMessageId);
+      final File tempPlaintextChunkFile = File('${tempDir.path}/temp_plaintext_${fileId}_$i.tmp');
+      final File receiverChunkFile = File('${tempDir.path}/temp_encrypted_${fileId}_$i.tmp');
+
+      try {
+        await engine.decryptDiskToStream(
+          encryptedChunkFile: senderChunkFile,
+          outputFile: tempPlaintextChunkFile,
+          dekBytes: senderDekBytes,
+          append: false,
+          ctrIv: senderCtrIvBytes,
+          globalByteOffset: globalByteOffset,
+        );
+
+        final encryptedPaths = await engine.encryptStreamToDisk(
+          sourceFile: tempPlaintextChunkFile,
+          outputDirectory: tempDir.path,
+          dekBytes: receiverDekBytes,
+          ctrIv: receiverCtrIvBytes,
+        );
+
+        if (encryptedPaths.isEmpty) {
+          throw Exception("Failed to encrypt chunk.");
+        }
+        
+        final File outputEncFile = File(encryptedPaths.first);
+        if (outputEncFile.path != receiverChunkFile.path) {
+          if (await receiverChunkFile.exists()) await receiverChunkFile.delete();
+          await outputEncFile.rename(receiverChunkFile.path);
+        }
+      } on FileSystemException catch (e) {
+        if (e.message.contains('No space left') || e.osError?.errorCode == 28 || e.osError?.errorCode == 112) {
+          throw Exception("Import failed: Insufficient storage space on your device.");
+        }
+        rethrow;
+      }
+
+      // Encrypt and encode chunk caption manifest
+      final cipher = AesGcm.with256bits();
+      final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
+      final nonce = cipher.newNonce();
+      final secretBox = await cipher.encrypt(
+        receiverDekBytes,
+        secretKey: secretKey,
+        nonce: nonce,
+      );
+      final wrappedDekBase64 = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+
+      final chunkCaption = await ManifestEncoder.encodeFileManifest(
+        fileId: fileId,
+        fileName: fileName,
+        parentFolderId: fileData['folderId'],
+        masterKey: secretKey,
+        hash: '',
+        size: fileSize ?? 0,
+        mime: fileMimeType ?? 'application/octet-stream',
+        wrappedDekBase64: wrappedDekBase64,
+        ctrIvBase64: receiverCtrIvBytes != null ? base64Encode(receiverCtrIvBytes) : null,
+        chunkIndex: i,
+        totalChunks: chunks.length,
+        isChunked: chunks.length > 1 ? 1 : 0,
+      );
+
+      final response = await client.uploadDocument(
+        receiverChannelId,
+        receiverChunkFile.path,
+        caption: chunkCaption,
+      );
+
+      if (response['@type'] == 'error') {
+        throw Exception('Failed to upload chunk to storage: ${response['message']}');
+      }
+
+      final int messageId = response['id'];
+      final int actualChunkSize = await receiverChunkFile.length();
+
+      // Clean up temp files immediately
+      try {
+        if (await senderChunkFile.exists()) await senderChunkFile.delete();
+        if (await tempPlaintextChunkFile.exists()) await tempPlaintextChunkFile.delete();
+        if (await receiverChunkFile.exists()) await receiverChunkFile.delete();
+      } catch (_) {}
+
+      // Update state
+      chunkData['status'] = 'completed';
+      chunkData['receiver_message_id'] = messageId;
+      chunkData['receiver_channel_id'] = receiverChannelId;
+      chunkData['receiver_size'] = actualChunkSize;
+
+      state['bytesTransferred'] = (state['bytesTransferred'] as int) + chunkSize;
+      await _saveImportState(taskId, state);
+
+      globalByteOffset += chunkSize;
+    }
+
+    // Now, write to database (File & all its Chunks) under a single SQLite transaction
+    final cipher = AesGcm.with256bits();
+    final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
+    final nonce = cipher.newNonce();
+    final secretBox = await cipher.encrypt(
+      receiverDekBytes,
+      secretKey: secretKey,
+      nonce: nonce,
+    );
+    var wrappedDekString = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+    if (receiverCtrIvBytes != null) {
+      wrappedDekString = '$wrappedDekString|${base64Encode(receiverCtrIvBytes)}';
+    }
+
+    await db.transaction(() async {
+      await db.into(db.files).insert(
+        FilesCompanion.insert(
+          id: fileId,
+          name: fileName,
+          folderId: drift.Value(fileData['folderId']),
+          size: drift.Value(fileSize),
+          mimeType: drift.Value(fileMimeType),
+          sha256Hash: drift.Value(wrappedDekString),
+          isEncrypted: const drift.Value(true),
+          isChunked: drift.Value(chunks.length > 1),
+          totalChunks: drift.Value(chunks.length),
+          createdAt: drift.Value(DateTime.now()),
+          updatedAt: drift.Value(DateTime.now()),
+        ),
+        mode: drift.InsertMode.insertOrIgnore,
+      );
+
+      for (final chunkInfo in chunks) {
+        await db.into(db.chunks).insert(
+          ChunksCompanion.insert(
+            id: const Uuid().v4(),
+            fileId: drift.Value(fileId),
+            chunkIndex: drift.Value(chunkInfo['index'] as int),
+            channelId: drift.Value(chunkInfo['receiver_channel_id'] as int),
+            messageId: drift.Value(chunkInfo['receiver_message_id'] as int),
+            size: drift.Value(chunkInfo['receiver_size'] as int?),
+          ),
+          mode: drift.InsertMode.insertOrIgnore,
+        );
+      }
+    });
+  }
+
+  Future<File> _downloadTelegramMessageDocumentWithClient(TelegramService client, int channelId, int messageId) async {
+    final message = await client.sendRequest({
+      "@type": "getMessage",
+      "chat_id": channelId,
+      "message_id": messageId,
+    });
+
+    if (message['@type'] == 'error') {
+      throw Exception("Failed to retrieve chunk message: ${message['message']}");
+    }
+
+    final content = message['content'];
+    if (content == null || content['@type'] != 'messageDocument') {
+      throw Exception("Invalid message format: expected messageDocument.");
+    }
+
+    final doc = content['document'];
+    if (doc == null || doc['document'] == null) {
+      throw Exception("Document object not found in chunk message.");
+    }
+
+    final fileId = doc['document']['id'] as int;
+    await client.downloadFile(fileId);
+
+    String? localPath;
+    for (var attempt = 0; attempt < 120; attempt++) {
+      final fileInfo = await client.sendRequest({'@type': 'getFile', 'file_id': fileId});
+      final local = fileInfo['local'] as Map<String, dynamic>?;
+      if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {
+        localPath = local['path'] as String;
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+
+    if (localPath == null) {
+      throw Exception("Failed to download chunk file from Telegram.");
+    }
+
+    return File(localPath);
   }
 
   Future<void> revokeShare(String shareId) async {

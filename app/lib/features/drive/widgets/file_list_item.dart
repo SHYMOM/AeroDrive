@@ -214,6 +214,8 @@ class FileListItem extends ConsumerWidget {
           _showCopyDialog(context, ref);
         } else if (value == 'star') {
           _toggleFavorite(ref);
+        } else if (value == 'info') {
+          _showInfoDialog(context, ref);
         }
       },
       itemBuilder: (context) => [
@@ -223,6 +225,7 @@ class FileListItem extends ConsumerWidget {
         const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
         const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
         PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: const TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Colors.white))),
         const PopupMenuDivider(),
         const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
@@ -331,7 +334,63 @@ class FileListItem extends ConsumerWidget {
         ),
       );
     }
-    
     ref.read(dbRebuildVersionProvider.notifier).state++;
+  }
+
+  void _showInfoDialog(BuildContext context, WidgetRef ref) {
+    final sizeStr = _formatBytes(file.size ?? 0);
+    final createdStr = file.createdAt != null
+        ? DateFormat('MM/dd/yyyy hh:mm a').format(file.createdAt!)
+        : 'Unknown';
+    final photoTakenStr = file.photoTakenAt != null
+        ? DateFormat('MM/dd/yyyy hh:mm a').format(file.photoTakenAt!)
+        : 'None available';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.primary),
+            SizedBox(width: 10),
+            Text('File Info', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('Name:', file.name),
+            _buildInfoRow('Type:', file.mimeType ?? 'Unknown'),
+            _buildInfoRow('Size:', sizeStr),
+            _buildInfoRow('Uploaded:', createdStr),
+            if (file.duration != null && file.duration! > 0)
+              _buildInfoRow('Video Duration:', _formatDuration(file.duration)),
+            _buildInfoRow('Photo Taken (EXIF):', photoTakenStr),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13))),
+        ],
+      ),
+    );
   }
 }

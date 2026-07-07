@@ -464,6 +464,40 @@ class SidebarContent extends ConsumerWidget {
                   ),
                 ),
 
+                // My Shared Links Option
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        if (Scaffold.of(context).isDrawerOpen) {
+                          Navigator.pop(context);
+                        }
+                        context.push('/settings/shared_links');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
+                            SizedBox(width: 16),
+                            Text(
+                              'My Shared Links',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
                 // Trash Option
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

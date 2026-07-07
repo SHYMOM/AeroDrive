@@ -106,175 +106,179 @@ class FileGridItem extends ConsumerWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Top Half: Cover image or File Type placeholder
-              Expanded(
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (isImg || isVid)
-                      _FileThumbnail(file: file)
-                    else
-                      _buildFilePlaceholder(),
-                    
-                    // Gradient overlay
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.3),
-                            Colors.transparent,
-                            Colors.black.withValues(alpha: 0.3),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Top-Left Badge (File type icon)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.6),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: _buildTypeBadgeIcon(ext),
-                      ),
-                    ),
-                    
-                    // Top-Right Star Icon
-                    Positioned(
-                      top: 2,
-                      right: 2,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: IconButton(
-                          icon: Icon(
-                            file.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                            color: file.isFavorite ? const Color(0xFF38BDF8) : Colors.white70,
-                            size: 20,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Top Half: Cover image or File Type placeholder
+                  Expanded(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (isImg || isVid)
+                          _FileThumbnail(file: file)
+                        else
+                          _buildFilePlaceholder(),
+                        
+                        // Gradient overlay
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.3),
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.3),
+                              ],
+                            ),
                           ),
-                          onPressed: () => _toggleFavorite(ref),
                         ),
-                      ),
-                    ),
 
-                    // Video Play overlay button in the middle (with frosted glass effect)
-                    if (isVid)
-                      Center(
-                        child: ClipOval(
-                          child: BackdropFilter(
-                            filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
-                                  width: 1.2,
+                        // Top-Left Badge (File type icon)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: _buildTypeBadgeIcon(ext),
+                          ),
+                        ),
+                        
+                        // Top-Right Star Icon
+                        Positioned(
+                          top: 2,
+                          right: 2,
+                          child: Material(
+                            color: Colors.transparent,
+                            child: IconButton(
+                              icon: Icon(
+                                file.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
+                                color: file.isFavorite ? const Color(0xFF38BDF8) : Colors.white70,
+                                size: 20,
+                              ),
+                              onPressed: () => _toggleFavorite(ref),
+                            ),
+                          ),
+                        ),
+
+                        // Video Play overlay button in the middle (with frosted glass effect)
+                        if (isVid)
+                          Center(
+                            child: ClipOval(
+                              child: BackdropFilter(
+                                filter: ui.ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                                child: Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.15),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Colors.white,
-                                size: 24,
+                            ),
+                          ),
+
+                        // Video Duration tag at bottom-right
+                        if (isVid)
+                          Positioned(
+                            bottom: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.75),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _formatDuration(file.duration),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
 
-                    // Video Duration tag at bottom-right
-                    if (isVid)
-                      Positioned(
-                        bottom: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.75),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            _formatDuration(file.duration),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
+                        // Checkbox Selection Mode Overlay
+                        if (isSelectionMode)
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.primary : Colors.black45,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: Icon(
+                                isSelected ? Icons.check : Icons.add,
+                                size: 12,
+                                color: isSelected ? Colors.black : Colors.transparent,
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-
-                    // Checkbox Selection Mode Overlay
-                    if (isSelectionMode)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : Colors.black45,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          child: Icon(
-                            isSelected ? Icons.check : Icons.add,
-                            size: 12,
-                            color: isSelected ? Colors.black : Colors.transparent,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              
-              // Bottom Section: Title, options & details
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            file.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        if (!isSelectionMode)
-                          _buildOptionsMenu(context, ref),
                       ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$dateString • $sizeString',
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 10,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  ),
+                  
+                  // Bottom Section: Title & details
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          file.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$dateString • $sizeString',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 10,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+
+              // Translucent blue overlay on selection
+              if (isSelected)
+                Positioned.fill(
+                  child: Container(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                  ),
+                ),
             ],
           ),
         ),

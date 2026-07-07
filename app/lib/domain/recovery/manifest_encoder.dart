@@ -16,6 +16,7 @@ class ManifestEncoder {
     int? chunkIndex,
     int? totalChunks,
     int? duration,
+    DateTime? photoTakenAt,
     int isChunked = 0,
     int version = 1,
   }) async => CaptionSerializer.serializeFile(
@@ -31,6 +32,7 @@ class ManifestEncoder {
       chunkIndex: chunkIndex,
       totalChunks: totalChunks,
       duration: duration,
+      photoTakenAt: photoTakenAt,
       isChunked: isChunked,
       version: version,
     );

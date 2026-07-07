@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:app_links/app_links.dart';
 import 'package:drift/drift.dart' as drift;
@@ -26,31 +28,72 @@ import 'domain/auto_backup_watcher.dart';
 import 'domain/backup_service.dart';
 import 'domain/boot_service.dart';
 import 'domain/notification_service.dart';
+import 'domain/upload_queue_service.dart';
+import 'domain/download_queue_service.dart';
+import 'domain/folder_scanner.dart';
 import 'domain/streaming/streaming_server.dart';
 import 'domain/sync/realtime_sync_service.dart';
 import 'features/debug/debug_error_screen.dart';
 import 'features/drive/providers/drive_providers.dart';
 import 'features/sharing/share_service.dart';
+import 'core/providers.dart';
+import 'features/telegram/telegram_manager.dart';
+import 'features/telegram/telegram_service.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == 'aero_drive_scheduled_backup') {
       try {
-        final db = AeroDriveDatabase();
-        final settingsRepo = SettingsRepository(db);
+        // 1. Check if main app is active
+        final mainIsolateActive = IsolateNameServer.lookupPortByName('aerodrive_main_isolate') != null;
+        if (mainIsolateActive) {
+          debugPrint('[AeroDrive] Background task: Main app is active, skipping background processing.');
+          return true;
+        }
+
+        // 2. Headless Mode: Initialize ProviderContainer
+        final container = ProviderContainer();
+        final db = container.read(databaseProvider);
+        final settingsRepo = container.read(settingsRepositoryProvider);
 
         final enabled = await settingsRepo.getSetting('master_autobackup_enabled');
-        if (enabled != 'true') return true;
+        if (enabled != 'true') {
+          container.dispose();
+          return true;
+        }
 
         final raw = await settingsRepo.getSetting('tracked_backup_folders');
-        if (raw == null || raw.isEmpty) return true;
+        if (raw == null || raw.isEmpty) {
+          container.dispose();
+          return true;
+        }
 
         final List<dynamic> profiles;
         try {
           profiles = jsonDecode(raw) as List<dynamic>;
         } catch (_) {
+          container.dispose();
           return true;
+        }
+
+        // 3. Wait for Telegram client to restore and be ready
+        var ready = false;
+        for (var i = 0; i < 30; i++) {
+          final readyClients = container.read(telegramManagerProvider)
+              .where((c) => c.authState == TelegramAuthState.ready)
+              .toList();
+          if (readyClients.isNotEmpty) {
+            ready = true;
+            break;
+          }
+          await Future.delayed(const Duration(seconds: 1));
+        }
+
+        if (!ready) {
+          debugPrint('[AeroDrive] Background task: No Telegram client became ready. Exiting.');
+          container.dispose();
+          return false;
         }
 
         const uuid = Uuid();
@@ -115,11 +158,10 @@ void callbackDispatcher() {
 
               if (!matches) continue;
               final fileSize = await entity.length();
-
               final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
 
               // Resolve target folder hierarchy
-              final resolvedFolderId = await _resolveBackupFolderIdInDispatcher(db, entity.path, path, destinationFolderId);
+              final resolvedFolderId = await _resolveBackupFolderIdInDispatcher(container, db, entity.path, path, destinationFolderId);
               final targetFolderIdPart = resolvedFolderId ?? '';
 
               // Check if file already exists in target folder with same name and size
@@ -128,18 +170,26 @@ void callbackDispatcher() {
               ).get();
 
               if (existing.isEmpty) {
-                await db.into(db.transferQueue).insert(
-                  TransferQueueCompanion.insert(
-                    id: uuid.v4(),
-                    type: const drift.Value('UPLOAD_FILE'),
-                    status: const drift.Value('PENDING'),
-                    priority: const drift.Value(1),
-                    totalBytes: drift.Value(fileSize),
-                    fileId: drift.Value('${entity.path}|$targetFolderIdPart'),
-                    createdAt: drift.Value(DateTime.now()),
-                  ),
-                );
-                queuedCount++;
+                // Check if file is already in the transfer queue (PENDING or PROCESSING)
+                final targetFileId = '${entity.path}|$targetFolderIdPart';
+                final inQueue = await (db.select(db.transferQueue)
+                  ..where((q) => q.fileId.equals(targetFileId) & (q.status.equals('PENDING') | q.status.equals('PROCESSING')))
+                ).get();
+
+                if (inQueue.isEmpty) {
+                  await db.into(db.transferQueue).insert(
+                    TransferQueueCompanion.insert(
+                      id: uuid.v4(),
+                      type: const drift.Value('UPLOAD_FILE'),
+                      status: const drift.Value('PENDING'),
+                      priority: const drift.Value(1),
+                      totalBytes: drift.Value(fileSize),
+                      fileId: drift.Value(targetFileId),
+                      createdAt: drift.Value(DateTime.now()),
+                    ),
+                  );
+                  queuedCount++;
+                }
               }
             }
           }
@@ -165,8 +215,28 @@ void callbackDispatcher() {
         }
 
         await settingsRepo.setSetting('last_backup_check', DateTime.now().toIso8601String());
-        await db.close();
         debugPrint('[AeroDrive] Background backup queued $queuedCount files');
+
+        // 4. Initialize Queue Services and process background uploads
+        if (queuedCount > 0) {
+          final uploadService = container.read(uploadQueueServiceProvider);
+          final downloadService = container.read(downloadQueueServiceProvider);
+
+          final startTime = DateTime.now();
+          while (DateTime.now().difference(startTime).inMinutes < 8) {
+            final pendingCount = await (db.select(db.transferQueue)
+              ..where((q) => q.status.equals('PENDING') | q.status.equals('PROCESSING'))
+            ).get().then((list) => list.length);
+
+            if (pendingCount == 0) {
+              debugPrint('[AeroDrive] Background task: Queue processing complete.');
+              break;
+            }
+            await Future.delayed(const Duration(seconds: 5));
+          }
+        }
+
+        container.dispose();
         return true;
       } catch (e) {
         debugPrint('[AeroDrive] Background backup error: $e');
@@ -178,6 +248,7 @@ void callbackDispatcher() {
 }
 
 Future<String?> _resolveBackupFolderIdInDispatcher(
+  ProviderContainer container,
   AeroDriveDatabase db,
   String filePath,
   String trackedFolderPath,
@@ -210,6 +281,12 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
               createdAt: drift.Value(DateTime.now()),
             )
           );
+          try {
+            final folderScanner = container.read(folderScannerProvider);
+            unawaited(folderScanner.uploadFolderManifest(newId, folderName, currentFolderId));
+          } catch (e) {
+            debugPrint('Failed to upload folder manifest in background: $e');
+          }
           currentFolderId = newId;
         } else {
           currentFolderId = folder.id;
@@ -256,6 +333,12 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
           createdAt: drift.Value(DateTime.now()),
         )
       );
+      try {
+        final folderScanner = container.read(folderScannerProvider);
+        unawaited(folderScanner.uploadFolderManifest(newId, folderName, currentFolderId));
+      } catch (e) {
+        debugPrint('Failed to upload folder manifest in background: $e');
+      }
       currentFolderId = newId;
     } else {
       currentFolderId = folder.id;
@@ -269,6 +352,10 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
 void main() {
   // Initialize AppLogger first to capture all startup logs.
   AppLogger.init();
+
+  // Register main isolate port to indicate that the UI is active
+  final receivePort = ReceivePort();
+  IsolateNameServer.registerPortWithName(receivePort.sendPort, 'aerodrive_main_isolate');
 
   // 1. (Moved inside runZonedGuarded)
 
@@ -504,6 +591,7 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
   @override
   void dispose() {
     _linkSubscription?.cancel();
+    IsolateNameServer.removePortNameMapping('aerodrive_main_isolate');
     super.dispose();
   }
 

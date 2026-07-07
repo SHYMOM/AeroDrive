@@ -113,6 +113,12 @@ class ZeroDBRecoveryService {
           itemsRecovered++;
 
           if (manifest['t'] == 'dir') {
+            final int? tsSeconds = manifest['ts'] as int?;
+            final int? msgDate = msg['date'] as int?;
+            final DateTime recoveredDate = tsSeconds != null 
+                ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000) 
+                : (msgDate != null ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000) : DateTime.now());
+
             final folderId = manifest['id'] as String;
             recoveredFolderIds.add(folderId);
             recoveredFolders.add(
@@ -121,8 +127,8 @@ class ZeroDBRecoveryService {
                 name: manifest['name'] as String,
                 parentId: drift.Value(manifest['pid'] as String?), // Can be null
                 color: drift.Value(manifest['col'] as String?),
-                createdAt: drift.Value(DateTime.now()), 
-                updatedAt: drift.Value(DateTime.now()),
+                createdAt: drift.Value(recoveredDate), 
+                updatedAt: drift.Value(recoveredDate),
               ),
             );
           } else if (manifest['t'] == 'thumb') {
@@ -189,6 +195,18 @@ class ZeroDBRecoveryService {
               final isChunkedVal = manifest['chk'] == 1;
               final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
               final durationVal = manifest['dur'] as int?;
+              
+              final int? tsSeconds = manifest['ts'] as int?;
+              final int? msgDate = msg['date'] as int?;
+              final DateTime recoveredDate = tsSeconds != null 
+                  ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000) 
+                  : (msgDate != null ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000) : DateTime.now());
+
+              final int? ptSeconds = manifest['pt'] as int?;
+              final DateTime? photoTakenAt = ptSeconds != null 
+                  ? DateTime.fromMillisecondsSinceEpoch(ptSeconds * 1000) 
+                  : null;
+
               recoveredFiles.add(
                 FilesCompanion.insert(
                   id: fileId,
@@ -200,7 +218,9 @@ class ZeroDBRecoveryService {
                   isChunked: drift.Value(isChunkedVal),
                   totalChunks: drift.Value(totalChunksVal),
                   sha256Hash: drift.Value(wrappedDekString),
-                  createdAt: drift.Value(DateTime.now()),
+                  createdAt: drift.Value(recoveredDate),
+                  updatedAt: drift.Value(recoveredDate),
+                  photoTakenAt: drift.Value(photoTakenAt),
                   duration: drift.Value(durationVal),
                 ),
               );

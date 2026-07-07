@@ -21,6 +21,8 @@ class FolderGridItem extends ConsumerWidget {
   const FolderGridItem({super.key, required this.folder});
   final FolderData folder;
 
+
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     Color folderColor = AppColors.folderDefault;
@@ -37,18 +39,6 @@ class FolderGridItem extends ConsumerWidget {
         // Fallback to default
       }
     }
-    
-    // Format date: MM/dd/yyyy hh:mm a
-    final dateString = folder.createdAt != null 
-        ? DateFormat('MM/dd/yyyy hh:mm a').format(folder.createdAt!)
-        : 'Unknown time';
-
-    final sizeAsync = ref.watch(folderSizeProvider(folder.id));
-    final sizeText = sizeAsync.when(
-      data: _formatFolderSize,
-      loading: () => '...',
-      error: (_, _) => '0 B',
-    );
 
     final isSelectionMode = ref.watch(isSelectionModeProvider);
     final selectedItems = ref.watch(selectedItemsProvider);
@@ -89,8 +79,7 @@ class FolderGridItem extends ConsumerWidget {
         }
       },
       borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E2D),
           borderRadius: BorderRadius.circular(12),
@@ -113,73 +102,105 @@ class FolderGridItem extends ConsumerWidget {
               ),
           ],
         ),
-        child: Row(
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Icon(
-                  Icons.folder_rounded,
-                  size: 28,
-                  color: folderColor,
-                ),
-                if (isSelectionMode)
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.all(1),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primary : Colors.black45,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.0),
-                      ),
-                      child: Icon(
-                        isSelected ? Icons.check : Icons.add,
-                        size: 8,
-                        color: isSelected ? Colors.black : Colors.transparent,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Column(
                 children: [
-                  Text(
-                    folder.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                  // Top Half: Large Folder Icon
+                  Expanded(
+                    child: Center(
+                      child: Icon(
+                        Icons.folder_rounded,
+                        size: 48,
+                        color: folderColor,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    itemsCountText,
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 10,
+                  // Bottom Half: Folder Info
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    color: Colors.black12,
+                    width: double.infinity,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          folder.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          itemsCountText,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (folder.isFavorite)
-                  const Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 14),
-                if (!isSelectionMode)
-                  _buildOptionsMenu(context, ref),
-              ],
-            ),
-          ],
+              
+              // Star Badge (Top-Left)
+              if (folder.isFavorite)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.star_rounded,
+                      color: Color(0xFF38BDF8),
+                      size: 14,
+                    ),
+                  ),
+                ),
+
+              // Selection badge (Top-Right)
+              if (isSelectionMode)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF38BDF8) : Colors.black45,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.0),
+                    ),
+                    child: Icon(
+                      isSelected ? Icons.check : Icons.add,
+                      size: 10,
+                      color: isSelected ? Colors.black : Colors.transparent,
+                    ),
+                  ),
+                ),
+
+              // Translucent blue overlay on selection
+              if (isSelected)
+                Positioned.fill(
+                  child: Container(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

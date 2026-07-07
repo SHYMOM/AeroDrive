@@ -28,6 +28,9 @@ class FolderScanner {
   late final AeroDriveDatabase _db;
   final Uuid _uuid = const Uuid();
 
+  Future<void> uploadFolderManifest(String folderId, String folderName, String? parentId) =>
+      _uploadFolderManifest(folderId, folderName, parentId);
+
   /// Uploads folder metadata manifest as a 1px transparent PNG to Telegram.
   Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId) async {
     try {

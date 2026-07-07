@@ -120,7 +120,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
               if (password == null) return; // User cancelled
             }
 
-            // Show a progress indicator while importing
+            // Show a progress indicator while initializing and fetching metadata
             if (!context.mounted) return;
             showDialog(
               context: context,
@@ -135,7 +135,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                       SizedBox(width: 20),
                       Expanded(
                         child: Text(
-                          'Importing share and mapping keys...',
+                          'Measuring internet speed and fetching metadata...',
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
@@ -150,9 +150,87 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                 url,
                 password: password,
                 targetFolderId: _targetFolderId,
+                onConfirm: (totalSize, speedBytesPerSec) async {
+                  // Hide the loading dialog first
+                  if (context.mounted) {
+                    Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+                  }
+
+                  final sizeStr = _formatBytes(totalSize);
+                  final double speedMb = speedBytesPerSec / (1024 * 1024);
+                  final speedStr = '${speedMb.toStringAsFixed(1)} MB/s';
+                  
+                  // estimated duration in seconds (double size because we download + upload!)
+                  final double totalTransferred = totalSize.toDouble() * 2;
+                  final double durationSec = speedBytesPerSec > 0 ? totalTransferred / speedBytesPerSec : 0;
+                  final int durationMin = (durationSec / 60).ceil();
+                  final durationStr = '$durationMin minute${durationMin == 1 ? "" : "s"}';
+
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      backgroundColor: AppColors.surfaceElevated,
+                      title: const Text('Confirm Import', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Importing this shared item will download and re-encrypt the data to your storage channel.',
+                            style: TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDetailRow('Total Size:', sizeStr),
+                          _buildDetailRow('Internet Data Cost:', '${_formatBytes(totalSize * 2)} (Download + Upload)'),
+                          _buildDetailRow('Measured Speed:', speedStr),
+                          _buildDetailRow('Estimated Time:', durationStr),
+                        ],
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: const Text('Proceed', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  // Show the loading dialog again if confirmed
+                  if (confirmed == true && context.mounted) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => PopScope(
+                        canPop: false,
+                        child: AlertDialog(
+                          backgroundColor: AppColors.surfaceElevated,
+                          content: const Row(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(width: 20),
+                              Expanded(
+                                child: Text(
+                                  'Importing share and copying chunks...',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return confirmed ?? false;
+                },
               );
               
               if (context.mounted) {
+                // If loading dialog is still showing, dismiss it
                 Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
                 ref.invalidate(folderContentsProvider);
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -161,7 +239,10 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
               }
             } catch (e) {
               if (context.mounted) {
-                Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+                // If loading dialog is still showing, dismiss it
+                try {
+                  Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
+                } catch (_) {}
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -182,6 +263,26 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
           child: const Text('Import', style: TextStyle(color: Colors.black)),
         ),
       ],
+    );
+  }
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
+        ],
+      ),
     );
   }
 }

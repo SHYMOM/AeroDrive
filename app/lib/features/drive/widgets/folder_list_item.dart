@@ -160,6 +160,8 @@ class FolderListItem extends ConsumerWidget {
           _showCopyDialog(context, ref);
         } else if (value == 'star') {
           _toggleFavorite(ref);
+        } else if (value == 'info') {
+          _showInfoDialog(context, ref);
         }
       },
       itemBuilder: (context) => [
@@ -168,6 +170,7 @@ class FolderListItem extends ConsumerWidget {
         const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
         const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
         PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Colors.white))),
         const PopupMenuDivider(),
         const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
@@ -353,5 +356,68 @@ class FolderListItem extends ConsumerWidget {
     for (final sub in subs) {
       await _copyFolderRecursive(sub.id, newId, db);
     }
+  }
+
+  void _showInfoDialog(BuildContext context, WidgetRef ref) {
+    final sizeAsync = ref.read(folderSizeProvider(folder.id));
+    final itemsCountAsync = ref.read(folderItemsCountProvider(folder.id));
+    
+    final sizeStr = sizeAsync.maybeWhen(
+      data: (s) => _formatFolderSize(s),
+      orElse: () => 'Calculating...',
+    );
+    final countStr = itemsCountAsync.maybeWhen(
+      data: (c) => '$c item${c == 1 ? "" : "s"}',
+      orElse: () => 'Calculating...',
+    );
+    
+    final createdStr = folder.createdAt != null
+        ? DateFormat('MM/dd/yyyy hh:mm a').format(folder.createdAt!)
+        : 'Unknown';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.primary),
+            SizedBox(width: 10),
+            Text('Folder Info', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoRow('Name:', folder.name),
+            _buildInfoRow('Type:', 'Folder'),
+            _buildInfoRow('Contains:', countStr),
+            _buildInfoRow('Total Size:', sizeStr),
+            _buildInfoRow('Created:', createdStr),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13))),
+        ],
+      ),
+    );
   }
 }
