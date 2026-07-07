@@ -26,6 +26,7 @@ import 'data/db/database.dart';
 import 'data/repositories/settings_repository.dart';
 import 'domain/auto_backup_watcher.dart';
 import 'domain/backup_service.dart';
+import 'domain/background_service_manager.dart';
 import 'domain/boot_service.dart';
 import 'domain/notification_service.dart';
 import 'domain/upload_queue_service.dart';
@@ -412,20 +413,29 @@ void main() {
     }
 
     // --- Workmanager (mobile only) ---
+    // Background auto-backup runs when app is closed/in background
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
       try {
-        await Workmanager().initialize(callbackDispatcher);
+        await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+        // Register periodic background backup task:
+        // - No charging requirement (runs anytime)
+        // - No battery-low constraint (we want reliable background backup)
+        // - Minimum 15-minute frequency (Android enforced minimum)
         await Workmanager().registerPeriodicTask(
           'aero_drive_backup',
           'aero_drive_scheduled_backup',
           frequency: const Duration(minutes: 15),
+          initialDelay: const Duration(minutes: 2),
           constraints: Constraints(
             networkType: NetworkType.connected,
-            requiresBatteryNotLow: true,
-            requiresCharging: true,
+            requiresBatteryNotLow: false,
+            requiresCharging: false,
           ),
-          existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+          existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+          backoffPolicy: BackoffPolicy.linear,
+          backoffPolicyDelay: const Duration(minutes: 5),
         );
+        debugPrint('[AeroDrive] Background backup task registered successfully');
       } catch (e) {
         debugPrint('[AeroDrive] Workmanager init skipped: $e');
       }
@@ -478,9 +488,16 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     super.initState();
     _initDeepLinks();
     _checkScheduledBackup();
-    Future.microtask(() {
+    Future.microtask(() async {
       try {
         ref.read(autoBackupWatcherProvider).start();
+        // Start the foreground backup service on Android so backup
+        // continues even when the user swipes the app away from recents.
+        final settingsRepo = ref.read(settingsRepositoryProvider);
+        final autoBackupEnabled = await settingsRepo.getSetting('master_autobackup_enabled');
+        if (autoBackupEnabled == 'true') {
+          await BackgroundServiceManager.startService();
+        }
       } catch (e) {
         AppLogger.error('Failed to start auto-backup watcher', e);
       }

@@ -12,10 +12,10 @@ import '../../core/providers.dart';
 import '../../data/db/database.dart';
 import '../drive/media_player_screen.dart';
 import 'archive_viewer.dart';
-import 'decrypted_text_viewer.dart';
 import 'file_decryption_util.dart';
 import 'image_gallery_screen.dart';
 import 'media_gallery_screen.dart';
+import 'universal_file_viewer.dart';
 import 'video_gallery_screen.dart';
 
 class PreviewDownloadButton extends ConsumerWidget {
@@ -50,6 +50,7 @@ class PreviewDownloadButton extends ConsumerWidget {
 class PreviewRouter {
   static void openPreview(BuildContext context, FileData file, {List<FileData>? siblings}) {
     final mime = file.mimeType ?? '';
+    final ext = file.name.split('.').last.toLowerCase();
 
     final isImage = mime.startsWith('image/');
     final isVideo = mime.startsWith('video/');
@@ -87,25 +88,6 @@ class PreviewRouter {
       Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
         builder: (_) => MediaPlayerScreen(file: file),
       ));
-    } else if (mime == 'application/pdf') {
-      _openPdf(context, file);
-    } else if (mime.startsWith('text/') ||
-        mime == 'application/json' ||
-        mime == 'application/xml' ||
-        mime == 'application/javascript' ||
-        mime.endsWith('+xml') ||
-        mime.endsWith('+json')) {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(
-            title: Text(file.name),
-            actions: [
-              PreviewDownloadButton(fileId: file.id),
-            ],
-          ),
-          body: DecryptedTextViewer(file: file),
-        ),
-      ));
     } else if (mime.contains('zip') ||
         mime.contains('rar') ||
         mime.contains('tar') ||
@@ -124,29 +106,84 @@ class PreviewRouter {
           body: ArchiveViewer(file: file),
         ),
       ));
+    } else if (_isPreviewable(mime, ext)) {
+      // Open with the universal file viewer
+      _openUniversalViewer(context, file);
     } else {
       _openGeneric(context, file);
     }
   }
 
-  static void _openPdf(BuildContext context, FileData file) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Open PDF'),
-        content: const Text('Download and open this PDF with an external app?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _downloadAndOpen(context, file);
-            },
-            child: const Text('Download & Open'),
+  /// Determines if a file can be shown in the universal text/code/markup viewer
+  static bool _isPreviewable(String mime, String ext) {
+    if (mime == 'application/pdf') return true;
+    if (mime.startsWith('text/')) return true;
+    if (mime == 'application/json' ||
+        mime == 'application/xml' ||
+        mime == 'application/javascript' ||
+        mime.endsWith('+xml') ||
+        mime.endsWith('+json')) return true;
+
+    // Code file extensions
+    const codeExts = {
+      'java', 'py', 'dart', 'js', 'ts', 'c', 'cpp', 'cs', 'go', 'kt',
+      'swift', 'rs', 'rb', 'php', 'sh', 'bat', 'json', 'xml', 'yaml',
+      'yml', 'toml', 'ini', 'conf', 'gradle', 'cmake', 'makefile',
+      'dockerfile', 'properties', 'md', 'markdown', 'html', 'htm',
+      'css', 'scss', 'sass', 'less', 'txt', 'log', 'csv',
+    };
+    return codeExts.contains(ext);
+  }
+
+  static void _openUniversalViewer(BuildContext context, FileData file) {
+    final mime = file.mimeType ?? '';
+    final ext = file.name.split('.').last.toLowerCase();
+
+    // Determine the viewer type label and color for the AppBar
+    final String viewerLabel;
+    final Color accentColor;
+
+    if (mime == 'application/pdf' || ext == 'pdf') {
+      viewerLabel = 'PDF Viewer';
+      accentColor = const Color(0xFFE53935);
+    } else if (mime == 'text/html' || ext == 'html' || ext == 'htm') {
+      viewerLabel = 'HTML Viewer';
+      accentColor = const Color(0xFFFF9800);
+    } else if (mime == 'text/x-markdown' || ext == 'md' || ext == 'markdown') {
+      viewerLabel = 'Markdown Viewer';
+      accentColor = const Color(0xFF607D8B);
+    } else {
+      viewerLabel = 'Code Editor';
+      accentColor = const Color(0xFF00B4D8);
+    }
+
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: const Color(0xFF0D1117),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF161B22),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.name,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                viewerLabel,
+                style: TextStyle(color: accentColor, fontSize: 11),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            PreviewDownloadButton(fileId: file.id),
+          ],
+          iconTheme: const IconThemeData(color: Colors.white70),
+        ),
+        body: UniversalFileViewer(file: file),
       ),
-    );
+    ));
   }
 
   static void _openGeneric(BuildContext context, FileData file) {
@@ -155,10 +192,17 @@ class PreviewRouter {
         : 'Unknown size';
     final mimeStr = file.mimeType ?? 'Unknown';
 
+    final icon = fileTypeIcon(file.mimeType, file.name);
+    final color = fileTypeColor(file.mimeType, file.name);
+    final ext = file.name.split('.').last.toUpperCase();
+
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => Scaffold(
+        backgroundColor: const Color(0xFF0D1117),
         appBar: AppBar(
-          title: Text(file.name),
+          backgroundColor: const Color(0xFF161B22),
+          title: Text(file.name, style: const TextStyle(color: Colors.white)),
+          iconTheme: const IconThemeData(color: Colors.white70),
           actions: [
             PreviewDownloadButton(fileId: file.id),
           ],
@@ -169,17 +213,41 @@ class PreviewRouter {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.insert_drive_file_outlined, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(height: 16),
-                Text(file.name, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
-                const SizedBox(height: 8),
-                Text('Type: $mimeStr', style: Theme.of(context).textTheme.bodySmall),
-                Text('Size: $sizeStr', style: Theme.of(context).textTheme.bodySmall),
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: color.withValues(alpha: 0.15),
+                    border: Border.all(color: color.withValues(alpha: 0.4), width: 2),
+                    boxShadow: [BoxShadow(color: color.withValues(alpha: 0.2), blurRadius: 24, spreadRadius: 4)],
+                  ),
+                  child: Icon(icon, size: 48, color: color),
+                ),
                 const SizedBox(height: 24),
+                Text(
+                  file.name,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('.$ext', style: TextStyle(color: color, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                ),
+                const SizedBox(height: 8),
+                Text('Type: $mimeStr', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                Text('Size: $sizeStr', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                const SizedBox(height: 32),
                 FilledButton.icon(
                   onPressed: () => _downloadAndOpen(context, file),
                   icon: const Icon(Icons.open_in_new),
                   label: const Text('Open with external app'),
+                  style: FilledButton.styleFrom(backgroundColor: color),
                 ),
               ],
             ),

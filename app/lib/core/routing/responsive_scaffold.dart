@@ -531,7 +531,83 @@ class SidebarContent extends ConsumerWidget {
                     ),
                   ),
                 ),
+
+                // About Option
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        if (Scaffold.of(context).isDrawerOpen) {
+                          Navigator.pop(context);
+                        }
+                        context.push('/settings/about');
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.white54, size: 24),
+                            SizedBox(width: 16),
+                            Text(
+                              'About',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
+            ),
+          ),
+          
+          // ── Bottom Credit Signature ───────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1A0B3B), Color(0xFF0D1B4D)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: const Color(0xFF7B61FF).withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'Made With ❤️ In 🇧🇩',
+                    style: TextStyle(color: Colors.white38, fontSize: 9, letterSpacing: 1),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 3),
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      colors: [Color(0xFF7B61FF), Color(0xFF4A90E2), Color(0xFFEC4899)],
+                    ).createShader(bounds),
+                    child: const Text(
+                      'SHEIKH SHYMOM ISLAM',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

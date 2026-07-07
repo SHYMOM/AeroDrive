@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../domain/background_service_manager.dart';
 import '../telegram/telegram_service.dart';
 import 'advanced_settings_dialogs.dart';
 import 'appearance_settings_screen.dart';
@@ -357,7 +358,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             color: Colors.transparent,
             child: InkWell(
               onTap: () async {
-                await ref.read(settingsRepositoryProvider).setSetting(settingKey, (!isEnabled) ? 'true' : 'false');
+                final newVal = !isEnabled;
+                await ref.read(settingsRepositoryProvider).setSetting(settingKey, newVal ? 'true' : 'false');
+                // Start/stop foreground backup service if master switch is toggled
+                if (settingKey == 'master_autobackup_enabled') {
+                  if (newVal) {
+                    await BackgroundServiceManager.startService();
+                  } else {
+                    await BackgroundServiceManager.stopService();
+                  }
+                }
                 ref.invalidate(settingsRepositoryProvider);
               },
               highlightColor: Colors.white.withValues(alpha: 0.05),
@@ -390,6 +400,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       activeTrackColor: AppColors.primary,
                       onChanged: (val) async {
                         await ref.read(settingsRepositoryProvider).setSetting(settingKey, val ? 'true' : 'false');
+                        // Start/stop foreground backup service if master switch is toggled
+                        if (settingKey == 'master_autobackup_enabled') {
+                          if (val) {
+                            await BackgroundServiceManager.startService();
+                          } else {
+                            await BackgroundServiceManager.stopService();
+                          }
+                        }
                         ref.invalidate(settingsRepositoryProvider);
                       },
                     ),

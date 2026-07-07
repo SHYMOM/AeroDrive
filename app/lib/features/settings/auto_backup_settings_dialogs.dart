@@ -89,18 +89,22 @@ class _ManageBackupFoldersScreenState extends ConsumerState<ManageBackupFoldersS
         final enabled = await ref.read(settingsRepositoryProvider).getSetting('master_autobackup_enabled');
         if (enabled == 'true' && _profiles.isNotEmpty) {
           final powerSavingStr = await ref.read(settingsRepositoryProvider).getSetting('auto_backup_power_saving');
-          final isPowerSaving = powerSavingStr != 'false';
+          final isPowerSaving = powerSavingStr == 'true'; // Default OFF (no power saving = always runs)
 
           await Workmanager().registerPeriodicTask(
             'aero_drive_backup',
             'aero_drive_scheduled_backup',
             frequency: const Duration(minutes: 15),
+            initialDelay: const Duration(minutes: 1),
             constraints: Constraints(
               networkType: wifiOnly ? NetworkType.unmetered : NetworkType.connected,
+              // Only apply power-saving constraints if the user explicitly enabled it
               requiresBatteryNotLow: isPowerSaving,
               requiresCharging: isPowerSaving,
             ),
             existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+            backoffPolicy: BackoffPolicy.linear,
+            backoffPolicyDelay: const Duration(minutes: 5),
           );
           debugPrint('[AeroDrive] Workmanager constraints updated. wifiOnly=$wifiOnly powerSaving=$isPowerSaving');
         }

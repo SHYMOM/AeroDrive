@@ -12,6 +12,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterFragmentActivity() {
     private val BOOT_CHANNEL = "com.aerodrive.aerodrive/boot"
     private val SETTINGS_CHANNEL = "com.aerodrive.aerodrive/settings"
+    private val BACKUP_SERVICE_CHANNEL = "com.aerodrive.aerodrive/backup_service"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -49,5 +50,30 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // Method channel for controlling the foreground backup service
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BACKUP_SERVICE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "startBackupService" -> {
+                        try {
+                            AeroDriveBackupService.start(this)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("SERVICE_ERROR", e.message, null)
+                        }
+                    }
+                    "stopBackupService" -> {
+                        try {
+                            AeroDriveBackupService.stop(this)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("SERVICE_ERROR", e.message, null)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 }
+

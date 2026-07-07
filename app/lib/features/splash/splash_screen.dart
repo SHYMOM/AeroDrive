@@ -126,6 +126,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               ),
                             ),
                           ),
+
+                          const SizedBox(height: 36),
+
+                          // ── Signature Credit ─────────────────────────
+                          Column(
+                            children: [
+                              Text(
+                                'Made With ❤️ In 🇧🇩',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  fontSize: 10,
+                                  letterSpacing: 1.2,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 4),
+                              ShaderMask(
+                                shaderCallback: (bounds) => const LinearGradient(
+                                  colors: [Color(0xFF7B61FF), Color(0xFF4A90E2), Color(0xFFEC4899)],
+                                ).createShader(bounds),
+                                child: const Text(
+                                  'SHEIKH SHYMOM ISLAM',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 2,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ).animate().fadeIn(delay: 500.ms, duration: 800.ms),
                         ],
                       ),
                     ),
