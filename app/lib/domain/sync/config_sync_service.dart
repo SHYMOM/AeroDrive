@@ -39,7 +39,19 @@ class ConfigSyncService {
     }
 
     final rawChannels = await settingsRepo.getSetting('storage_channels_list');
-    final String configToSync = (rawChannels == null || rawChannels.isEmpty) ? '[]' : rawChannels;
+    final activeChannel = await settingsRepo.getSetting('active_channel_id');
+    final publicShareChannelId = await settingsRepo.getSetting('public_share_channel_id');
+    final publicShareChannelUsername = await settingsRepo.getSetting('public_share_channel_username');
+    final publicShareChannelInvite = await settingsRepo.getSetting('public_share_channel_invite');
+
+    final configMap = {
+      'storage_channels_list': rawChannels ?? '[]',
+      'active_channel_id': activeChannel ?? '',
+      'public_share_channel_id': publicShareChannelId ?? '',
+      'public_share_channel_username': publicShareChannelUsername ?? '',
+      'public_share_channel_invite': publicShareChannelInvite ?? '',
+    };
+    final String configToSync = jsonEncode(configMap);
 
     try {
       final masterKey = SecretKey(masterKeyBytes);
@@ -184,7 +196,18 @@ class ConfigSyncService {
       final restoredConfig = await restoreConfigFromChannel();
       final localConfig = await settingsRepo.getSetting('storage_channels_list');
       
-      if (restoredConfig != null && restoredConfig != '[]') {
+      bool hasRestored = false;
+      if (restoredConfig != null && restoredConfig.isNotEmpty) {
+        if (restoredConfig.startsWith('{')) {
+          final Map<String, dynamic> configMap = jsonDecode(restoredConfig);
+          final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
+          hasRestored = rawChannels != '[]';
+        } else {
+          hasRestored = restoredConfig != '[]';
+        }
+      }
+
+      if (hasRestored) {
         if (localConfig == null || localConfig.isEmpty || localConfig == '[]') {
           return ConfigStatus.found_unrestored;
         } else {

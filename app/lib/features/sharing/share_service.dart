@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show Random;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -13,6 +15,8 @@ import '../../core/providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../data/db/database.dart';
 import '../../core/providers/repository_providers.dart';
+import '../../data/crypto/encryption_engine.dart';
+import '../../domain/recovery/manifest_encoder.dart';
 import '../../domain/sync/config_sync_service.dart';
 import '../../features/telegram/telegram_service.dart';
 
@@ -300,6 +304,58 @@ class ShareService {
 
   // --- PUBLIC SHARE CHANNEL SETUP ---
 
+  Future<void> _archiveAndMute(TelegramService telegramService, int chatId) async {
+    await telegramService.sendRequest({
+      "@type": "addChatToList",
+      "chat_id": chatId,
+      "chat_list": {"@type": "chatListArchive"}
+    });
+
+    await telegramService.sendRequest({
+      "@type": "setChatNotificationSettings",
+      "chat_id": chatId,
+      "notification_settings": {
+        "@type": "chatNotificationSettings",
+        "use_default_mute_for": false,
+        "mute_for": 2147483647,
+        "use_default_sound": false,
+        "sound_id": 0,
+        "use_default_show_preview": false,
+        "show_preview": false,
+        "use_default_disable_pinned_message_notifications": false,
+        "disable_pinned_message_notifications": true,
+        "use_default_disable_mention_notifications": false,
+        "disable_mention_notifications": true
+      }
+    });
+  }
+
+  Future<void> _setChannelIcon(TelegramService telegramService, int chatId) async {
+    try {
+      final byteData = await rootBundle.load('assets/icon.png');
+      final buffer = byteData.buffer;
+
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/aerodrive_icon.png');
+      await tempFile.writeAsBytes(buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes));
+
+      await telegramService.sendRequest({
+        "@type": "setChatPhoto",
+        "chat_id": chatId,
+        "photo": {
+          "@type": "inputChatPhotoStatic",
+          "photo": {
+            "@type": "inputFileLocal",
+            "path": tempFile.path
+          }
+        }
+      });
+      AppLogger.info('ShareService: Set channel icon successfully.');
+    } catch (e, s) {
+      AppLogger.error('ShareService: Error setting channel icon', e, s);
+    }
+  }
+
   Future<Map<String, dynamic>> _getOrCreatePublicShareChannel() async {
     final telegram = _ref.read(telegramServiceProvider.notifier);
     final settingsRepo = _ref.read(settingsRepositoryProvider);
@@ -344,6 +400,9 @@ class ShareService {
 
     await Future.delayed(const Duration(seconds: 1));
 
+    await _archiveAndMute(telegram, chatId);
+    await _setChannelIcon(telegram, chatId);
+
     var finalUsername = '';
     if (supergroupId != null) {
       for (var attempt = 0; attempt < 5; attempt++) {
@@ -381,6 +440,13 @@ class ShareService {
       await settingsRepo.setSetting('public_share_channel_invite', inviteLink);
     }
 
+    try {
+      final configSync = _ref.read(configSyncServiceProvider);
+      await configSync.syncConfigToChannel();
+    } catch (e) {
+      AppLogger.error('ShareService: Failed to sync configuration to channel', e);
+    }
+
     return {
       'id': chatId,
       'username': finalUsername.isNotEmpty ? finalUsername : null,
@@ -402,14 +468,17 @@ class ShareService {
     final List<Map<String, dynamic>> filesJson = [];
     for (final file in files) {
       final chunks = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))).get();
-      final dekBytes = await _decryptFileDek(file);
+      final keyAndIv = await _decryptFileDekAndIv(file);
+      final dekBytes = keyAndIv[0];
+      final ctrIvBytes = keyAndIv[1];
       
       filesJson.add({
         'id': file.id,
         'name': file.name,
         'size': file.size,
         'mime_type': file.mimeType,
-        'dek': base64Encode(dekBytes),
+        'dek': base64Encode(dekBytes!),
+        'ctr_iv': ctrIvBytes != null ? base64Encode(ctrIvBytes) : null,
         'chunks': chunks.map((c) => {
           'index': c.chunkIndex,
           'size': c.size,
@@ -435,7 +504,7 @@ class ShareService {
     };
   }
 
-  Future<List<int>> _decryptFileDek(FileData file) async {
+  Future<List<List<int>?>> _decryptFileDekAndIv(FileData file) async {
     final masterKey = _ref.read(masterKeyProvider);
     if (masterKey == null) throw Exception("Vault is locked");
     if (file.sha256Hash == null) throw Exception("File key is empty");
@@ -451,16 +520,218 @@ class ShareService {
       
       final cipher = AesGcm.with256bits();
       final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
-      return await cipher.decrypt(
+      final dekBytes = await cipher.decrypt(
         SecretBox(cipherText, nonce: nonce, mac: mac),
         secretKey: secretKey,
       );
+
+      List<int>? ctrIv;
+      if (parts.length >= 4) {
+        ctrIv = base64Decode(parts[3]);
+      }
+      return [dekBytes, ctrIv];
     }
     
     if (file.sha256Hash!.contains(',')) {
-      return file.sha256Hash!.split(',').map((s) => int.parse(s.trim())).toList();
+      return [file.sha256Hash!.split(',').map((s) => int.parse(s.trim())).toList(), null];
     }
-    return base64Decode(file.sha256Hash!);
+    return [base64Decode(file.sha256Hash!), null];
+  }
+
+  Future<File> _downloadTelegramMessageDocument(int channelId, int messageId) async {
+    final telegram = _ref.read(telegramServiceProvider.notifier);
+    final message = await telegram.sendRequest({
+      "@type": "getMessage",
+      "chat_id": channelId,
+      "message_id": messageId,
+    });
+
+    if (message['@type'] == 'error') {
+      throw Exception("Failed to retrieve chunk message. The share link might have been revoked by the owner.");
+    }
+
+    final content = message['content'];
+    if (content == null || content['@type'] != 'messageDocument') {
+      throw Exception("Invalid message format: expected messageDocument.");
+    }
+
+    final doc = content['document'];
+    if (doc == null || doc['document'] == null) {
+      throw Exception("Document object not found in chunk message.");
+    }
+
+    final fileId = doc['document']['id'] as int;
+    await telegram.downloadFile(fileId);
+
+    String? localPath;
+    for (var attempt = 0; attempt < 120; attempt++) {
+      final fileInfo = await telegram.sendRequest({'@type': 'getFile', 'file_id': fileId});
+      final local = fileInfo['local'] as Map<String, dynamic>?;
+      if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {
+        localPath = local['path'] as String;
+        break;
+      }
+      await Future.delayed(const Duration(milliseconds: 250));
+    }
+
+    if (localPath == null) {
+      throw Exception("Failed to download chunk file from Telegram.");
+    }
+
+    return File(localPath);
+  }
+
+  Future<void> _copyAndReEncryptFile(
+    Map<String, dynamic> fileJson,
+    String? targetFolderId,
+    AeroDriveDatabase db,
+    List<int> receiverMasterKey,
+    int receiverChannelId,
+  ) async {
+    final fileId = fileJson['id'] as String;
+    final fileName = fileJson['name'] as String;
+    final fileSize = fileJson['size'] as int?;
+    final fileMimeType = fileJson['mime_type'] as String?;
+    final senderDekBytes = base64Decode(fileJson['dek'] as String);
+    final senderCtrIvBytes = fileJson['ctr_iv'] != null ? base64Decode(fileJson['ctr_iv'] as String) : null;
+    final chunks = fileJson['chunks'] as List;
+
+    final random = Random.secure();
+    final receiverDekBytes = List<int>.generate(32, (_) => random.nextInt(256));
+    final isVideo = fileMimeType != null && fileMimeType.startsWith('video/');
+    final List<int>? receiverCtrIvBytes = isVideo ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
+
+    final tempDir = await getTemporaryDirectory();
+    final engine = EncryptionEngine();
+    final telegram = _ref.read(telegramServiceProvider.notifier);
+
+    final List<Map<String, dynamic>> uploadedChunks = [];
+    var globalByteOffset = 0;
+
+    for (var i = 0; i < chunks.length; i++) {
+      final chunkJson = chunks[i];
+      final senderChannelId = chunkJson['channel_id'] as int;
+      final senderMessageId = chunkJson['message_id'] as int;
+      final chunkSize = chunkJson['size'] as int?;
+
+      final File senderChunkFile = await _downloadTelegramMessageDocument(senderChannelId, senderMessageId);
+
+      final File tempPlaintextChunkFile = File('${tempDir.path}/temp_plaintext_${fileId}_$i.tmp');
+      await engine.decryptDiskToStream(
+        encryptedChunkFile: senderChunkFile,
+        outputFile: tempPlaintextChunkFile,
+        dekBytes: senderDekBytes,
+        append: false,
+        ctrIv: senderCtrIvBytes,
+        globalByteOffset: globalByteOffset,
+      );
+
+      final tempEncryptedChunkPaths = await engine.encryptStreamToDisk(
+        sourceFile: tempPlaintextChunkFile,
+        outputDirectory: tempDir.path,
+        dekBytes: receiverDekBytes,
+        ctrIv: receiverCtrIvBytes,
+      );
+
+      final File receiverChunkFile = File(tempEncryptedChunkPaths.first);
+
+      final cipher = AesGcm.with256bits();
+      final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
+      final nonce = cipher.newNonce();
+      final secretBox = await cipher.encrypt(
+        receiverDekBytes,
+        secretKey: secretKey,
+        nonce: nonce,
+      );
+      final wrappedDekBase64 = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+
+      final chunkCaption = await ManifestEncoder.encodeFileManifest(
+        fileId: fileId,
+        fileName: fileName,
+        parentFolderId: targetFolderId,
+        masterKey: secretKey,
+        hash: '',
+        size: fileSize ?? 0,
+        mime: fileMimeType ?? 'application/octet-stream',
+        wrappedDekBase64: wrappedDekBase64,
+        ctrIvBase64: receiverCtrIvBytes != null ? base64Encode(receiverCtrIvBytes) : null,
+        chunkIndex: i,
+        totalChunks: chunks.length,
+        isChunked: chunks.length > 1 ? 1 : 0,
+      );
+
+      final response = await telegram.uploadDocument(
+        receiverChannelId,
+        receiverChunkFile.path,
+        caption: chunkCaption,
+      );
+
+      if (response['@type'] == 'error') {
+        throw Exception('Failed to upload chunk to storage: ${response['message']}');
+      }
+
+      final int messageId = response['id'];
+      final int actualChunkSize = await receiverChunkFile.length();
+
+      uploadedChunks.add({
+        'index': i,
+        'size': actualChunkSize,
+        'message_id': messageId,
+        'channel_id': receiverChannelId,
+      });
+
+      try {
+        if (await senderChunkFile.exists()) await senderChunkFile.delete();
+        if (await tempPlaintextChunkFile.exists()) await tempPlaintextChunkFile.delete();
+        if (await receiverChunkFile.exists()) await receiverChunkFile.delete();
+      } catch (_) {}
+
+      globalByteOffset += chunkSize ?? 0;
+    }
+
+    final cipher = AesGcm.with256bits();
+    final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
+    final nonce = cipher.newNonce();
+    final secretBox = await cipher.encrypt(
+      receiverDekBytes,
+      secretKey: secretKey,
+      nonce: nonce,
+    );
+    var wrappedDekString = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+    if (receiverCtrIvBytes != null) {
+      wrappedDekString = '$wrappedDekString|${base64Encode(receiverCtrIvBytes)}';
+    }
+
+    await db.into(db.files).insert(
+      FilesCompanion.insert(
+        id: fileId,
+        name: fileName,
+        folderId: drift.Value(targetFolderId),
+        size: drift.Value(fileSize),
+        mimeType: drift.Value(fileMimeType),
+        sha256Hash: drift.Value(wrappedDekString),
+        isEncrypted: const drift.Value(true),
+        isChunked: drift.Value(chunks.length > 1),
+        totalChunks: drift.Value(chunks.length),
+        createdAt: drift.Value(DateTime.now()),
+        updatedAt: drift.Value(DateTime.now()),
+      ),
+      mode: drift.InsertMode.insertOrIgnore,
+    );
+
+    for (final chunkInfo in uploadedChunks) {
+      await db.into(db.chunks).insert(
+        ChunksCompanion.insert(
+          id: const Uuid().v4(),
+          fileId: drift.Value(fileId),
+          chunkIndex: drift.Value(chunkInfo['index'] as int),
+          channelId: drift.Value(chunkInfo['channel_id'] as int),
+          messageId: drift.Value(chunkInfo['message_id'] as int),
+          size: drift.Value(chunkInfo['size'] as int?),
+        ),
+        mode: drift.InsertMode.insertOrIgnore,
+      );
+    }
   }
 
   // --- RECURSIVE METADATA INSERTION ---
@@ -470,6 +741,7 @@ class ShareService {
     String? parentId,
     AeroDriveDatabase db,
     List<int> receiverMasterKey,
+    int receiverChannelId,
   ) async {
     final folderId = metadata['id'] as String;
     final folderName = metadata['name'] as String;
@@ -486,51 +758,24 @@ class ShareService {
 
     final files = metadata['files'] as List;
     for (final fileJson in files) {
-      final fileId = fileJson['id'] as String;
-      final fileName = fileJson['name'] as String;
-      final fileSize = fileJson['size'] as int?;
-      final fileMimeType = fileJson['mime_type'] as String?;
-      final dekBytes = base64Decode(fileJson['dek'] as String);
-
-      final cipher = AesGcm.with256bits();
-      final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
-      final encryptedDek = await cipher.encrypt(dekBytes, secretKey: secretKey);
-      final newHash = '${base64Encode(encryptedDek.nonce)}|${base64Encode(encryptedDek.mac.bytes)}|${base64Encode(encryptedDek.cipherText)}';
-
-      await db.into(db.files).insert(
-        FilesCompanion.insert(
-          id: fileId,
-          name: fileName,
-          folderId: drift.Value(folderId),
-          size: drift.Value(fileSize),
-          mimeType: drift.Value(fileMimeType),
-          sha256Hash: drift.Value(newHash),
-          isEncrypted: const drift.Value(true),
-          createdAt: drift.Value(DateTime.now()),
-          updatedAt: drift.Value(DateTime.now()),
-        ),
-        mode: drift.InsertMode.insertOrIgnore,
+      await _copyAndReEncryptFile(
+        fileJson as Map<String, dynamic>,
+        folderId,
+        db,
+        receiverMasterKey,
+        receiverChannelId,
       );
-
-      final chunks = fileJson['chunks'] as List;
-      for (final chunkJson in chunks) {
-        await db.into(db.chunks).insert(
-          ChunksCompanion.insert(
-            id: const Uuid().v4(),
-            fileId: drift.Value(fileId),
-            chunkIndex: drift.Value(chunkJson['index'] as int),
-            channelId: drift.Value(chunkJson['channel_id'] as int),
-            messageId: drift.Value(chunkJson['message_id'] as int),
-            size: drift.Value(chunkJson['size'] as int?),
-          ),
-          mode: drift.InsertMode.insertOrIgnore,
-        );
-      }
     }
 
     final subfolders = metadata['subfolders'] as List;
     for (final subJson in subfolders) {
-      await _importFolderMetadata(subJson as Map<String, dynamic>, folderId, db, receiverMasterKey);
+      await _importFolderMetadata(
+        subJson as Map<String, dynamic>,
+        folderId,
+        db,
+        receiverMasterKey,
+        receiverChannelId,
+      );
     }
   }
 
@@ -583,7 +828,9 @@ class ShareService {
       final List<int> newMsgIds = messagesList.map((m) => m['id'] as int).toList();
       allForwardedMessageIds.addAll(newMsgIds);
 
-      final dekBytes = await _decryptFileDek(file);
+      final keyAndIv = await _decryptFileDekAndIv(file);
+      final dekBytes = keyAndIv[0];
+      final ctrIvBytes = keyAndIv[1];
 
       manifestPayload = {
         'type': 'file',
@@ -591,7 +838,8 @@ class ShareService {
         'name': file.name,
         'size': file.size,
         'mime_type': file.mimeType,
-        'dek': base64Encode(dekBytes),
+        'dek': base64Encode(dekBytes!),
+        'ctr_iv': ctrIvBytes != null ? base64Encode(ctrIvBytes) : null,
         'invite_link': inviteLink,
         'channel_id': shareChatId,
         'chunks': List.generate(chunks.length, (idx) => {
@@ -740,10 +988,20 @@ class ShareService {
     final String shareId = _uuid.v4();
     final String publicUrl;
 
+    final payloadMap = {
+      'invite': inviteLink ?? '',
+      'channelId': shareChatId,
+      'manifest': manifestMessageId,
+      'id': shareId,
+    };
+    final payloadStr = jsonEncode(payloadMap);
+    final encryptedPayloadStr = await _encryptData(payloadStr, keyBytes);
+    final pParam = Uri.encodeComponent(encryptedPayloadStr);
+
     if (hasPassword) {
-      publicUrl = 'aerodrive://share?invite=${Uri.encodeComponent(inviteLink ?? '')}&channelId=$shareChatId&manifest=$manifestMessageId&hasPassword=1&id=$shareId';
+      publicUrl = 'aerodrive://share?p=$pParam&hasPassword=1';
     } else {
-      publicUrl = 'aerodrive://share?invite=${Uri.encodeComponent(inviteLink ?? '')}&channelId=$shareChatId&manifest=$manifestMessageId&id=$shareId#$shareKeyFragment';
+      publicUrl = 'aerodrive://share?p=$pParam#$shareKeyFragment';
     }
 
     // 6. Update the Config Channel Share Registry Pointer
@@ -763,7 +1021,7 @@ class ShareService {
     return publicUrl;
   }
 
-  Future<void> importShareLink(String url, {String? password}) async {
+  Future<void> importShareLink(String url, {String? password, String? targetFolderId}) async {
     final uri = Uri.parse(url);
     if (uri.scheme != 'aerodrive' || uri.host != 'share') {
       if (!url.startsWith('aerodrive://share')) {
@@ -771,20 +1029,43 @@ class ShareService {
       }
     }
 
-    final inviteLinkEncoded = uri.queryParameters['invite'];
-    final channelIdStr = uri.queryParameters['channelId'];
-    final manifestIdStr = uri.queryParameters['manifest'];
-    final hasPassword = uri.queryParameters['hasPassword'] == '1';
-
-    if (channelIdStr == null || manifestIdStr == null) {
-      throw Exception("Invalid link: missing manifest location pointers");
+    final pParam = uri.queryParameters['p'];
+    if (pParam == null) {
+      throw Exception("Invalid link: missing encrypted data payload");
     }
 
-    final inviteLink = inviteLinkEncoded != null ? Uri.decodeComponent(inviteLinkEncoded) : null;
-    final int shareChannelId = int.parse(channelIdStr);
-    final int manifestMessageId = int.parse(manifestIdStr);
+    final encryptedPayloadStr = Uri.decodeComponent(pParam);
+    final hasPassword = uri.queryParameters['hasPassword'] == '1';
 
-    // 1. Auto-Join Telegram Channel
+    // 1. Resolve Decryption Key
+    final List<int> keyBytes;
+    if (hasPassword) {
+      if (password == null || password.isEmpty) {
+        throw SharePasswordRequiredException("This link is password protected. Enter password to decrypt.");
+      }
+      keyBytes = await _deriveKeyFromPassword(password);
+    } else {
+      final fragment = uri.fragment;
+      if (fragment.isEmpty) {
+        throw Exception("Invalid link: missing share fragment key");
+      }
+      keyBytes = base64Url.decode(fragment);
+    }
+
+    // 2. Decrypt Payload
+    final String decryptedPayloadJson;
+    try {
+      decryptedPayloadJson = await _decryptData(encryptedPayloadStr, keyBytes);
+    } catch (_) {
+      throw Exception(hasPassword ? "Incorrect password. Please try again." : "Failed to decrypt share link. Key might be invalid.");
+    }
+
+    final Map<String, dynamic> payload = jsonDecode(decryptedPayloadJson);
+    final inviteLink = payload['invite'] as String?;
+    final int shareChannelId = payload['channelId'] as int;
+    final int manifestMessageId = payload['manifest'] as int;
+
+    // 3. Auto-Join Telegram Channel
     final telegram = _ref.read(telegramServiceProvider.notifier);
     if (inviteLink != null && inviteLink.isNotEmpty) {
       try {
@@ -797,7 +1078,7 @@ class ShareService {
       }
     }
 
-    // 2. Fetch the Share Manifest message from the Public Share Channel
+    // 4. Fetch the Share Manifest message from the Public Share Channel
     final manifestMsg = await telegram.sendRequest({
       "@type": "getMessage",
       "chat_id": shareChannelId,
@@ -821,80 +1102,46 @@ class ShareService {
     final lines = text.split('\n');
     final manifestPayloadCipher = lines.lastWhere((l) => l.trim().isNotEmpty).trim();
 
-    // 3. Resolve Decryption Key
-    final List<int> keyBytes;
-    if (hasPassword) {
-      if (password == null || password.isEmpty) {
-        throw SharePasswordRequiredException("This link is password protected. Enter password to decrypt.");
-      }
-      keyBytes = await _deriveKeyFromPassword(password);
-    } else {
-      final fragment = uri.fragment;
-      if (fragment.isEmpty) {
-        throw Exception("Invalid link: missing share fragment key");
-      }
-      keyBytes = base64Url.decode(fragment);
-    }
-
-    // 4. Decrypt Manifest
+    // 5. Decrypt Manifest using keyBytes
     final String decryptedJson;
     try {
       decryptedJson = await _decryptData(manifestPayloadCipher, keyBytes);
     } catch (_) {
-      throw Exception(hasPassword ? "Incorrect password. Please try again." : "Failed to decrypt share manifest. Key might be invalid.");
+      throw Exception("Failed to decrypt share manifest.");
     }
 
     final Map<String, dynamic> manifest = jsonDecode(decryptedJson);
 
-    // 5. Reconstruct Database records
+    // 6. Reconstruct Database records and download/re-encrypt chunks
     final db = _ref.read(databaseProvider);
     final receiverMasterKey = _ref.read(masterKeyProvider);
     if (receiverMasterKey == null) throw Exception("Vault is locked. Cannot import.");
 
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+    if (activeChannelStr == null || activeChannelStr.isEmpty) {
+      throw Exception("No active storage channel configured. Cannot import file.");
+    }
+    final int receiverChannelId = int.parse(activeChannelStr);
+
     final type = manifest['type'] as String;
     if (type == 'file') {
-      final fileId = manifest['id'] as String;
-      final fileName = manifest['name'] as String;
-      final fileSize = manifest['size'] as int?;
-      final fileMimeType = manifest['mime_type'] as String?;
-      final dekBytes = base64Decode(manifest['dek'] as String);
-
-      final cipher = AesGcm.with256bits();
-      final secretKey = await cipher.newSecretKeyFromBytes(receiverMasterKey);
-      final encryptedDek = await cipher.encrypt(dekBytes, secretKey: secretKey);
-      final newHash = '${base64Encode(encryptedDek.nonce)}|${base64Encode(encryptedDek.mac.bytes)}|${base64Encode(encryptedDek.cipherText)}';
-
-      await db.into(db.files).insert(
-        FilesCompanion.insert(
-          id: fileId,
-          name: fileName,
-          size: drift.Value(fileSize),
-          mimeType: drift.Value(fileMimeType),
-          sha256Hash: drift.Value(newHash),
-          isEncrypted: const drift.Value(true),
-          createdAt: drift.Value(DateTime.now()),
-          updatedAt: drift.Value(DateTime.now()),
-        ),
-        mode: drift.InsertMode.insertOrIgnore,
+      await _copyAndReEncryptFile(
+        manifest,
+        targetFolderId,
+        db,
+        receiverMasterKey,
+        receiverChannelId,
       );
-
-      final chunks = manifest['chunks'] as List;
-      for (final chunkJson in chunks) {
-        await db.into(db.chunks).insert(
-          ChunksCompanion.insert(
-            id: const Uuid().v4(),
-            fileId: drift.Value(fileId),
-            chunkIndex: drift.Value(chunkJson['index'] as int),
-            channelId: drift.Value(shareChannelId),
-            messageId: drift.Value(chunkJson['message_id'] as int),
-            size: drift.Value(chunkJson['size'] as int?),
-          ),
-          mode: drift.InsertMode.insertOrIgnore,
-        );
-      }
     } else {
       final folderMetadata = manifest['folder'] as Map<String, dynamic>;
-      await _importFolderMetadata(folderMetadata, null, db, receiverMasterKey);
+      await _importFolderMetadata(
+        folderMetadata,
+        targetFolderId,
+        db,
+        receiverMasterKey,
+        receiverChannelId,
+      );
     }
   }
 

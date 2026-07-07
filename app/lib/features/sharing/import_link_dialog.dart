@@ -1,28 +1,96 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../drive/providers/drive_providers.dart';
+import '../drive/widgets/folder_picker_dialog.dart';
 import 'share_service.dart';
 
-class ImportLinkDialog extends ConsumerWidget {
+class ImportLinkDialog extends ConsumerStatefulWidget {
   const ImportLinkDialog({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final controller = TextEditingController();
+  ConsumerState<ImportLinkDialog> createState() => _ImportLinkDialogState();
+}
+
+class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
+  final _controller = TextEditingController();
+  String? _targetFolderId;
+  String _targetFolderName = 'My Drive';
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _resolveFolderName(String folderId) async {
+    final db = ref.read(databaseProvider);
+    final folder = await (db.select(db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
+    if (folder != null && mounted) {
+      setState(() {
+        _targetFolderName = folder.name;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
       title: Text('Import Link', style: TextStyle(color: AppColors.onSurface)),
-      content: TextField(
-        controller: controller,
-        style: TextStyle(color: AppColors.onSurface),
-        decoration: InputDecoration(
-          hintText: 'aerodrive://share?...',
-          hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
-          filled: true,
-          fillColor: AppColors.surfaceVariant,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _controller,
+            style: TextStyle(color: AppColors.onSurface),
+            decoration: InputDecoration(
+              hintText: 'aerodrive://share?...',
+              hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
+              filled: true,
+              fillColor: AppColors.surfaceVariant,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Import to:',
+                style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
+              ),
+              TextButton.icon(
+                icon: const Icon(Icons.folder_open, size: 16, color: AppColors.primary),
+                label: Text(
+                  _targetFolderName,
+                  style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                onPressed: () async {
+                  final pickedId = await showDialog<String>(
+                    context: context,
+                    builder: (ctx) => const FolderPickerDialog(
+                      title: 'Select Destination Folder',
+                    ),
+                  );
+                  if (pickedId != null) {
+                    setState(() {
+                      if (pickedId == '__root__') {
+                        _targetFolderId = null;
+                        _targetFolderName = 'My Drive';
+                      } else {
+                        _targetFolderId = pickedId;
+                        _resolveFolderName(pickedId);
+                      }
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ],
       ),
       actions: [
         TextButton(
@@ -32,7 +100,7 @@ class ImportLinkDialog extends ConsumerWidget {
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
           onPressed: () async {
-            final url = controller.text.trim();
+            final url = _controller.text.trim();
             if (url.isEmpty) {
               Navigator.pop(context);
               return;
@@ -78,7 +146,11 @@ class ImportLinkDialog extends ConsumerWidget {
             );
 
             try {
-              await ref.read(shareServiceProvider).importShareLink(url, password: password);
+              await ref.read(shareServiceProvider).importShareLink(
+                url,
+                password: password,
+                targetFolderId: _targetFolderId,
+              );
               
               if (context.mounted) {
                 Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog

@@ -195,15 +195,39 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 Navigator.pop(ctx);
                 final jsonConfig = await configService.restoreConfigFromChannel();
                 if (jsonConfig != null) {
-                  await ref.read(settingsRepositoryProvider).setSetting('storage_channels_list', jsonConfig);
+                  final settingsRepo = ref.read(settingsRepositoryProvider);
                   try {
-                    final List<dynamic> decoded = jsonDecode(jsonConfig);
-                    if (decoded.isNotEmpty) {
-                      final firstChannelId = decoded.first['id'].toString();
-                      await ref.read(settingsRepositoryProvider).setSetting('active_channel_id', firstChannelId);
+                    if (jsonConfig.startsWith('{')) {
+                      final Map<String, dynamic> configMap = jsonDecode(jsonConfig);
+                      final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
+                      final activeChannel = configMap['active_channel_id'] as String? ?? '';
+                      final publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
+                      final publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
+                      final publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
+
+                      await settingsRepo.setSetting('storage_channels_list', rawChannels);
+                      if (activeChannel.isNotEmpty) {
+                        await settingsRepo.setSetting('active_channel_id', activeChannel);
+                      }
+                      if (publicShareChannelId.isNotEmpty) {
+                        await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
+                      }
+                      if (publicShareChannelUsername.isNotEmpty) {
+                        await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
+                      }
+                      if (publicShareChannelInvite.isNotEmpty) {
+                        await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
+                      }
+                    } else {
+                      await settingsRepo.setSetting('storage_channels_list', jsonConfig);
+                      final List<dynamic> decoded = jsonDecode(jsonConfig);
+                      if (decoded.isNotEmpty) {
+                        final firstChannelId = decoded.first['id'].toString();
+                        await settingsRepo.setSetting('active_channel_id', firstChannelId);
+                      }
                     }
                   } catch (e) {
-                    debugPrint('Failed to auto-set active channel: $e');
+                    debugPrint('Failed to restore config details: $e');
                   }
                   // Trigger disaster recovery
                   if (mounted) {
@@ -1112,7 +1136,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pop(ctx);
-                                    openAppSettings();
+                                    Permission.manageExternalStorage.request();
                                   },
                                   child: const Text('Open Settings'),
                                 ),

@@ -5,6 +5,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:workmanager/workmanager.dart';
 
 import '../../core/providers.dart';
@@ -184,6 +185,40 @@ class _AddBackupProfileDialogState extends ConsumerState<AddBackupProfileDialog>
   bool _wifiOnly = true;
 
   Future<void> _pickFolder() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.manageExternalStorage.request();
+      if (status.isDenied || status.isPermanentlyDenied) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: Colors.grey[900],
+              title: const Text('Storage Permission Required', style: TextStyle(color: Colors.white)),
+              content: const Text(
+                'AeroDrive needs "Manage All Files" access to read and sync backup folders from your device.\n\n'
+                'Please grant this permission in your device settings to enable automatic backup.',
+                style: TextStyle(color: Colors.white70),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Permission.manageExternalStorage.request();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     try {
       final String? result = await getDirectoryPath();
       if (result != null) {
