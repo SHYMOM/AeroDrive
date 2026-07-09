@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/repository_providers.dart';
+import '../../core/theme/aerodrive_theme.dart';
 import '../../core/theme/theme_provider.dart';
 
 class AppearanceSettingsScreen extends ConsumerWidget {
@@ -9,126 +10,92 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeState = ref.watch(themeProvider);
+    final themeState   = ref.watch(themeProvider);
     final themeNotifier = ref.read(themeProvider.notifier);
-
-    final colors = [
-      Colors.blueAccent,
-      Colors.purpleAccent,
-      Colors.greenAccent,
-      Colors.orangeAccent,
-      Colors.redAccent,
-      Colors.tealAccent,
-      Colors.pinkAccent,
-    ];
+    final scheme       = Theme.of(context).colorScheme;
+    final textTheme    = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Appearance'),
+        centerTitle: false,
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
         children: [
-          // Theme Mode Segmented Button
+
+          // ─── Theme Mode ───────────────────────────────────────────
+          _SectionHeader(label: 'Theme Mode'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Theme Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 16),
-                SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode), label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto), label: Text('System')),
-                    ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode), label: Text('Dark')),
-                  ],
-                  selected: {themeState.themeMode},
-                  onSelectionChanged: (newSelection) {
-                    themeNotifier.setThemeMode(newSelection.first);
-                  },
-                  style: SegmentedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: ThemeMode.values.map((mode) {
+                final isSelected = themeState.themeMode == mode;
+                final (icon, label) = switch (mode) {
+                  ThemeMode.light  => (Icons.light_mode_outlined,  'Light'),
+                  ThemeMode.dark   => (Icons.dark_mode_outlined,   'Dark'),
+                  ThemeMode.system => (Icons.brightness_auto,       'System'),
+                };
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: _ModeCard(
+                      icon: icon,
+                      label: label,
+                      isSelected: isSelected,
+                      primaryColor: scheme.primary,
+                      onTap: () => themeNotifier.setThemeMode(mode),
+                    ),
                   ),
-                ),
-              ],
+                );
+              }).toList(),
             ),
           ),
-          const Divider(height: 32),
 
-          // Accent Color
+          const SizedBox(height: 8),
+          const Divider(indent: 20, endIndent: 20),
+          const SizedBox(height: 8),
+
+          // ─── Color Theme Presets ───────────────────────────────────
+          _SectionHeader(label: 'Color Theme'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Accent Color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 16),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: colors.map((color) {
-                      final isSelected = themeState.accentColorValue == color.toARGB32();
-                      return GestureDetector(
-                        onTap: () => themeNotifier.setAccentColor(color),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 16),
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: color,
-                            shape: BoxShape.circle,
-                            border: isSelected ? Border.all(color: Theme.of(context).colorScheme.onSurface, width: 3) : null,
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: isSelected ? Icon(Icons.check, color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white) : null,
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: GridView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 2.5,
+              ),
+              itemCount: AeroDriveTheme.presets.length,
+              itemBuilder: (context, i) {
+                final preset = AeroDriveTheme.presets[i];
+                final isSelected =
+                    themeState.accentColorValue == preset.primary.toARGB32();
+                return _PresetCard(
+                  preset: preset,
+                  isSelected: isSelected,
+                  onTap: () => themeNotifier.setAccentColor(preset.primary),
+                );
+              },
             ),
           ),
-          const Divider(height: 32),
 
-          // File Icon Style
-          _buildDropdownSetting(
-            ref, 
-            'File Icon Style', 
-            'app_file_icon_style', 
-            ['Minimal', 'Filled', 'Colored', 'Outlined'], 
-            'Colored'
-          ),
-          
-          // Language
-          _buildDropdownSetting(
-            ref, 
-            'Language', 
-            'app_language', 
-            ['English', 'Spanish', 'French', 'German', 'System Default'], 
-            'System Default'
-          ),
+          const SizedBox(height: 8),
+          const Divider(indent: 20, endIndent: 20),
+          const SizedBox(height: 8),
 
-          const Divider(height: 32),
-
-          // Font Scale
+          // ─── Font Size ────────────────────────────────────────────
+          _SectionHeader(label: 'Font Size'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Font Size', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Text('A', style: TextStyle(fontSize: 14)),
+                    Text('A', style: textTheme.bodySmall),
                     Expanded(
                       child: Slider(
                         value: themeState.fontScale,
@@ -139,49 +106,256 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                         onChanged: themeNotifier.setFontScale,
                       ),
                     ),
-                    const Text('A', style: TextStyle(fontSize: 24)),
+                    Text('A', style: textTheme.titleMedium),
                   ],
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${(themeState.fontScale * 100).round()}%',
+                    style: textTheme.bodySmall,
+                  ),
                 ),
               ],
             ),
           ),
-          
-          // High Contrast
+
+          const SizedBox(height: 8),
+          const Divider(indent: 20, endIndent: 20),
+          const SizedBox(height: 8),
+
+          // ─── High Contrast ────────────────────────────────────────
+          _SectionHeader(label: 'Accessibility'),
           SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-            title: const Text('High Contrast', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            subtitle: const Text('Maximize color legibility and contrast ratios'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            secondary: Icon(Icons.contrast, color: scheme.primary),
+            title: Text('High Contrast', style: textTheme.titleSmall),
+            subtitle: Text(
+              'Maximise legibility with stronger colour contrast ratios',
+              style: textTheme.bodySmall,
+            ),
             value: themeState.highContrast,
             onChanged: themeNotifier.setHighContrast,
           ),
+
+          const SizedBox(height: 8),
+          const Divider(indent: 20, endIndent: 20),
+          const SizedBox(height: 8),
+
+          // ─── File Icon Style ──────────────────────────────────────
+          _SectionHeader(label: 'Files'),
+          _DropdownTile(
+            settingKey: 'app_file_icon_style',
+            label: 'File Icon Style',
+            options: const ['Minimal', 'Filled', 'Colored', 'Outlined'],
+            defaultVal: 'Colored',
+          ),
+
+          // ─── Language ─────────────────────────────────────────────
+          _SectionHeader(label: 'Language'),
+          _DropdownTile(
+            settingKey: 'app_language',
+            label: 'Display Language',
+            options: const ['English', 'Spanish', 'French', 'German', 'System Default'],
+            defaultVal: 'System Default',
+          ),
+
+          const SizedBox(height: 32),
         ],
       ),
     );
   }
+}
 
-  Widget _buildDropdownSetting(WidgetRef ref, String title, String key, List<String> options, String defaultVal) => FutureBuilder<String?>(
-      future: ref.read(settingsRepositoryProvider).getSetting(key),
-      builder: (context, snapshot) {
-        final currentVal = snapshot.data ?? defaultVal;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              DropdownButton<String>(
-                value: currentVal,
-                items: options.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: (val) async {
-                  if (val != null) {
-                    await ref.read(settingsRepositoryProvider).setSetting(key, val);
-                    ref.read(settingsUpdateProvider.notifier).state++;
-                  }
-                },
+// ── Sub-widgets ──────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.2,
+          color: cs.primary,
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeCard extends StatelessWidget {
+  const _ModeCard({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.primaryColor,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final Color primaryColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? primaryColor.withValues(alpha: 0.12)
+              : cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? primaryColor : cs.outlineVariant,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: isSelected ? primaryColor : cs.onSurfaceVariant, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected ? primaryColor : cs.onSurfaceVariant,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetCard extends StatelessWidget {
+  const _PresetCard({
+    required this.preset,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final AeroThemePreset preset;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? preset.primary : cs.outlineVariant,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: preset.primary.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 3))]
+              : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              // Gradient swatch + icon
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: preset.gradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(preset.icon, color: Colors.white, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  preset.name,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected ? preset.primary : cs.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isSelected)
+                Icon(Icons.check_circle_rounded, color: preset.primary, size: 18),
             ],
           ),
-        );
-      }
+        ),
+      ),
     );
+  }
+}
+
+class _DropdownTile extends ConsumerWidget {
+  const _DropdownTile({
+    required this.settingKey,
+    required this.label,
+    required this.options,
+    required this.defaultVal,
+  });
+
+  final String settingKey;
+  final String label;
+  final List<String> options;
+  final String defaultVal;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<String?>(
+      future: ref.read(settingsRepositoryProvider).getSetting(settingKey),
+      builder: (context, snapshot) {
+        final currentVal = snapshot.data ?? defaultVal;
+        return ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          trailing: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: currentVal,
+              borderRadius: BorderRadius.circular(12),
+              items: options
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (val) async {
+                if (val != null) {
+                  await ref.read(settingsRepositoryProvider).setSetting(settingKey, val);
+                  ref.read(settingsUpdateProvider.notifier).state++;
+                }
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

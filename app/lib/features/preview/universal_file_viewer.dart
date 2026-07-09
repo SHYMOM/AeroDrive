@@ -4,6 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:pdfx/pdfx.dart';
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart' as xml;
 
 import '../../data/db/database.dart';
 import 'file_decryption_util.dart';
@@ -56,7 +61,8 @@ enum _ViewerType {
   html,
   markdown,
   pdf,
-  unsupported,
+  docx,
+  unsupported;
 }
 
 _ViewerType _getViewerType(FileData file) {
@@ -66,6 +72,7 @@ _ViewerType _getViewerType(FileData file) {
   if (mime == 'application/pdf') return _ViewerType.pdf;
   if (mime == 'text/html' || ext == 'html' || ext == 'htm') return _ViewerType.html;
   if (mime == 'text/x-markdown' || ext == 'md' || ext == 'markdown') return _ViewerType.markdown;
+  if (ext == 'docx' || ext == 'doc') return _ViewerType.docx;
   if (mime.startsWith('text/') ||
       mime == 'application/json' ||
       mime == 'application/xml' ||
@@ -142,6 +149,7 @@ class _UniversalFileViewerState extends ConsumerState<UniversalFileViewer> {
       _ViewerType.markdown => _MarkdownViewer(file: widget.file, data: _data!),
       _ViewerType.html => _HtmlViewer(file: widget.file, data: _data!),
       _ViewerType.pdf => _PdfViewer(file: widget.file, data: _data!),
+      _ViewerType.docx => _DocxViewer(file: widget.file, data: _data!),
       _ViewerType.unsupported => _UnsupportedView(file: widget.file),
     };
   }
@@ -551,232 +559,21 @@ class _MarkdownViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = utf8.decode(data, allowMalformed: true);
 
-    return Column(
-      children: [
-        // Header bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          color: const Color(0xFF1A1A2E),
-          child: Row(
-            children: [
-              const Icon(Icons.article_outlined, color: Color(0xFF607D8B), size: 18),
-              const SizedBox(width: 8),
-              const Text('Markdown', style: TextStyle(color: Color(0xFF607D8B), fontSize: 12, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              Text('${text.split('\n').length} lines', style: const TextStyle(color: Colors.white38, fontSize: 11)),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(file.name, style: const TextStyle(fontSize: 14)),
+        backgroundColor: const Color(0xFF1A1A2E),
+      ),
+      body: Markdown(
+        data: text,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+          p: const TextStyle(color: Colors.white70),
+          h1: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          h2: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          code: const TextStyle(backgroundColor: Colors.black26),
         ),
-        Expanded(
-          child: Container(
-            color: const Color(0xFF0D1117),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: _MarkdownRenderer(text: text),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
-  }
-}
-
-class _MarkdownRenderer extends StatelessWidget {
-  const _MarkdownRenderer({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final lines = text.split('\n');
-    final widgets = <Widget>[];
-
-    for (var i = 0; i < lines.length; i++) {
-      final line = lines[i];
-      widgets.add(_buildLine(context, line));
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: widgets,
-    );
-  }
-
-  Widget _buildLine(BuildContext context, String line) {
-    // H1
-    if (line.startsWith('# ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 16, bottom: 8),
-        child: Text(
-          line.substring(2),
-          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, height: 1.3),
-        ),
-      );
-    }
-    // H2
-    if (line.startsWith('## ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 14, bottom: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(line.substring(3), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-            const Divider(color: Color(0xFF2D3748)),
-          ],
-        ),
-      );
-    }
-    // H3
-    if (line.startsWith('### ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 4),
-        child: Text(line.substring(4), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-      );
-    }
-    // H4-H6
-    if (line.startsWith('#### ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8, bottom: 2),
-        child: Text(line.substring(5), style: const TextStyle(color: Colors.white70, fontSize: 15, fontWeight: FontWeight.bold)),
-      );
-    }
-    // Horizontal rule
-    if (line == '---' || line == '***' || line == '___') {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Divider(color: Color(0xFF2D3748)),
-      );
-    }
-    // Blockquote
-    if (line.startsWith('> ')) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: const BoxDecoration(
-          border: Border(left: BorderSide(color: Color(0xFF4A5568), width: 4)),
-          color: Color(0xFF1A2030),
-        ),
-        child: Text(line.substring(2), style: const TextStyle(color: Colors.white54, fontStyle: FontStyle.italic)),
-      );
-    }
-    // Code block
-    if (line.startsWith('```') || line.startsWith('    ')) {
-      return Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF161B22),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: const Color(0xFF2D3748)),
-        ),
-        child: SelectableText(
-          line.startsWith('    ') ? line.substring(4) : line.replaceAll('```', ''),
-          style: const TextStyle(fontFamily: 'monospace', color: Color(0xFFE2E8F0), fontSize: 13),
-        ),
-      );
-    }
-    // Bullet list
-    if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('+ ')) {
-      return Padding(
-        padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 6, right: 8),
-              child: CircleAvatar(radius: 3, backgroundColor: Color(0xFF4A90E2)),
-            ),
-            Expanded(child: _buildInlineText(line.substring(2))),
-          ],
-        ),
-      );
-    }
-    // Numbered list
-    final numListMatch = RegExp(r'^\d+\. (.+)').firstMatch(line);
-    if (numListMatch != null) {
-      final num = line.split('.').first;
-      return Padding(
-        padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: Text('$num.', style: const TextStyle(color: Color(0xFF4A90E2), fontWeight: FontWeight.bold)),
-            ),
-            Expanded(child: _buildInlineText(numListMatch.group(1)!)),
-          ],
-        ),
-      );
-    }
-    // Empty line = spacing
-    if (line.trim().isEmpty) {
-      return const SizedBox(height: 8);
-    }
-    // Normal paragraph text
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: _buildInlineText(line),
-    );
-  }
-
-  Widget _buildInlineText(String text) {
-    // Handle bold/italic/code inline
-    final spans = _parseInline(text);
-    return SelectableText.rich(TextSpan(children: spans));
-  }
-
-  List<TextSpan> _parseInline(String text) {
-    final spans = <TextSpan>[];
-    var pos = 0;
-    final base = const TextStyle(color: Color(0xFFCBD5E0), height: 1.6, fontSize: 14);
-
-    while (pos < text.length) {
-      // Bold **text**
-      if (text.startsWith('**', pos)) {
-        final end = text.indexOf('**', pos + 2);
-        if (end != -1) {
-          spans.add(TextSpan(
-            text: text.substring(pos + 2, end),
-            style: base.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
-          ));
-          pos = end + 2;
-          continue;
-        }
-      }
-      // Italic *text*
-      if (text[pos] == '*' && (pos == 0 || text[pos - 1] != '*') && pos + 1 < text.length && text[pos + 1] != '*') {
-        final end = text.indexOf('*', pos + 1);
-        if (end != -1) {
-          spans.add(TextSpan(
-            text: text.substring(pos + 1, end),
-            style: base.copyWith(fontStyle: FontStyle.italic),
-          ));
-          pos = end + 1;
-          continue;
-        }
-      }
-      // Inline code `code`
-      if (text[pos] == '`') {
-        final end = text.indexOf('`', pos + 1);
-        if (end != -1) {
-          spans.add(TextSpan(
-            text: text.substring(pos + 1, end),
-            style: base.copyWith(
-              fontFamily: 'monospace',
-              color: const Color(0xFF98C379),
-              backgroundColor: const Color(0xFF161B22),
-            ),
-          ));
-          pos = end + 1;
-          continue;
-        }
-      }
-
-      spans.add(TextSpan(text: text[pos], style: base));
-      pos++;
-    }
-
-    return spans.isEmpty ? [TextSpan(text: text, style: base)] : spans;
   }
 }
 
@@ -789,153 +586,154 @@ class _HtmlViewer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final html = utf8.decode(data, allowMalformed: true);
-    // Strip HTML tags for readable plain text preview
-    final plainText = html
-        .replaceAll(RegExp(r'<style[^>]*>.*?</style>', dotAll: true), '')
-        .replaceAll(RegExp(r'<script[^>]*>.*?</script>', dotAll: true), '')
-        .replaceAll(RegExp(r'<[^>]+>'), ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
 
-    return Column(
-      children: [
-        // HTML header bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: const BoxDecoration(color: Color(0xFF1A1A2E)),
-          child: Row(
-            children: [
-              const Icon(Icons.html_outlined, color: Color(0xFFFF9800), size: 18),
-              const SizedBox(width: 8),
-              const Text('HTML Preview', style: TextStyle(color: Color(0xFFFF9800), fontSize: 12, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF9800).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text('Text mode', style: TextStyle(color: Color(0xFFFF9800), fontSize: 10)),
-              ),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(file.name, style: const TextStyle(fontSize: 14)),
+        backgroundColor: const Color(0xFF1A1A2E),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: HtmlWidget(
+          html,
+          textStyle: const TextStyle(color: Colors.white),
         ),
-        // Tabs: Source / Preview
-        DefaultTabController(
-          length: 2,
-          child: Expanded(
-            child: Column(
-              children: [
-                const TabBar(
-                  tabs: [
-                    Tab(text: 'Rendered Text'),
-                    Tab(text: 'HTML Source'),
-                  ],
-                  indicatorColor: Color(0xFFFF9800),
-                  labelColor: Color(0xFFFF9800),
-                  unselectedLabelColor: Colors.white54,
-                ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      // Plain text view
-                      Container(
-                        color: const Color(0xFF0D1117),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
-                          child: SelectableText(
-                            plainText,
-                            style: const TextStyle(color: Color(0xFFCBD5E0), height: 1.6, fontSize: 14),
-                          ),
-                        ),
-                      ),
-                      // HTML source view
-                      Container(
-                        color: const Color(0xFF0D1117),
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.all(16),
-                          child: SelectableText(
-                            html,
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              color: Color(0xFFE2E8F0),
-                              fontSize: 12,
-                              height: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
 // ── PDF Viewer ─────────────────────────────────────────────────────────────
-class _PdfViewer extends StatelessWidget {
+class _PdfViewer extends StatefulWidget {
   const _PdfViewer({required this.file, required this.data});
   final FileData file;
   final Uint8List data;
 
   @override
+  State<_PdfViewer> createState() => _PdfViewerState();
+}
+
+class _PdfViewerState extends State<_PdfViewer> {
+  PdfController? _pdfController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pdfController = PdfController(
+      document: PdfDocument.openData(widget.data),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pdfController?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFE53935).withValues(alpha: 0.15),
-                border: Border.all(color: const Color(0xFFE53935).withValues(alpha: 0.4), width: 2),
-              ),
-              child: const Icon(Icons.picture_as_pdf_outlined, size: 48, color: Color(0xFFE53935)),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              file.name,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${(data.length / 1024 / 1024).toStringAsFixed(2)} MB',
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'PDF files require an external viewer.\nThe file has been downloaded and is ready to open.',
-              style: TextStyle(color: Colors.white54, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE53935).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE53935).withValues(alpha: 0.2)),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check_circle_outline, color: Color(0xFF4CAF50), size: 16),
-                  SizedBox(width: 8),
-                  Text('PDF loaded in memory', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                ],
+    if (_pdfController == null) return const Center(child: CircularProgressIndicator());
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.file.name, style: const TextStyle(fontSize: 14)),
+        backgroundColor: const Color(0xFF1A1A2E),
+        actions: [
+          PdfPageNumber(
+            controller: _pdfController!,
+            builder: (_, loadingState, page, pagesCount) => Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                '$page/${pagesCount ?? 0}',
+                style: const TextStyle(fontSize: 16),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+      body: PdfView(
+        controller: _pdfController!,
+        scrollDirection: Axis.vertical,
+      ),
+    );
+  }
+}
+
+// ── Word/Docx Viewer ───────────────────────────────────────────────────────
+class _DocxViewer extends StatelessWidget {
+  const _DocxViewer({required this.file, required this.data});
+  final FileData file;
+  final Uint8List data;
+
+  String _parseDocx(Uint8List docxBytes) {
+    try {
+      final archive = ZipDecoder().decodeBytes(docxBytes);
+      final documentFile = archive.findFile('word/document.xml');
+      if (documentFile == null) return 'Invalid docx file (word/document.xml not found).';
+
+      final xmlString = utf8.decode(documentFile.content as List<int>);
+      final document = xml.XmlDocument.parse(xmlString);
+      
+      final buffer = StringBuffer();
+      final paragraphs = document.findAllElements('w:p');
+      for (final p in paragraphs) {
+        var prefix = '';
+        final pPr = p.getElement('w:pPr');
+        if (pPr != null) {
+          final pStyle = pPr.getElement('w:pStyle');
+          if (pStyle != null) {
+            final styleVal = pStyle.getAttribute('w:val');
+            if (styleVal == 'Heading1') {
+              prefix = '# ';
+            } else if (styleVal == 'Heading2') {
+              prefix = '## ';
+            } else if (styleVal == 'Heading3') {
+              prefix = '### ';
+            }
+          }
+        }
+        
+        buffer.write(prefix);
+        
+        final runs = p.findAllElements('w:r');
+        for (final r in runs) {
+          final rPr = r.getElement('w:rPr');
+          final isBold = rPr?.getElement('w:b') != null;
+          final isItalic = rPr?.getElement('w:i') != null;
+          
+          final texts = r.findAllElements('w:t');
+          for (final t in texts) {
+            var runText = t.innerText;
+            if (isBold) runText = '**$runText**';
+            if (isItalic) runText = '*$runText*';
+            buffer.write(runText);
+          }
+        }
+        buffer.writeln();
+        buffer.writeln();
+      }
+      return buffer.toString();
+    } catch (e) {
+      return 'Error parsing docx file: $e';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final markdownText = _parseDocx(data);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(file.name, style: const TextStyle(fontSize: 14)),
+        backgroundColor: const Color(0xFF1A1A2E),
+      ),
+      body: Markdown(
+        data: markdownText,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+          p: const TextStyle(color: Colors.white70),
+          h1: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          h2: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          code: const TextStyle(backgroundColor: Colors.black26),
         ),
       ),
     );

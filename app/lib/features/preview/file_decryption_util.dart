@@ -88,6 +88,5 @@ Future<Uint8List> _downloadChunk(dynamic telegram, int fileId, int expectedSize)
   if (!await file.exists()) return Uint8List(0);
 
   final bytes = await file.readAsBytes();
-  final data = bytes.sublist(0, expectedSize < bytes.length ? expectedSize : bytes.length);
-  return Uint8List.fromList(data);
+  return bytes;
 }

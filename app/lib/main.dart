@@ -657,3 +657,25 @@ void _handleGlobalError(Object error, StackTrace stack) {
     debugPrint('[AeroDrive] Fail-safe crash navigation failed: $e\n$s');
   }
 }
+
+@pragma('vm:entry-point')
+void backgroundMain() async {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    try {
+      await dotenv.load();
+    } catch (_) {}
+
+    final container = ProviderContainer();
+
+    container.read(autoBackupWatcherProvider).start();
+    container.read(uploadQueueServiceProvider);
+    container.read(downloadQueueServiceProvider);
+    container.read(realtimeSyncServiceProvider).startListening();
+
+    debugPrint('[AeroDrive] Headless background engine started successfully.');
+  }, (error, stack) {
+    debugPrint('[AeroDrive] Headless background engine fatal error: $error\n$stack');
+  });
+}

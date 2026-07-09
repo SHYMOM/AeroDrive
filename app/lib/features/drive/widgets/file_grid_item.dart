@@ -60,7 +60,12 @@ class FileGridItem extends ConsumerWidget {
     final isImg = file.mimeType?.startsWith('image/') == true;
     final isVid = file.mimeType?.startsWith('video/') == true;
 
-    return InkWell(
+    Offset? tapPosition;
+
+    return GestureDetector(
+      onTapDown: (details) {
+        tapPosition = details.globalPosition;
+      },
       onTap: () {
         if (isSelectionMode) {
           _toggleSelection(ref);
@@ -69,18 +74,20 @@ class FileGridItem extends ConsumerWidget {
         }
       },
       onLongPress: () {
-        if (!isSelectionMode) {
-          ref.read(isSelectionModeProvider.notifier).state = true;
-          ref.read(selectedItemsProvider.notifier).state = {file.id};
+        if (!isSelectionMode && tapPosition != null) {
+          _showGridContextMenu(context, ref, tapPosition!);
+        } else {
+          _toggleSelection(ref);
         }
+      },
+      onSecondaryTapDown: (details) {
+        tapPosition = details.globalPosition;
       },
       onSecondaryTap: () {
-        if (!isSelectionMode) {
-          ref.read(isSelectionModeProvider.notifier).state = true;
-          ref.read(selectedItemsProvider.notifier).state = {file.id};
+        if (!isSelectionMode && tapPosition != null) {
+          _showGridContextMenu(context, ref, tapPosition!);
         }
       },
-      borderRadius: BorderRadius.circular(12),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E2D), // Slightly lighter surface #1E1E2D
@@ -488,6 +495,66 @@ class FileGridItem extends ConsumerWidget {
     }
     
     ref.read(dbRebuildVersionProvider.notifier).state++;
+  }
+
+  void _showGridContextMenu(BuildContext context, WidgetRef ref, Offset position) async {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final value = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Rect.fromLTWH(0, 0, overlay.size.width, overlay.size.height),
+      ),
+      color: AppColors.surfaceElevated,
+      items: [
+        const PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: const TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Colors.white))),
+        const PopupMenuDivider(),
+        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+      ],
+    );
+
+    if (value == null) return;
+
+    if (value == 'download') {
+      final db = ref.read(databaseProvider);
+      await db.into(db.transferQueue).insert(
+        TransferQueueCompanion.insert(
+          id: const Uuid().v4(),
+          fileId: drift.Value(file.id),
+          type: const drift.Value('DOWNLOAD_FILE'),
+          status: const drift.Value('PENDING'),
+          priority: const drift.Value(1),
+          createdAt: drift.Value(DateTime.now()),
+        )
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Queued ${file.name} for download...')));
+      }
+    } else if (value == 'share') {
+      showDialog(
+        context: context,
+        builder: (ctx) => ShareDialog(file: file),
+      );
+    } else if (value == 'tags') {
+      TagDialog.show(context, file);
+    } else if (value == 'delete') {
+      _showDeleteConfirm(context, ref);
+    } else if (value == 'move') {
+      _showMoveDialog(context, ref);
+    } else if (value == 'copy') {
+      _showCopyDialog(context, ref);
+    } else if (value == 'star') {
+      _toggleFavorite(ref);
+    } else if (value == 'select') {
+      ref.read(isSelectionModeProvider.notifier).state = true;
+      ref.read(selectedItemsProvider.notifier).state = {file.id};
+    }
   }
 }
 

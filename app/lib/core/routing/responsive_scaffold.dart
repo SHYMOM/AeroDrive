@@ -348,13 +348,13 @@ class SidebarContent extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Aero User',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+                        style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w700),
                       ),
                       Text(
                         'Zero-Knowledge',
@@ -408,14 +408,14 @@ class SidebarContent extends ConsumerWidget {
                             children: [
                               Icon(
                                 isSelected ? dest.selectedIcon : dest.icon,
-                                color: isSelected ? AppColors.primary : Colors.white70,
+                                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
                                 size: 24,
                               ),
                               const SizedBox(width: 16),
                               Text(
                                 dest.label,
                                 style: TextStyle(
-                                  color: isSelected ? AppColors.primary : Colors.white70,
+                                  color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
                                   fontSize: 15,
                                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                 ),
@@ -428,7 +428,7 @@ class SidebarContent extends ConsumerWidget {
                   );
                 }),
                 
-                const Divider(color: Colors.white12, height: 24),
+                Divider(color: AppColors.outline, height: 24),
                 
                 // Import Shared Link Option
                 Padding(
@@ -445,14 +445,14 @@ class SidebarContent extends ConsumerWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.link, color: AppColors.secondary, size: 24),
-                            SizedBox(width: 16),
+                            const Icon(Icons.link, color: AppColors.secondary, size: 24),
+                            const SizedBox(width: 16),
                             Text(
                               'Import Shared Link',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.onSurfaceVariant,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -479,14 +479,14 @@ class SidebarContent extends ConsumerWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
-                            SizedBox(width: 16),
+                            const Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
+                            const SizedBox(width: 16),
                             Text(
                               'My Shared Links',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.onSurfaceVariant,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -513,14 +513,14 @@ class SidebarContent extends ConsumerWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.delete_outline, color: AppColors.error, size: 24),
-                            SizedBox(width: 16),
+                            const Icon(Icons.delete_outline, color: AppColors.error, size: 24),
+                            const SizedBox(width: 16),
                             Text(
                               'Trash',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.onSurfaceVariant,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -547,14 +547,14 @@ class SidebarContent extends ConsumerWidget {
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: Colors.white54, size: 24),
-                            SizedBox(width: 16),
+                            Icon(Icons.info_outline, color: AppColors.onSurfaceVariant, size: 24),
+                            const SizedBox(width: 16),
                             Text(
                               'About',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.onSurfaceVariant,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),

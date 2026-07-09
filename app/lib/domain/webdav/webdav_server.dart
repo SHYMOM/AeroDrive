@@ -25,10 +25,10 @@ class WebDavServer {
   static int? _activePort;
   static ReceivePort? _mainReceivePort;
   static SendPort? _isolateSendPort;
-  static Ref? _ref;
+  static WidgetRef? _ref;
 
   /// Starts the WebDAV server. Throws SocketException if port is in use.
-  static Future<void> start(Ref ref, WebDavCredentials creds) async {
+  static Future<void> start(WidgetRef ref, WebDavCredentials creds) async {
     if (_activePort != null) return;
     _ref = ref;
 
@@ -140,7 +140,7 @@ class WebDavServer {
     for (var i = 0; i < parts.length; i++) {
       final part = parts[i];
       final folder = await (db.select(db.folders)
-        ..where((f) => f.name.equals(part) & f.parentId.equals(currentFolderId) & f.deletedAt.isNull())
+        ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId!)) & f.deletedAt.isNull())
       ).getSingleOrNull();
 
       if (folder != null) {
@@ -173,7 +173,7 @@ class WebDavServer {
       } else {
         if (i == parts.length - 1) {
           final file = await (db.select(db.files)
-            ..where((f) => f.name.equals(part) & f.folderId.equals(currentFolderId) & f.deletedAt.isNull())
+            ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.folderId.isNull() : f.folderId.equals(currentFolderId!)) & f.deletedAt.isNull())
           ).getSingleOrNull();
           if (file != null) {
             return {
@@ -196,7 +196,7 @@ class WebDavServer {
     String? currentFolderId;
     for (final part in parts) {
       final folder = await (db.select(db.folders)
-        ..where((f) => f.name.equals(part) & f.parentId.equals(currentFolderId) & f.deletedAt.isNull())
+        ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId!)) & f.deletedAt.isNull())
       ).getSingleOrNull();
       if (folder == null) return null;
       currentFolderId = folder.id;

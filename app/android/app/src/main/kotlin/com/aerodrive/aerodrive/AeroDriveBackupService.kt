@@ -10,6 +10,8 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
 
 /**
  * AeroDriveBackupService
@@ -23,6 +25,8 @@ import androidx.core.app.NotificationCompat
  * and stopped when the user explicitly disables auto-backup.
  */
 class AeroDriveBackupService : Service() {
+
+    private var flutterEngine: FlutterEngine? = null
 
     companion object {
         private const val TAG = "AeroDriveBackupService"
@@ -53,6 +57,23 @@ class AeroDriveBackupService : Service() {
         Log.d(TAG, "AeroDriveBackupService created")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
+
+        try {
+            val loader = io.flutter.embedding.engine.loader.FlutterLoader()
+            loader.startInitialization(applicationContext)
+            loader.ensureInitializationComplete(applicationContext, null)
+
+            flutterEngine = FlutterEngine(this)
+            flutterEngine?.dartExecutor?.executeDartEntrypoint(
+                DartExecutor.DartEntrypoint(
+                    loader.findAppBundlePath(),
+                    "backgroundMain"
+                )
+            )
+            Log.d(TAG, "Headless Flutter Engine started successfully running backgroundMain")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start headless Flutter Engine", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -64,6 +85,8 @@ class AeroDriveBackupService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "AeroDriveBackupService destroyed")
+        flutterEngine?.destroy()
+        flutterEngine = null
     }
 
     private fun buildNotification(): Notification {

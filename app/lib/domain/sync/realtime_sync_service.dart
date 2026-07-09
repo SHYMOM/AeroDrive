@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +12,10 @@ import '../../core/providers/security_providers.dart';
 import '../../data/db/database.dart';
 import '../../features/drive/providers/drive_providers.dart';
 import '../../features/telegram/telegram_manager.dart';
+import '../../features/telegram/telegram_service.dart';
 import '../recovery/manifest_encoder.dart';
+import '../smart_analyzer.dart';
+import 'config_sync_service.dart';
 
 final realtimeSyncServiceProvider = Provider<RealtimeSyncService>((ref) {
   final service = RealtimeSyncService(ref);
@@ -35,9 +40,13 @@ class RealtimeSyncService {
           _handleDeleteMessages(event);
         } else if (event['@type'] == 'updateNewMessage') {
           _handleNewMessage(event);
+        } else if (event['@type'] == 'updateMessageContent') {
+          _handleMessageContent(event);
         }
       });
     }
+
+    Future.microtask(() => _initializeBackgroundSyncChats());
   }
 
   void stopListening() {
@@ -137,8 +146,15 @@ class RealtimeSyncService {
       final chatId = msg['chat_id'] as int?;
       if (chatId == null) return;
       
-      // Check if it's one of our storage channels
       final settingsRepo = _ref.read(settingsRepositoryProvider);
+      
+      final configChatId = await _getConfigChatId();
+      if (chatId == configChatId) {
+        await _syncConfigFromChannelText(msg);
+        return;
+      }
+
+      // Check if it's one of our storage channels
       final rawChannels = await settingsRepo.getSetting('storage_channels_list');
       if (rawChannels == null || !rawChannels.contains(chatId.toString())) return;
 
@@ -198,6 +214,12 @@ class RealtimeSyncService {
           final isChunkedVal = manifest['chk'] == 1;
           final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
           
+          final durationVal = manifest['dur'] as int?;
+          final int? ptSeconds = manifest['pt'] as int?;
+          final DateTime? photoTakenAt = ptSeconds != null 
+              ? DateTime.fromMillisecondsSinceEpoch(ptSeconds * 1000) 
+              : null;
+
           await db.into(db.files).insertOnConflictUpdate(
             FilesCompanion.insert(
               id: fileId,
@@ -210,6 +232,8 @@ class RealtimeSyncService {
               totalChunks: drift.Value(totalChunksVal),
               sha256Hash: drift.Value(wrappedDekString),
               createdAt: drift.Value(DateTime.now()),
+              photoTakenAt: drift.Value(photoTakenAt),
+              duration: drift.Value(durationVal),
             ),
           );
 
@@ -223,6 +247,14 @@ class RealtimeSyncService {
               size: drift.Value(size),
             ),
           );
+
+          try {
+            final analyzer = SmartAnalyzer(db);
+            await analyzer.syncMetadataFromManifest(manifest, fileId);
+          } catch (e) {
+            AppLogger.error('RealtimeSync: Failed to sync metadata for $fileId', e);
+          }
+
           dbChanged = true;
           AppLogger.info('RealtimeSync: Added/Updated file $fileId');
         }
@@ -234,6 +266,146 @@ class RealtimeSyncService {
       }
     } catch (e, s) {
       AppLogger.error('RealtimeSyncService: Error handling new message', e, s);
+    }
+  }
+
+  int? _configChatId;
+
+  Future<int?> _getConfigChatId() async {
+    if (_configChatId != null) return _configChatId;
+    try {
+      final configService = _ref.read(configSyncServiceProvider);
+      _configChatId = await configService.findConfigChannel();
+    } catch (_) {}
+    return _configChatId;
+  }
+
+  Future<void> _syncConfigFromChannelText(Map<String, dynamic> msg) async {
+    try {
+      if (msg['content']?['@type'] == 'messageText') {
+        final text = msg['content']['text']['text'] as String?;
+        if (text != null && text.contains('WARNING: DO NOT DELETE')) {
+          final parts = text.split('\n\n');
+          if (parts.length >= 3) {
+            final encryptedBase64 = parts.last;
+            final encryptedBytes = base64Decode(encryptedBase64);
+            
+            final secretBox = SecretBox.fromConcatenation(
+              encryptedBytes,
+              nonceLength: 12,
+              macLength: 16,
+            );
+            
+            final masterKeyBytes = _ref.read(masterKeyProvider);
+            if (masterKeyBytes == null) return;
+            
+            final masterKey = SecretKey(masterKeyBytes);
+            final algorithm = AesGcm.with256bits();
+            final decryptedBytes = await algorithm.decrypt(
+              secretBox,
+              secretKey: masterKey,
+            );
+            
+            final decryptedConfig = utf8.decode(decryptedBytes);
+            if (decryptedConfig.isNotEmpty) {
+              final Map<String, dynamic> configMap = jsonDecode(decryptedConfig);
+              final remoteLww = configMap['lww_timestamp'] as int? ?? 0;
+              
+              final settingsRepo = _ref.read(settingsRepositoryProvider);
+              final localLwwStr = await settingsRepo.getSetting('config_lww_timestamp');
+              final localLww = int.tryParse(localLwwStr ?? '') ?? 0;
+
+              if (remoteLww > localLww) {
+                final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
+                final activeChannel = configMap['active_channel_id'] as String? ?? '';
+                final publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
+                final publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
+                final publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
+                final tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
+
+                await settingsRepo.setSetting('storage_channels_list', rawChannels);
+                await settingsRepo.setSetting('active_channel_id', activeChannel);
+                await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
+                await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
+                await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
+                await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
+                await settingsRepo.setSetting('config_lww_timestamp', remoteLww.toString());
+                AppLogger.info('RealtimeSync: Configuration updated in real-time ($remoteLww > $localLww)');
+                
+                // Notify UI
+                _ref.read(dbRebuildVersionProvider.notifier).update((state) => state + 1);
+                _ref.invalidate(folderContentsProvider);
+              }
+            }
+          }
+        }
+      }
+    } catch (e, s) {
+      AppLogger.error('RealtimeSync: Error parsing config update from chat text', e, s);
+    }
+  }
+
+  Future<void> _handleMessageContent(Map<String, dynamic> event) async {
+    try {
+      final chatId = event['chat_id'] as int?;
+      if (chatId == null) return;
+
+      final configChatId = await _getConfigChatId();
+      if (chatId == configChatId) {
+        final mockMsg = {
+          'chat_id': chatId,
+          'id': event['message_id'],
+          'content': event['new_content'],
+        };
+        await _syncConfigFromChannelText(mockMsg);
+      }
+    } catch (e, s) {
+      AppLogger.error('RealtimeSyncService: Error handling message content update', e, s);
+    }
+  }
+
+  Future<void> _initializeBackgroundSyncChats() async {
+    try {
+      final settingsRepo = _ref.read(settingsRepositoryProvider);
+      final rawChannels = await settingsRepo.getSetting('storage_channels_list');
+      final List<int> chatIds = [];
+
+      if (rawChannels != null && rawChannels.isNotEmpty) {
+        final List<dynamic> decoded = jsonDecode(rawChannels);
+        for (final item in decoded) {
+          final id = int.tryParse(item['id'].toString());
+          if (id != null) chatIds.add(id);
+        }
+      }
+
+      final configChatId = await _getConfigChatId();
+      if (configChatId != null) {
+        chatIds.add(configChatId);
+      }
+
+      final telegramAccounts = _ref.read(telegramManagerProvider);
+      if (telegramAccounts.isNotEmpty) {
+        final primary = telegramAccounts.first;
+        if (primary.authState == TelegramAuthState.ready) {
+          for (final chatId in chatIds) {
+            try {
+              await primary.sendRequest({
+                "@type": "getChat",
+                "chat_id": chatId,
+              });
+              await primary.sendRequest({
+                "@type": "openChat",
+                "chat_id": chatId,
+              });
+              AppLogger.info('RealtimeSync: Pre-opened channel $chatId for background updates');
+            } catch (e) {
+              AppLogger.warning('RealtimeSync: Failed to pre-open channel $chatId: $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.error('RealtimeSync: Failed to initialize background chats', e);
     }
   }
 }

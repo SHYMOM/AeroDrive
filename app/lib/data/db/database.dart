@@ -78,6 +78,14 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
         if (from < 9) {
           await m.addColumn(files, files.duration);
         }
+        if (from < 10) {
+          await m.addColumn(files, files.thumbnailMessageId);
+          await m.addColumn(files, files.thumbnailChannelId);
+          try {
+            await m.deleteTable('photo_faces');
+          } catch (_) {}
+          await m.createTable(photoFaces);
+        }
       },
     );
 }

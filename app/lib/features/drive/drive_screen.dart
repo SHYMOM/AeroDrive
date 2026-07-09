@@ -20,6 +20,9 @@ import '../../data/db/database.dart';
 import '../../domain/folder_scanner.dart';
 import '../../domain/recovery/recovery_scanner.dart';
 import '../../domain/sync/config_sync_service.dart';
+import '../sharing/share_service.dart';
+import '../transfers/transfers_screen.dart';
+import '../transfers/widgets/global_progress_bar.dart';
 import 'providers/drive_providers.dart';
 import 'widgets/create_folder_dialog.dart';
 import 'widgets/file_grid_item.dart';
@@ -28,7 +31,6 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
-import '../sharing/share_service.dart';
 
 class DriveScreen extends ConsumerStatefulWidget {
   const DriveScreen({super.key});
@@ -710,6 +712,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       );
     }
 
+    final progressState = ref.watch(aggregateTransferProgressProvider);
+
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
@@ -723,7 +727,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_outlined, color: AppColors.primary, size: 28),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Text(
             'AeroDrive',
             style: TextStyle(
@@ -736,6 +740,48 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       ),
       centerTitle: false,
       actions: [
+        progressState.when(
+          data: (data) {
+            if (data['hasActive'] != true) return const SizedBox.shrink();
+            final progress = data['progress'] as double;
+            final upCount = data['uploads'] as int;
+            final downCount = data['downloads'] as int;
+            
+            return InkWell(
+              onTap: () => _showBackgroundTasksBottomSheet(context),
+              borderRadius: BorderRadius.circular(20),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 2,
+                        backgroundColor: Colors.white10,
+                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${(progress * 100).toStringAsFixed(0)}%',
+                      style: TextStyle(
+                        color: Theme.of(context).primaryColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+        ),
         IconButton(
           icon: Icon(Icons.search, color: AppColors.onSurfaceVariant),
           onPressed: () => context.push('/search'),
@@ -1335,40 +1381,21 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       },
     );
 
-  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: Icon(
-            Icons.grid_view_rounded,
-            size: 20,
-            color: isGridView ? const Color(0xFF38BDF8) : Colors.white38,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          onPressed: () async {
-            ref.read(isGridViewProvider.notifier).state = true;
-            await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', true);
-          },
-          tooltip: 'Grid view',
+  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => IconButton(
+        icon: Icon(
+          isGridView ? Icons.list_rounded : Icons.grid_view_rounded,
+          size: 22,
+          color: Theme.of(context).primaryColor,
         ),
-        const SizedBox(width: 12),
-        IconButton(
-          icon: Icon(
-            Icons.list_rounded,
-            size: 22,
-            color: !isGridView ? const Color(0xFF38BDF8) : Colors.white38,
-          ),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(),
-          onPressed: () async {
-            ref.read(isGridViewProvider.notifier).state = false;
-            await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', false);
-          },
-          tooltip: 'List view',
-        ),
-      ],
-    );
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+        onPressed: () async {
+          final newValue = !isGridView;
+          ref.read(isGridViewProvider.notifier).state = newValue;
+          await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', newValue);
+        },
+        tooltip: isGridView ? 'Switch to List view' : 'Switch to Grid view',
+      );
 
   void _showNoChannelDialog(BuildContext context) {
     showDialog(
@@ -1514,5 +1541,121 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         );
       }
     }
+  }
+
+  void _showBackgroundTasksBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Consumer(
+          builder: (context, ref, _) {
+            final transfersAsync = ref.watch(transfersStreamProvider);
+            return Container(
+              padding: const EdgeInsets.all(16),
+              height: MediaQuery.of(context).size.height * 0.5,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Background Tasks',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          context.push('/transfers');
+                        },
+                        child: const Text('View All', style: TextStyle(color: Color(0xFF38BDF8))),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: transfersAsync.when(
+                      data: (list) {
+                        final active = list.where((item) => item.transfer.status == 'PENDING' || item.transfer.status == 'PROCESSING').toList();
+                        if (active.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No active background tasks',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                          );
+                        }
+                        return ListView.builder(
+                          itemCount: active.length,
+                          itemBuilder: (context, index) {
+                            final item = active[index];
+                            final isUpload = item.transfer.type == 'UPLOAD_FILE';
+                            final progress = item.transfer.totalBytes != null && item.transfer.totalBytes! > 0
+                                ? (item.transfer.bytesTransferred! / item.transfer.totalBytes!)
+                                : 0.0;
+                            
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: CircleAvatar(
+                                backgroundColor: isUpload 
+                                    ? AppColors.primary.withValues(alpha: 0.1) 
+                                    : AppColors.secondary.withValues(alpha: 0.1),
+                                child: Icon(
+                                  isUpload ? Icons.cloud_upload : Icons.cloud_download,
+                                  color: isUpload ? AppColors.primary : AppColors.secondary,
+                                  size: 20,
+                                ),
+                              ),
+                              title: Text(
+                                item.file?.name ?? item.transfer.fileId ?? 'Unknown File',
+                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: progress,
+                                    backgroundColor: Colors.white10,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      isUpload ? AppColors.primary : AppColors.secondary,
+                                    ),
+                                    minHeight: 4,
+                                  ),
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                onPressed: () async {
+                                  final db = ref.read(databaseProvider);
+                                  await (db.delete(db.transferQueue)..where((q) => q.id.equals(item.transfer.id))).go();
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.redAccent))),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

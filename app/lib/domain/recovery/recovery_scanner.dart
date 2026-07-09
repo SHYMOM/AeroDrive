@@ -7,10 +7,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../data/db/database.dart';
 import '../../features/telegram/telegram_service.dart';
+import '../smart_analyzer.dart';
 import '../thumbnail_cache_manager.dart';
 import 'manifest_encoder.dart';
 
@@ -65,6 +67,7 @@ class ZeroDBRecoveryService {
     final List<FoldersCompanion> recoveredFolders = [];
     final List<FilesCompanion> recoveredFiles = [];
     final List<ChunksCompanion> recoveredChunks = [];
+    final List<Map<String, dynamic>> recoveredManifests = [];
     final Set<String> recoveredFolderIds = {};
     final Set<String> recoveredFileIds = {};
     const uuid = Uuid();
@@ -111,6 +114,10 @@ class ZeroDBRecoveryService {
           }
 
           itemsRecovered++;
+
+          if (manifest['t'] == 'file') {
+            recoveredManifests.add(manifest);
+          }
 
           if (manifest['t'] == 'dir') {
             final int? tsSeconds = manifest['ts'] as int?;
@@ -303,6 +310,19 @@ class ZeroDBRecoveryService {
         }
       }
     });
+
+    // 5. Sync metadata after transaction commits
+    final analyzer = SmartAnalyzer(_db);
+    for (final manifest in recoveredManifests) {
+      final fileId = manifest['id'] as String?;
+      if (fileId != null) {
+        try {
+          await analyzer.syncMetadataFromManifest(manifest, fileId);
+        } catch (e) {
+          AppLogger.error('Failed to sync metadata after recovery for $fileId', e);
+        }
+      }
+    }
 
     onProgress?.call(messagesScanned, itemsRecovered);
     debugPrint("ZeroDB disaster recovery scan complete! Recovered $itemsRecovered items.");

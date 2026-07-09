@@ -75,32 +75,41 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
       final dekBytes = dekResult[0]!;
       final ctrIv = dekResult[1];
 
-      // Try thumbnail first
+      // 1. Try thumbnail first (as placeholder)
       final thumb = await (db.select(db.thumbnails)..where((t) => t.fileId.equals(file.id))).getSingleOrNull();
       if (thumb != null && thumb.encryptedBlob.isNotEmpty) {
-        AppLogger.info('Loading thumbnail for ${file.id}');
-        final cipher = AesGcm.with256bits();
-        final secretKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
-        final thumbNonce = thumb.encryptedBlob.sublist(0, 12);
-        final thumbMac = Mac(thumb.encryptedBlob.sublist(12, 28));
-        final thumbCipherText = thumb.encryptedBlob.sublist(28);
-        final thumbPlain = await cipher.decrypt(
-          SecretBox(thumbCipherText, nonce: thumbNonce, mac: thumbMac),
-          secretKey: secretKey,
-        );
-        if (mounted) {
-          setState(() { _decryptedBytes = Uint8List.fromList(thumbPlain); _isLoading = false; });
+        AppLogger.info('Loading thumbnail for ${file.id} as placeholder');
+        try {
+          final cipher = AesGcm.with256bits();
+          final secretKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
+          final thumbNonce = thumb.encryptedBlob.sublist(0, 12);
+          final thumbMac = Mac(thumb.encryptedBlob.sublist(12, 28));
+          final thumbCipherText = thumb.encryptedBlob.sublist(28);
+          final thumbPlain = await cipher.decrypt(
+            SecretBox(thumbCipherText, nonce: thumbNonce, mac: thumbMac),
+            secretKey: secretKey,
+          );
+          if (mounted) {
+            setState(() {
+              _decryptedBytes = Uint8List.fromList(thumbPlain);
+              _isLoading = false;
+            });
+          }
+        } catch (e) {
+          AppLogger.error('Failed to decrypt thumbnail', e);
         }
-        return;
       }
 
+      // 2. Load the original chunks in the background/foreground
       final chunks = await (db.select(db.chunks)
         ..where((c) => c.fileId.equals(file.id))
         ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
       ).get();
 
       if (chunks.isEmpty) {
-        setState(() { _error = 'No chunk data found'; _isLoading = false; });
+        if (_decryptedBytes == null && mounted) {
+          setState(() { _error = 'No chunk data found'; _isLoading = false; });
+        }
         return;
       }
 
@@ -141,16 +150,21 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
       final fullBytes = bytesBuilder.toBytes();
       if (fullBytes.isEmpty) {
-        setState(() { _error = 'Decrypted data is empty'; _isLoading = false; });
+        if (_decryptedBytes == null && mounted) {
+          setState(() { _error = 'Decrypted data is empty'; _isLoading = false; });
+        }
         return;
       }
 
       if (mounted) {
-        setState(() { _decryptedBytes = fullBytes; _isLoading = false; });
+        setState(() {
+          _decryptedBytes = fullBytes;
+          _isLoading = false;
+        });
       }
     } catch (e, s) {
       AppLogger.error('Failed to decrypt image', e, s);
-      if (mounted) {
+      if (_decryptedBytes == null && mounted) {
         setState(() { _error = 'Failed to decrypt: $e'; _isLoading = false; });
       }
     }

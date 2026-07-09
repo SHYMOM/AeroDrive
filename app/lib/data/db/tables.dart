@@ -42,6 +42,8 @@ class Files extends Table {
   DateTimeColumn get deletedAt => dateTime().nullable()();
   DateTimeColumn get photoTakenAt => dateTime().nullable()();
   IntColumn get duration => integer().nullable()(); // video or audio duration in seconds
+  IntColumn get thumbnailMessageId => integer().nullable()();
+  IntColumn get thumbnailChannelId => integer().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};
@@ -157,12 +159,17 @@ class FaceClusters extends Table {
 
 // 11. Photo-Face Mapping
 class PhotoFaces extends Table {
+  TextColumn get id => text()();
   TextColumn get fileId => text().references(Files, #id)();
   TextColumn get faceClusterId => text().references(FaceClusters, #id)();
   RealColumn get confidence => real().nullable()();
+  RealColumn get boxLeft => real().nullable()();
+  RealColumn get boxTop => real().nullable()();
+  RealColumn get boxWidth => real().nullable()();
+  RealColumn get boxHeight => real().nullable()();
 
   @override
-  Set<Column> get primaryKey => {fileId, faceClusterId};
+  Set<Column> get primaryKey => {id};
 }
 
 // 12. Backup History

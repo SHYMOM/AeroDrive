@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:drift/drift.dart' as drift;
+import 'package:image/image.dart' as img;
+import 'package:uuid/uuid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,12 +38,18 @@ final faceClustersProvider = FutureProvider<List<FaceClusterModel>>((ref) async 
   
   final cacheDir = await getApplicationSupportDirectory();
   final facesDir = Directory('${cacheDir.path}/faces');
+  if (!await facesDir.exists()) {
+    await facesDir.create(recursive: true);
+  }
+  
   List<File> cropFiles = [];
   if (await facesDir.exists()) {
     cropFiles = facesDir.listSync().whereType<File>().toList();
   }
 
   final List<FaceClusterModel> list = [];
+  const uuid = Uuid();
+
   for (final cluster in clusters) {
     // Find associated files
     final fileIds = mappings.where((m) => m.faceClusterId == cluster.id).map((m) => m.fileId).toList();
@@ -54,9 +62,39 @@ final faceClustersProvider = FutureProvider<List<FaceClusterModel>>((ref) async 
     if (photos.isEmpty) continue;
 
     // Find cover crop file matching cluster.id
-    final coverFile = cropFiles.firstWhereOrNull(
+    var coverFile = cropFiles.firstWhereOrNull(
       (f) => f.path.split(Platform.pathSeparator).last.startsWith(cluster.id),
     );
+
+    if (coverFile == null && photos.isNotEmpty) {
+      try {
+        final firstFile = photos.first;
+        final mapping = mappings.firstWhereOrNull((m) => m.faceClusterId == cluster.id && m.fileId == firstFile.id);
+        if (mapping != null && mapping.boxLeft != null && mapping.boxTop != null && mapping.boxWidth != null && mapping.boxHeight != null) {
+          final thumbFile = await ref.read(thumbnailServiceProvider).getThumbnail(firstFile);
+          if (thumbFile != null && await thumbFile.exists()) {
+            final bytes = await thumbFile.readAsBytes();
+            final thumbImage = img.decodeImage(bytes);
+            if (thumbImage != null) {
+              final int x = (mapping.boxLeft! * thumbImage.width).toInt().clamp(0, thumbImage.width);
+              final int y = (mapping.boxTop! * thumbImage.height).toInt().clamp(0, thumbImage.height);
+              final int w = (mapping.boxWidth! * thumbImage.width).toInt().clamp(1, thumbImage.width - x);
+              final int h = (mapping.boxHeight! * thumbImage.height).toInt().clamp(1, thumbImage.height - y);
+
+              if (w > 0 && h > 0) {
+                final cropped = img.copyCrop(thumbImage, x: x, y: y, width: w, height: h);
+                final faceFile = File('${facesDir.path}/${cluster.id}_${uuid.v4()}.png');
+                await faceFile.writeAsBytes(img.encodePng(cropped));
+                coverFile = faceFile;
+                debugPrint('Dynamic Face Crop: Generated cover crop for cluster ${cluster.id} from local thumbnail');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Dynamic Face Crop: Failed to generate cover crop for ${cluster.id}: $e');
+      }
+    }
 
     list.add(FaceClusterModel(
       id: cluster.id,

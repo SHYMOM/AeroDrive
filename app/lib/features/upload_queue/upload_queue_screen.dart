@@ -102,7 +102,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: const BorderSide(color: AppColors.outline, width: 0.5),
+                  side: BorderSide(color: AppColors.outline, width: 0.5),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
@@ -129,7 +129,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   _formatSize(totalBytes),
-                                  style: const TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -155,7 +155,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                           child: LinearProgressIndicator(
                             value: progress,
                             backgroundColor: Colors.white10,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                             minHeight: 4,
                           ),
                         ),

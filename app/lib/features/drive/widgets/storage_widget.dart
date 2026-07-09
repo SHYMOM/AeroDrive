@@ -50,7 +50,7 @@ class StorageWidget extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Unlimited',
                   style: TextStyle(
                     color: AppColors.onSurface,

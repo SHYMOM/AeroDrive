@@ -140,6 +140,7 @@ class MLService {
 
           await db.into(db.photoFaces).insert(
             PhotoFacesCompanion.insert(
+              id: const Uuid().v4(),
               fileId: file.id,
               faceClusterId: clusterId,
               confidence: const drift.Value(0.9), // We just use 0.9 as a default for MLKit detected faces

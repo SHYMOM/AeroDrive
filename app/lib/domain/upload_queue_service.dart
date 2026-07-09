@@ -573,21 +573,26 @@ class UploadQueueService {
     final totalChunks = encryptedChunkPaths.length;
 
     DateTime? photoTakenAt;
+    double? latitude;
+    double? longitude;
+    String? locality;
+    String? country;
+    List<String>? tags;
+    List<Map<String, dynamic>>? faces;
+
     if (mimeType.startsWith('image/')) {
       try {
-        final bytes = await sourceFile.readAsBytes();
-        final data = await readExifFromBytes(bytes);
-        final dateTag = data['Image DateTime'] ?? data['EXIF DateTimeOriginal'];
-        if (dateTag != null) {
-          final dateStr = dateTag.toString();
-          // EXIF format: "YYYY:MM:DD HH:MM:SS"
-          if (dateStr.length >= 19) {
-            final formattedStr = '${dateStr.substring(0, 4)}-${dateStr.substring(5, 7)}-${dateStr.substring(8, 10)} ${dateStr.substring(11)}';
-            photoTakenAt = DateTime.tryParse(formattedStr);
-          }
-        }
+        final analyzer = SmartAnalyzer(_db);
+        final result = await analyzer.analyzeImageForUpload(sourceFile, fileId);
+        photoTakenAt = result.photoTakenAt;
+        latitude = result.latitude;
+        longitude = result.longitude;
+        locality = result.locality;
+        country = result.country;
+        tags = result.tags;
+        faces = result.faces;
       } catch (e) {
-        AppLogger.error('Failed to parse EXIF for $fileName', e);
+        AppLogger.error('Failed to run smart analyzer before upload', e);
       }
     }
 
@@ -646,27 +651,13 @@ class UploadQueueService {
             thumbnailLastAccess: drift.Value(DateTime.now()),
           ),
         );
-
-        // Upload the generated thumbnail as a 'thumb' manifest message so it syncs across devices
-        _uploadThumbnailManifest(
-          fileId: fileId,
-          encryptedThumbBytes: await File(encryptedPath).readAsBytes(),
-          masterKey: masterKey,
-          channelId: activeChannelId,
-        );
-
       } catch (e) {
         AppLogger.error('Failed to save thumbnail during upload for $fileId', e);
       }
     }
 
     if (mimeType.startsWith('image/')) {
-      final analyzer = SmartAnalyzer(_db);
-      // Run analysis concurrently so it doesn't block upload setup
-      analyzer.analyzeAndStore(sourceFile, fileId).then((_) {
-        // Invalidate explore data so the UI updates
-        _ref.invalidate(exploreDataProvider);
-      });
+      _ref.invalidate(exploreDataProvider);
     }
 
     final ivPart = ctrIv != null ? base64Encode(ctrIv) : '';
@@ -723,6 +714,12 @@ class UploadQueueService {
           isChunked: totalChunks > 1 ? 1 : 0,
           duration: videoDuration?.inSeconds,
           photoTakenAt: photoTakenAt,
+          latitude: latitude,
+          longitude: longitude,
+          locality: locality,
+          country: country,
+          tags: tags,
+          faces: faces,
         );
       }
 
@@ -1087,8 +1084,20 @@ class UploadQueueService {
       }
 
       try {
-        await readyClients.first.uploadDocument(chatId, thumbFile.path, caption: thumbCaptionBase64);
-        AppLogger.info('_uploadThumbnail SUCCESS for file $fileId');
+        final thumbMessage = await readyClients.first.uploadDocument(chatId, thumbFile.path, caption: thumbCaptionBase64);
+        if (thumbMessage.containsKey('id')) {
+          final int thumbMessageId = thumbMessage['id'];
+          final int thumbChannelId = thumbMessage['chat_id'];
+          await (_db.update(_db.files)..where((f) => f.id.equals(fileId))).write(
+            FilesCompanion(
+              thumbnailMessageId: drift.Value(thumbMessageId),
+              thumbnailChannelId: drift.Value(thumbChannelId),
+            ),
+          );
+          AppLogger.info('_uploadThumbnail SUCCESS for file $fileId (saved msgId=$thumbMessageId, chanId=$thumbChannelId)');
+        } else {
+          AppLogger.info('_uploadThumbnail SUCCESS for file $fileId (but message metadata not returned)');
+        }
       } catch (e) {
         AppLogger.error('_uploadThumbnail: uploadDocument failed for $fileId', e);
       } finally {

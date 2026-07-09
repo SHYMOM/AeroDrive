@@ -53,7 +53,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   ThemeNotifier(this._ref) : super(const AeroThemeState(
     themeMode: ThemeMode.system,
-    accentColorValue: 0xFF00B0FF, // default light blue accent
+    accentColorValue: 0xFF1A73E8, // default Google Blue accent
     fontScale: 1,
     highContrast: false,
   )) {
@@ -89,9 +89,9 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
       // Load Accent
       final accentStr = await settings.getSetting('app_accent_color');
-      var accentValue = 0xFF00B0FF;
+      var accentValue = 0xFF1A73E8;
       if (accentStr != null) {
-        accentValue = int.tryParse(accentStr) ?? 0xFF00B0FF;
+        accentValue = int.tryParse(accentStr) ?? 0xFF1A73E8;
       }
 
       // Load Font Scale

@@ -28,7 +28,7 @@ class StorageBanner extends StatelessWidget {
               // Infinity Icon
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.surfaceVariant,
                 ),
@@ -39,7 +39,7 @@ class StorageBanner extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Storage',
                       style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
                     ),

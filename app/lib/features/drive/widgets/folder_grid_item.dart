@@ -51,7 +51,12 @@ class FolderGridItem extends ConsumerWidget {
       error: (_, _) => '0 items',
     );
 
-    return InkWell(
+    Offset? tapPosition;
+
+    return GestureDetector(
+      onTapDown: (details) {
+        tapPosition = details.globalPosition;
+      },
       onTap: () {
         if (isSelectionMode) {
           _toggleSelection(ref);
@@ -67,18 +72,20 @@ class FolderGridItem extends ConsumerWidget {
         }
       },
       onLongPress: () {
-        if (!isSelectionMode) {
-          ref.read(isSelectionModeProvider.notifier).state = true;
-          ref.read(selectedItemsProvider.notifier).state = {folder.id};
+        if (!isSelectionMode && tapPosition != null) {
+          _showGridContextMenu(context, ref, tapPosition!);
+        } else {
+          _toggleSelection(ref);
         }
+      },
+      onSecondaryTapDown: (details) {
+        tapPosition = details.globalPosition;
       },
       onSecondaryTap: () {
-        if (!isSelectionMode) {
-          ref.read(isSelectionModeProvider.notifier).state = true;
-          ref.read(selectedItemsProvider.notifier).state = {folder.id};
+        if (!isSelectionMode && tapPosition != null) {
+          _showGridContextMenu(context, ref, tapPosition!);
         }
       },
-      borderRadius: BorderRadius.circular(12),
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E2D),
@@ -419,6 +426,50 @@ class FolderGridItem extends ConsumerWidget {
     final subs = await (db.select(db.folders)..where((f) => f.parentId.equals(srcId) & f.deletedAt.isNull())).get();
     for (final sub in subs) {
       await _copyFolderRecursive(sub.id, newId, db);
+    }
+  }
+
+  void _showGridContextMenu(BuildContext context, WidgetRef ref, Offset position) async {
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final value = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(position.dx, position.dy, 0, 0),
+        Rect.fromLTWH(0, 0, overlay.size.width, overlay.size.height),
+      ),
+      color: AppColors.surfaceElevated,
+      items: [
+        const PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),
+        const PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Colors.white))),
+        const PopupMenuDivider(),
+        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+      ],
+    );
+
+    if (value == null) return;
+
+    if (value == 'rename') {
+      _showRenameDialog(context, ref);
+    } else if (value == 'share') {
+      showDialog(
+        context: context,
+        builder: (ctx) => ShareDialog(folder: folder),
+      );
+    } else if (value == 'delete') {
+      _showDeleteConfirm(context, ref);
+    } else if (value == 'move') {
+      _showMoveDialog(context, ref);
+    } else if (value == 'copy') {
+      _showCopyDialog(context, ref);
+    } else if (value == 'star') {
+      _toggleFavorite(ref);
+    } else if (value == 'select') {
+      ref.read(isSelectionModeProvider.notifier).state = true;
+      ref.read(selectedItemsProvider.notifier).state = {folder.id};
     }
   }
 }

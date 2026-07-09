@@ -49,12 +49,6 @@ enum AppDestination {
     selectedIcon: Icons.photo_library,
     path: '/media',
   ),
-  transfers(
-    label: 'Transfers',
-    icon: Icons.sync,
-    selectedIcon: Icons.sync,
-    path: '/transfers',
-  ),
   settings(
     label: 'Settings',
     icon: Icons.settings_outlined,
@@ -185,7 +179,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: AppDestination.transfers.path,
+            path: '/transfers',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: TransfersScreen(),
             ),

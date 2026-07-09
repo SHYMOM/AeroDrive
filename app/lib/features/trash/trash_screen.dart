@@ -93,6 +93,11 @@ class TrashScreen extends ConsumerWidget {
                       addToDeleteMap(channelId, file.manifestMessageId!);
                     }
                   }
+
+                  // Thumbnail message
+                  if (file.thumbnailMessageId != null && file.thumbnailChannelId != null) {
+                    addToDeleteMap(file.thumbnailChannelId!, file.thumbnailMessageId!);
+                  }
                 }
 
                 // 3. Delete all collected messages from Telegram, batched by channel
@@ -283,6 +288,9 @@ class TrashScreen extends ConsumerWidget {
       if (channelId != null) {
         addToMap(channelId, file.manifestMessageId!);
       }
+    }
+    if (file.thumbnailMessageId != null && file.thumbnailChannelId != null) {
+      addToMap(file.thumbnailChannelId!, file.thumbnailMessageId!);
     }
 
     // Delete from Telegram

@@ -40,6 +40,12 @@ class CaptionSerializer {
     int? totalChunks,
     int? duration,
     DateTime? photoTakenAt,
+    double? latitude,
+    double? longitude,
+    String? locality,
+    String? country,
+    List<String>? tags,
+    List<Map<String, dynamic>>? faces,
     int version = 1,
     int isEncrypted = 1,
     int isChunked = 0,
@@ -64,6 +70,12 @@ class CaptionSerializer {
       if (ctrIvBase64 != null) "iv": ctrIvBase64,
       if (duration != null) "dur": duration,
       if (photoTakenAt != null) "pt": photoTakenAt.millisecondsSinceEpoch ~/ 1000,
+      if (latitude != null) "lat": latitude,
+      if (longitude != null) "lng": longitude,
+      if (locality != null) "loc": locality,
+      if (country != null) "cnt": country,
+      if (tags != null && tags.isNotEmpty) "tags": tags,
+      if (faces != null && faces.isNotEmpty) "faces": faces,
     };
 
     final jsonStr = jsonEncode(jsonMap);
