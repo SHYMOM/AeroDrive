@@ -38,7 +38,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
     final transfersAsync = ref.watch(transfersStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Queue')),
+      appBar: AppBar(title: Text('Upload Queue')),
       body: transfersAsync.when(
         data: (items) {
           final uploads = items.where((i) => i.transfer.type == 'UPLOAD_FILE').toList();
@@ -57,7 +57,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Files you upload will appear here',
                     style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
                   ),
@@ -113,7 +113,7 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                         children: [
                           CircleAvatar(
                             backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
-                            child: const Icon(Icons.cloud_upload, color: AppColors.primaryLight, size: 20),
+                            child: Icon(Icons.cloud_upload, color: AppColors.primaryLight, size: 20),
                           ),
                           const SizedBox(width: 12),
                           Expanded(

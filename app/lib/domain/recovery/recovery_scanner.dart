@@ -281,8 +281,8 @@ class ZeroDBRecoveryService {
       // Re-insert Chunks
       if (recoveredChunks.isNotEmpty) {
         final List<String> fileIdsToClear = recoveredChunks.map((c) => c.fileId.value!).toSet().toList();
-        for (final fid in fileIdsToClear) {
-          await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fid))).go();
+        if (fileIdsToClear.isNotEmpty) {
+          await (_db.delete(_db.chunks)..where((c) => c.fileId.isIn(fileIdsToClear))).go();
         }
         await _db.batch((batch) {
           const chunkSize = 100;
@@ -295,19 +295,30 @@ class ZeroDBRecoveryService {
 
       // 4. Prune database records not found in Telegram (handling deletions)
       final allFiles = await _db.select(_db.files).get();
-      for (final f in allFiles) {
-        if (!recoveredFileIds.contains(f.id)) {
-          // Delete chunks and file
-          await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(f.id))).go();
-          await (_db.delete(_db.files)..where((file) => file.id.equals(f.id))).go();
-        }
+      final List<String> fileIdsToDelete = allFiles
+          .map((f) => f.id)
+          .where((id) => !recoveredFileIds.contains(id))
+          .toList();
+
+      if (fileIdsToDelete.isNotEmpty) {
+        // Delete chunks, thumbnails, tags, faces, places, share links, and file in batches to satisfy foreign key constraints
+        await (_db.delete(_db.chunks)..where((c) => c.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.thumbnails)..where((t) => t.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.fileTags)..where((ft) => ft.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.photoFaces)..where((pf) => pf.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.filePlaces)..where((fp) => fp.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.shareLinks)..where((sl) => sl.fileId.isIn(fileIdsToDelete))).go();
+        await (_db.delete(_db.files)..where((file) => file.id.isIn(fileIdsToDelete))).go();
       }
 
       final allFolders = await _db.select(_db.folders).get();
-      for (final f in allFolders) {
-        if (!recoveredFolderIds.contains(f.id)) {
-          await (_db.delete(_db.folders)..where((folder) => folder.id.equals(f.id))).go();
-        }
+      final List<String> folderIdsToDelete = allFolders
+          .map((f) => f.id)
+          .where((id) => !recoveredFolderIds.contains(id))
+          .toList();
+
+      if (folderIdsToDelete.isNotEmpty) {
+        await (_db.delete(_db.folders)..where((folder) => folder.id.isIn(folderIdsToDelete))).go();
       }
     });
 

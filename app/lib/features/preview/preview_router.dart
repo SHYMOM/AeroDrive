@@ -145,29 +145,29 @@ class PreviewRouter {
 
     if (mime == 'application/pdf' || ext == 'pdf') {
       viewerLabel = 'PDF Viewer';
-      accentColor = const Color(0xFFE53935);
+      accentColor = Theme.of(context).colorScheme.error;
     } else if (mime == 'text/html' || ext == 'html' || ext == 'htm') {
       viewerLabel = 'HTML Viewer';
-      accentColor = const Color(0xFFFF9800);
+      accentColor = Theme.of(context).colorScheme.tertiary;
     } else if (mime == 'text/x-markdown' || ext == 'md' || ext == 'markdown') {
       viewerLabel = 'Markdown Viewer';
-      accentColor = const Color(0xFF607D8B);
+      accentColor = Theme.of(context).colorScheme.onSurfaceVariant;
     } else {
       viewerLabel = 'Code Editor';
-      accentColor = const Color(0xFF00B4D8);
+      accentColor = Theme.of(context).colorScheme.primary;
     }
 
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => Scaffold(
-        backgroundColor: const Color(0xFF0D1117),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF161B22),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 file.name,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 15),
                 overflow: TextOverflow.ellipsis,
               ),
               Text(
@@ -179,7 +179,7 @@ class PreviewRouter {
           actions: [
             PreviewDownloadButton(fileId: file.id),
           ],
-          iconTheme: const IconThemeData(color: Colors.white70),
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         body: UniversalFileViewer(file: file),
       ),
@@ -198,11 +198,11 @@ class PreviewRouter {
 
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => Scaffold(
-        backgroundColor: const Color(0xFF0D1117),
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF161B22),
-          title: Text(file.name, style: const TextStyle(color: Colors.white)),
-          iconTheme: const IconThemeData(color: Colors.white70),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          title: Text(file.name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
           actions: [
             PreviewDownloadButton(fileId: file.id),
           ],
@@ -227,7 +227,7 @@ class PreviewRouter {
                 const SizedBox(height: 24),
                 Text(
                   file.name,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 8),
@@ -240,8 +240,8 @@ class PreviewRouter {
                   child: Text('.$ext', style: TextStyle(color: color, fontWeight: FontWeight.bold, letterSpacing: 1)),
                 ),
                 const SizedBox(height: 8),
-                Text('Type: $mimeStr', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                Text('Size: $sizeStr', style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                Text('Type: $mimeStr', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
+                Text('Size: $sizeStr', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 12)),
                 const SizedBox(height: 32),
                 FilledButton.icon(
                   onPressed: () => _downloadAndOpen(context, file),

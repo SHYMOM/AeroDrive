@@ -1,4 +1,4 @@
-import 'dart:math';
+﻿import 'dart:math';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
@@ -62,7 +62,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Clear History', style: TextStyle(color: Colors.white)),
+        title: Text('Clear History', style: TextStyle(color: AppColors.onSurface)),
         content: Text(
           'Are you sure you want to clear all completed and failed transfer records from history?',
           style: TextStyle(color: AppColors.onSurface),
@@ -74,7 +74,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Clear'),
+            child: Text('Clear'),
           ),
         ],
       ),
@@ -109,12 +109,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Transfers', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Transfers', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => context.go('/drive'),
         ),
         actions: [
@@ -208,7 +208,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                                 children: [
                                   Text(
                                     name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.onSurface),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -225,7 +225,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             if (status == 'PENDING' || status == 'PROCESSING' || status == 'FAILED') ...[
                               const SizedBox(width: 8),
                               IconButton(
-                                icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+                                icon: Icon(Icons.close, size: 18, color: Colors.grey),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () => _cancelTransfer(item.transfer.id),
@@ -239,7 +239,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
                               value: progress,
-                              backgroundColor: Colors.white10,
+                              backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                               valueColor: AlwaysStoppedAnimation<Color>(
                                 isUpload ? AppColors.primary : AppColors.secondary
                               ),
@@ -252,11 +252,11 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             children: [
                               Text(
                                 '${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}',
-                                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                               ),
                               Text(
                                 '${(progress * 100).toStringAsFixed(0)}%',
-                                style: const TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.bold),
+                                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.bold),
                               ),
                             ],
                           ),
@@ -285,16 +285,16 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.swap_vert_circle_outlined,
             size: 64,
-            color: Colors.white24,
+            color: AppColors.outline,
           ),
           const SizedBox(height: 24),
           Text(
             'No transfers found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.white54,
+              color: AppColors.onSurfaceVariant,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -373,7 +373,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       checkmarkColor: AppColors.primary,
       backgroundColor: AppColors.surfaceElevated.withValues(alpha: 0.1),
       labelStyle: TextStyle(
-        color: selected ? Colors.white : AppColors.onSurfaceVariant,
+        color: selected ? AppColors.onSurface : AppColors.onSurfaceVariant,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),

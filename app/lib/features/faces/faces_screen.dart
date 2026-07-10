@@ -125,24 +125,24 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Name this person', style: TextStyle(color: Colors.white)),
+        title: Text('Name this person', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          decoration: InputDecoration(
             hintText: 'Enter name',
-            hintStyle: TextStyle(color: Colors.white30),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Save', style: TextStyle(color: AppColors.primary)),
+            child: Text('Save', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -181,19 +181,19 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Merge Face Clusters', style: TextStyle(color: Colors.white)),
+        title: Text('Merge Face Clusters', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Do you want to merge these ${_selectedClusterIds.length} people under the name "${target.name ?? 'Unnamed Person'}"?',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Merge', style: TextStyle(color: AppColors.primary)),
+            child: Text('Merge', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -236,7 +236,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(_selectedCluster != null ? Icons.arrow_back : Icons.close, color: Colors.white),
+          icon: Icon(_selectedCluster != null ? Icons.arrow_back : Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             if (_selectedCluster != null) {
               setState(() {
@@ -251,18 +251,18 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
           _selectedCluster != null 
               ? (_selectedCluster!.name ?? 'Unnamed Person') 
               : 'People & Faces',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
         actions: [
           if (_selectedCluster == null) ...[
             if (_isSelectionMode) ...[
               IconButton(
-                icon: const Icon(Icons.merge_type, color: AppColors.primary),
+                icon: Icon(Icons.merge_type, color: AppColors.primary),
                 tooltip: 'Merge Selected',
                 onPressed: _selectedClusterIds.length >= 2 ? _mergeSelectedClusters : null,
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () {
                   setState(() {
                     _isSelectionMode = false;
@@ -272,7 +272,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
               ),
             ] else
               IconButton(
-                icon: const Icon(Icons.select_all, color: Colors.white),
+                icon: Icon(Icons.select_all, color: Theme.of(context).colorScheme.onSurface),
                 tooltip: 'Select to Merge',
                 onPressed: () {
                   setState(() {
@@ -282,7 +282,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
               ),
           ] else
             IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
+              icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onSurface),
               tooltip: 'Rename',
               onPressed: () => _renameCluster(_selectedCluster!),
             ),
@@ -294,8 +294,8 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF3B82F6).withValues(alpha: 0.15),
-              const Color(0xFF8B5CF6).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -312,7 +312,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
     return clustersAsync.when(
       data: (clusters) {
         if (clusters.isEmpty) {
-          return const Center(child: Text('No faces detected yet.', style: TextStyle(color: Colors.white54)));
+          return Center(child: Text('No faces detected yet.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)));
         }
 
         return GridView.builder(
@@ -356,12 +356,12 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.03),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected 
-                            ? AppColors.primary 
-                            : Colors.white.withValues(alpha: 0.05),
+                        color: isSelected
+                            ? AppColors.primary
+                            : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -373,8 +373,8 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                           child: cluster.cropFile != null
                               ? Image.file(cluster.cropFile!, fit: BoxFit.cover)
                               : Container(
-                                  color: Colors.white.withValues(alpha: 0.05),
-                                  child: const Icon(Icons.person, color: Colors.white30, size: 28),
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                  child: Icon(Icons.person, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 28),
                                 ),
                         ),
                         Padding(
@@ -383,8 +383,8 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                             children: [
                               Text(
                                 cluster.name ?? 'Unnamed',
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -394,8 +394,8 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                               ),
                               Text(
                                 '${cluster.photos.length} photos',
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                   fontSize: 10,
                                 ),
                                 textAlign: TextAlign.center,
@@ -426,7 +426,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
@@ -464,7 +464,7 @@ class _FaceGridItem extends ConsumerWidget {
             },
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               clipBehavior: Clip.antiAlias,

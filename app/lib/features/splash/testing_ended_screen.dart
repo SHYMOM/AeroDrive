@@ -39,7 +39,7 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF08091A),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Stack(
         children: [
           // ── Animated starfield background ──────────────────────────
@@ -71,16 +71,16 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                         height: 120,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: const Color(0xFF1A0000),
+                          color: Theme.of(context).colorScheme.error,
                           border: Border.all(
-                            color: const Color(0xFFFF3B30).withValues(
+                            color: Theme.of(context).colorScheme.error.withValues(
                               alpha: 0.5 + 0.4 * _pulseController.value,
                             ),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF3B30).withValues(
+                              color: Theme.of(context).colorScheme.error.withValues(
                                 alpha: 0.3 + 0.3 * _pulseController.value,
                               ),
                               blurRadius: glow,
@@ -91,9 +91,9 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                         child: child,
                       );
                     },
-                    child: const Icon(
+                    child: Icon(
                       Icons.lock_outline_rounded,
-                      color: Color(0xFFFF3B30),
+                      color: Theme.of(context).colorScheme.error,
                       size: 52,
                     ),
                   )
@@ -109,13 +109,13 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
 
                   // ── Headline ───────────────────────────────────────
                   ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFFFF6B6B), Color(0xFFFF3B30)],
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: [Theme.of(context).colorScheme.error.withValues(alpha: 0.8), Theme.of(context).colorScheme.error],
                     ).createShader(bounds),
-                    child: const Text(
+                    child: Text(
                       'Testing Has Ended',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 0.5,
@@ -131,10 +131,10 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                   const SizedBox(height: 16),
 
                   // ── Sub-message ────────────────────────────────────
-                  const Text(
+                  Text(
                     'This testing session is now closed.\nStay tuned for the next test release\nand the official launch!',
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 15,
                       height: 1.7,
                       letterSpacing: 0.3,
@@ -153,9 +153,9 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                       Expanded(
                         child: Container(
                           height: 1,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Colors.transparent, Color(0xFFFF3B30)],
+                              colors: [Colors.transparent, Theme.of(context).colorScheme.error],
                             ),
                           ),
                         ),
@@ -165,18 +165,18 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                         child: Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Color(0xFFFF3B30),
+                            color: Theme.of(context).colorScheme.error,
                           ),
                         ),
                       ),
                       Expanded(
                         child: Container(
                           height: 1,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [Color(0xFFFF3B30), Colors.transparent],
+                              colors: [Theme.of(context).colorScheme.error, Colors.transparent],
                             ),
                           ),
                         ),
@@ -191,28 +191,28 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      color: Colors.white.withValues(alpha: 0.04),
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: Theme.of(context).colorScheme.outlineVariant,
                       ),
                     ),
                     child: Column(
                       children: [
                         _InfoRow(
                           icon: Icons.rocket_launch_outlined,
-                          iconColor: const Color(0xFF4A90E2),
+                          iconColor: Theme.of(context).colorScheme.primary,
                           text: 'New version is in development',
                         ),
                         const SizedBox(height: 14),
                         _InfoRow(
                           icon: Icons.notifications_active_outlined,
-                          iconColor: const Color(0xFF7B61FF),
+                          iconColor: Theme.of(context).colorScheme.secondary,
                           text: 'Updates coming soon',
                         ),
                         const SizedBox(height: 14),
                         _InfoRow(
                           icon: Icons.security_outlined,
-                          iconColor: const Color(0xFF34C759),
+                          iconColor: Theme.of(context).colorScheme.tertiary,
                           text: 'Your data remains safe & encrypted',
                         ),
                       ],
@@ -232,8 +232,8 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF3B30),
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        foregroundColor: Theme.of(context).colorScheme.onError,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -250,7 +250,7 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                       Text(
                         'Made With ❤️ In 🇧🇩',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.25),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                           fontSize: 10,
                           letterSpacing: 1.2,
                         ),
@@ -258,13 +258,13 @@ class _TestingEndedScreenState extends State<TestingEndedScreen>
                       ),
                       const SizedBox(height: 3),
                       ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          colors: [Color(0xFF7B61FF), Color(0xFF4A90E2), Color(0xFFEC4899)],
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: [Theme.of(context).colorScheme.secondary, Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
                         ).createShader(bounds),
-                        child: const Text(
+                        child: Text(
                           'SHEIKH SHYMOM ISLAM',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 10,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 2,
@@ -313,7 +313,7 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13, height: 1.4),
           ),
         ),
       ],
@@ -362,3 +362,4 @@ class _GridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter _) => false;
 }
+

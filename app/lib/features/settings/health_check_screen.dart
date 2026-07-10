@@ -275,7 +275,7 @@ class _HealthCheckScreenState extends ConsumerState<HealthCheckScreen> {
                       child: ListView.builder(
                         itemCount: _compromisedFiles.length,
                         itemBuilder: (context, index) => ListTile(
-                            leading: const Icon(Icons.error_outline, color: AppColors.error),
+                            leading: Icon(Icons.error_outline, color: AppColors.error),
                             title: Text(
                               _compromisedFiles[index],
                               style: const TextStyle(color: Colors.white, fontSize: 14),

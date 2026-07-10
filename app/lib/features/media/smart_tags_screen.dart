@@ -29,7 +29,18 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
     });
 
     final db = ref.read(databaseProvider);
-    final mappings = await (db.select(db.fileTags)..where((ft) => ft.tagId.equals(tag.id))).get();
+
+    // First, find the actual tag from DB by name since the passed tag may have a synthetic ID
+    Tag? dbTag;
+    try {
+      dbTag = await (db.select(db.tags)..where((t) => t.name.equals(tag.name))).getSingleOrNull();
+    } catch (_) {}
+    final effectiveTagId = dbTag?.id ?? tag.id;
+
+    // Also search by both the original name (as ID) and the DB tag ID
+    final mappings = await (db.select(db.fileTags)
+      ..where((ft) => ft.tagId.equals(effectiveTagId))
+    ).get();
     
     if (mappings.isEmpty) {
       if (mounted) {
@@ -64,7 +75,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             if (_selectedTag != null) {
               setState(() {
@@ -78,7 +89,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
         ),
         title: Text(
           _selectedTag != null ? 'Tag: ${_selectedTag!.name}' : 'Smart Tags',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: DecoratedBox(
@@ -87,8 +98,8 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF7C3AED).withValues(alpha: 0.15),
-              const Color(0xFF00E5FF).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -106,8 +117,8 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_tagFiles.isEmpty) {
-      return const Center(
-        child: Text('No files have this tag.', style: TextStyle(color: Colors.white54)),
+      return Center(
+        child: Text('No files have this tag.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
       );
     }
     return GridView.builder(
@@ -151,7 +162,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -164,7 +175,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
+                          colors: [Theme.of(context).colorScheme.surface.withValues(alpha: 0.8), Colors.transparent],
                           begin: Alignment.bottomCenter,
                           end: Alignment.topCenter,
                         ),
@@ -178,11 +189,11 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
                         children: [
                           Text(
                             name,
-                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                           Text(
                             '$count items',
-                            style: const TextStyle(color: Colors.white70, fontSize: 11),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 11),
                           ),
                         ],
                       ),
@@ -195,7 +206,7 @@ class _SmartTagsScreenState extends ConsumerState<SmartTagsScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
 
   Widget _buildFallbackGradient(String name) {
@@ -233,7 +244,7 @@ class _LocalCoverImage extends ConsumerWidget {
         if (snapshot.hasData && snapshot.data != null) {
           return Image.file(snapshot.data!, fit: BoxFit.cover);
         }
-        return Container(color: Colors.white.withValues(alpha: 0.05));
+        return Container(color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3));
       },
     );
 }
@@ -249,7 +260,7 @@ class _LocalGalleryItem extends ConsumerWidget {
         final hasThumb = snapshot.hasData && snapshot.data != null;
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.03),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(8),
           ),
           clipBehavior: Clip.antiAlias,
@@ -259,7 +270,7 @@ class _LocalGalleryItem extends ConsumerWidget {
               if (hasThumb)
                 Image.file(snapshot.data!, fit: BoxFit.cover)
               else if (file.mimeType?.startsWith('video/') == true)
-                const Icon(Icons.videocam, color: Colors.white, size: 28)
+                Icon(Icons.videocam, color: Theme.of(context).colorScheme.onSurface, size: 28)
               else
                 const Icon(Icons.image_not_supported, color: Colors.grey, size: 20),
             ],

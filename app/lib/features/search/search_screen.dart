@@ -156,10 +156,10 @@ class SearchScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         title: TextField(
           autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          decoration: InputDecoration(
             hintText: 'Search files, folders or #tags...',
-            hintStyle: TextStyle(color: Colors.white38),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             border: InputBorder.none,
             icon: Icon(Icons.search, color: AppColors.primary),
           ),
@@ -175,28 +175,31 @@ class SearchScreen extends ConsumerWidget {
             onSelected: (value) {
               ref.read(searchSortByProvider.notifier).state = value;
             },
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem<SearchSortBy>(
-                value: SearchSortBy.name,
-                checked: sortBy == SearchSortBy.name,
-                child: const Text('Name', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchSortBy>(
-                value: SearchSortBy.date,
-                checked: sortBy == SearchSortBy.date,
-                child: const Text('Date', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchSortBy>(
-                value: SearchSortBy.size,
-                checked: sortBy == SearchSortBy.size,
-                child: const Text('Size', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchSortBy>(
-                value: SearchSortBy.type,
-                checked: sortBy == SearchSortBy.type,
-                child: const Text('Type', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+            itemBuilder: (context) {
+              final theme = Theme.of(context);
+              return [
+                CheckedPopupMenuItem<SearchSortBy>(
+                  value: SearchSortBy.name,
+                  checked: sortBy == SearchSortBy.name,
+                  child: Text('Name', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchSortBy>(
+                  value: SearchSortBy.date,
+                  checked: sortBy == SearchSortBy.date,
+                  child: Text('Date', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchSortBy>(
+                  value: SearchSortBy.size,
+                  checked: sortBy == SearchSortBy.size,
+                  child: Text('Size', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchSortBy>(
+                  value: SearchSortBy.type,
+                  checked: sortBy == SearchSortBy.type,
+                  child: Text('Type', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+              ];
+            },
           ),
           PopupMenuButton<SearchFilterType>(
             icon: Icon(Icons.filter_list, color: AppColors.onSurfaceVariant),
@@ -205,48 +208,51 @@ class SearchScreen extends ConsumerWidget {
             onSelected: (value) {
               ref.read(searchFilterTypeProvider.notifier).state = value;
             },
-            itemBuilder: (context) => [
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.all,
-                checked: filterType == SearchFilterType.all,
-                child: const Text('All', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.files,
-                checked: filterType == SearchFilterType.files,
-                child: const Text('Files', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.folders,
-                checked: filterType == SearchFilterType.folders,
-                child: const Text('Folders', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.images,
-                checked: filterType == SearchFilterType.images,
-                child: const Text('Images', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.videos,
-                checked: filterType == SearchFilterType.videos,
-                child: const Text('Videos', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.documents,
-                checked: filterType == SearchFilterType.documents,
-                child: const Text('Documents', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.audio,
-                checked: filterType == SearchFilterType.audio,
-                child: const Text('Audio', style: TextStyle(color: Colors.white)),
-              ),
-              CheckedPopupMenuItem<SearchFilterType>(
-                value: SearchFilterType.archives,
-                checked: filterType == SearchFilterType.archives,
-                child: const Text('Archives', style: TextStyle(color: Colors.white)),
-              ),
-            ],
+            itemBuilder: (context) {
+              final theme = Theme.of(context);
+              return [
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.all,
+                  checked: filterType == SearchFilterType.all,
+                  child: Text('All', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.files,
+                  checked: filterType == SearchFilterType.files,
+                  child: Text('Files', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.folders,
+                  checked: filterType == SearchFilterType.folders,
+                  child: Text('Folders', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.images,
+                  checked: filterType == SearchFilterType.images,
+                  child: Text('Images', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.videos,
+                  checked: filterType == SearchFilterType.videos,
+                  child: Text('Videos', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.documents,
+                  checked: filterType == SearchFilterType.documents,
+                  child: Text('Documents', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.audio,
+                  checked: filterType == SearchFilterType.audio,
+                  child: Text('Audio', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+                CheckedPopupMenuItem<SearchFilterType>(
+                  value: SearchFilterType.archives,
+                  checked: filterType == SearchFilterType.archives,
+                  child: Text('Archives', style: TextStyle(color: theme.colorScheme.onSurface)),
+                ),
+              ];
+            },
           ),
         ],
       ),
@@ -256,8 +262,8 @@ class SearchScreen extends ConsumerWidget {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF7C3AED).withValues(alpha: 0.15),
-              const Color(0xFF00E5FF).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -278,10 +284,10 @@ class SearchScreen extends ConsumerWidget {
                     if (filterType != SearchFilterType.all)
                       Chip(
                         backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        labelStyle: const TextStyle(color: AppColors.primary, fontSize: 11),
-                        side: const BorderSide(color: AppColors.primary),
+                        labelStyle: TextStyle(color: AppColors.primary, fontSize: 11),
+                        side: BorderSide(color: AppColors.primary),
                         label: Text(filterType.name),
-                        deleteIcon: const Icon(Icons.close, size: 14, color: AppColors.primary),
+                        deleteIcon: Icon(Icons.close, size: 14, color: AppColors.primary),
                         onDeleted: () => ref.read(searchFilterTypeProvider.notifier).state = SearchFilterType.all,
                       ),
                   ],
@@ -290,7 +296,7 @@ class SearchScreen extends ConsumerWidget {
             Expanded(
               child: searchResultsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+                error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
                 data: (results) {
                   final theme = Theme.of(context);
                   final folders = results['folders'] as List<FolderData>;

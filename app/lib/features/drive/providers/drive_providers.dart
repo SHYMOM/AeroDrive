@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/providers/repository_providers.dart';
+import '../../../core/providers/security_providers.dart';
 import '../../../data/db/database.dart';
 
 /// Manages the current folder ID being viewed by the user.
@@ -13,7 +14,10 @@ final currentFolderIdProvider = StateProvider<String?>((ref) => null);
 final isFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks if we have already checked for a remote config during this session
-final configCheckedProvider = StateProvider<bool>((ref) => false);
+final configCheckedProvider = StateProvider<bool>((ref) {
+  ref.watch(isAppUnlockedProvider);
+  return false;
+});
 
 /// Manages the breadcrumb path to the current folder.
 final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
@@ -306,6 +310,14 @@ final folderItemsCountProvider = FutureProvider.family<int, String>((ref, folder
 final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
   final db = ref.watch(databaseProvider);
   ref.watch(dbRebuildVersionProvider);
-  
+
   return db.customSelect('SELECT SUM(size) AS total FROM chunks;').watchSingle().map((row) => row.read<int>('total') ?? 0);
+});
+
+/// Reads the saved file icon style setting ('Minimal', 'Filled', 'Colored', 'Outlined').
+/// Watches [settingsUpdateProvider] so changing the setting in Appearance triggers a refresh.
+final fileIconStyleProvider = FutureProvider<String>((ref) async {
+  ref.watch(settingsUpdateProvider);
+  final settings = ref.read(settingsRepositoryProvider);
+  return await settings.getSetting('app_file_icon_style') ?? 'Colored';
 });

@@ -33,6 +33,7 @@ import '../../features/splash/splash_screen.dart';
 import '../../features/transfers/transfers_screen.dart';
 import '../../features/trash/trash_screen.dart';
 import '../logger.dart';
+import '../providers.dart';
 import 'responsive_scaffold.dart';
 
 /// Top-level navigation destinations used by the responsive scaffold.
@@ -48,6 +49,12 @@ enum AppDestination {
     icon: Icons.photo_library_outlined,
     selectedIcon: Icons.photo_library,
     path: '/media',
+  ),
+  transfers(
+    label: 'Transfers',
+    icon: Icons.swap_vert_outlined,
+    selectedIcon: Icons.swap_vert,
+    path: '/transfers',
   ),
   settings(
     label: 'Settings',
@@ -71,23 +78,39 @@ enum AppDestination {
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
+  final hasNavigatedPastSplash = ref.watch(hasNavigatedPastSplashProvider);
 
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) {
       final location = state.matchedLocation;
 
-      // Always allow the splash screen to proceed without redirect.
-      if (location == '/splash') return null;
+      // Allow splash screen to proceed without redirect.
+      if (location == '/splash') {
+        // If the user navigates BACK to splash (e.g., after auth), block it
+        // by sending them to drive or auth instead.
+        if (hasNavigatedPastSplash && context.mounted) {
+          final isAuth = authState == AuthState.authenticated;
+          return isAuth ? AppDestination.drive.path : '/auth';
+        }
+        return null;
+      }
+
+      // Mark that we've left the splash screen
+      if (!hasNavigatedPastSplash) {
+        ref.read(hasNavigatedPastSplashProvider.notifier).state = true;
+      }
 
       final isAuth = authState == AuthState.authenticated;
+      final isAuthLoading = authState == AuthState.loading;
       final isGoingToAuth = location == '/auth';
-      
-      if (!isAuth && !isGoingToAuth) {
+
+      // If not authenticated and not heading to auth → redirect to auth
+      if (!isAuth && !isGoingToAuth && !isAuthLoading) {
         return '/auth';
       }
 
-      // If authenticated, allow them to pass to Drive
+      // If authenticated and on auth → go to drive
       if (isAuth && isGoingToAuth) {
         return AppDestination.drive.path;
       }

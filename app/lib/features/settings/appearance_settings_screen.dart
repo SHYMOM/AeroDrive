@@ -153,11 +153,28 @@ class AppearanceSettingsScreen extends ConsumerWidget {
 
           // ─── Language ─────────────────────────────────────────────
           _SectionHeader(label: 'Language'),
-          _DropdownTile(
-            settingKey: 'app_language',
-            label: 'Display Language',
-            options: const ['English', 'Spanish', 'French', 'German', 'System Default'],
-            defaultVal: 'System Default',
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Display Language', style: textTheme.bodyMedium),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: themeState.localeString,
+                    borderRadius: BorderRadius.circular(12),
+                    items: const ['English', 'Spanish', 'French', 'German', 'System Default']
+                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                        .toList(),
+                    onChanged: (val) async {
+                      if (val != null) {
+                        await themeNotifier.setLocale(val);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
 
           const SizedBox(height: 32),

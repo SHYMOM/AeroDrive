@@ -37,7 +37,7 @@ class VideosScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.videocam_outlined, size: 48, color: AppColors.fileVideo),
+                  Icon(Icons.videocam_outlined, size: 48, color: AppColors.fileVideo),
                   const SizedBox(height: 16),
                   Text('No videos found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -102,7 +102,7 @@ class _VideoItem extends ConsumerWidget {
                   }
                   return Container(
                     color: AppColors.fileVideo.withValues(alpha: 0.1),
-                    child: const Icon(Icons.videocam_outlined, color: AppColors.fileVideo, size: 22),
+                    child: Icon(Icons.videocam_outlined, color: AppColors.fileVideo, size: 22),
                   );
                 },
               ),

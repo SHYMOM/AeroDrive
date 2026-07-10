@@ -349,8 +349,12 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
   return currentFolderId;
 }
 
+RawServerSocket? _uiLockSocket;
+
 /// AeroDrive application entry point.
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
   // Initialize AppLogger first to capture all startup logs.
   AppLogger.init();
 
@@ -358,7 +362,21 @@ void main() {
   final receivePort = ReceivePort();
   IsolateNameServer.registerPortWithName(receivePort.sendPort, 'aerodrive_main_isolate');
 
-  // 1. (Moved inside runZonedGuarded)
+  // Signal any running background headless service to yield the port lock
+  try {
+    final socket = await Socket.connect('127.0.0.1', 46828, timeout: const Duration(seconds: 1));
+    await socket.close();
+    // Wait for the background engine to shut down and release the port
+    await Future.delayed(const Duration(milliseconds: 1500));
+  } catch (_) {}
+
+  // Bind main UI lock port
+  try {
+    _uiLockSocket = await RawServerSocket.bind('127.0.0.1', 46828);
+    AppLogger.info('[AeroDrive UI] Successfully acquired UI isolate lock.');
+  } catch (e) {
+    AppLogger.warning('[AeroDrive UI] Failed to acquire UI isolate lock: $e');
+  }
 
   // 2. Allow google_fonts to fetch at runtime (fonts not bundled as assets).
   GoogleFonts.config.allowRuntimeFetching = true;
@@ -407,7 +425,7 @@ void main() {
 
     // --- DotEnv ---
     try {
-      await dotenv.load();
+      await dotenv.load(fileName: '.env');
     } catch (e, s) {
       debugPrint('[AeroDrive] dotenv load failed (non-fatal): $e\n$s');
     }
@@ -617,11 +635,25 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     final themeState = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
 
+    // Map saved locale string to a Locale object
+    Locale? locale;
+    switch (themeState.localeString) {
+      case 'English':
+        locale = const Locale('en');
+      case 'Spanish':
+        locale = const Locale('es');
+      case 'French':
+        locale = const Locale('fr');
+      case 'German':
+        locale = const Locale('de');
+      // 'System Default' -> null (use system locale)
+    }
+
     // Initialize background services
     ref.watch(uploadQueueServiceProvider);
     ref.watch(downloadQueueServiceProvider);
     ref.watch(realtimeSyncServiceProvider).startListening();
-    
+
     // Start local proxy server for media streaming
     ref.read(streamingServerProvider).start();
 
@@ -630,6 +662,7 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
       theme: AeroDriveTheme.getLight(themeState),
       darkTheme: AeroDriveTheme.getDark(themeState),
       themeMode: themeState.themeMode,
+      locale: locale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
@@ -658,23 +691,79 @@ void _handleGlobalError(Object error, StackTrace stack) {
   }
 }
 
+RawServerSocket? _backgroundLockSocket;
+bool _backgroundIsSyncing = false;
+ProviderContainer? _backgroundContainer;
+
+void _tryAcquireBackgroundLock() async {
+  try {
+    final socket = await RawServerSocket.bind('127.0.0.1', 46828);
+    _backgroundLockSocket = socket;
+    debugPrint('[AeroDrive Background] Successfully bound port lock. Starting background sync.');
+    
+    // Listen for UI launching connection to yield the lock
+    socket.listen((client) async {
+      debugPrint('[AeroDrive Background] UI app requested lock. Yielding...');
+      await client.close();
+      _stopBackgroundSync();
+    });
+
+    _startBackgroundSync();
+  } catch (_) {
+    // Port in use (UI active). Retry in 15 seconds.
+    Future.delayed(const Duration(seconds: 15), _tryAcquireBackgroundLock);
+  }
+}
+
+void _startBackgroundSync() {
+  if (_backgroundIsSyncing) return;
+  _backgroundIsSyncing = true;
+
+  _backgroundContainer = ProviderContainer();
+  _backgroundContainer!.read(autoBackupWatcherProvider).start();
+  _backgroundContainer!.read(uploadQueueServiceProvider);
+  _backgroundContainer!.read(downloadQueueServiceProvider);
+  _backgroundContainer!.read(realtimeSyncServiceProvider).startListening();
+}
+
+void _stopBackgroundSync() async {
+  if (!_backgroundIsSyncing) return;
+  _backgroundIsSyncing = false;
+
+  try {
+    if (_backgroundContainer != null) {
+      _backgroundContainer!.read(autoBackupWatcherProvider).stop();
+      _backgroundContainer!.read(realtimeSyncServiceProvider).stopListening();
+      // Dispose the container to release and close TDLib clients!
+      _backgroundContainer!.dispose();
+      _backgroundContainer = null;
+    }
+  } catch (e) {
+    debugPrint('[AeroDrive Background] Error stopping background sync: $e');
+  }
+
+  try {
+    if (_backgroundLockSocket != null) {
+      await _backgroundLockSocket!.close();
+      _backgroundLockSocket = null;
+    }
+  } catch (_) {}
+
+  // Restart the lock retry loop after yielding
+  Future.delayed(const Duration(seconds: 15), _tryAcquireBackgroundLock);
+}
+
 @pragma('vm:entry-point')
 void backgroundMain() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
     try {
-      await dotenv.load();
+      await dotenv.load(fileName: '.env');
     } catch (_) {}
 
-    final container = ProviderContainer();
-
-    container.read(autoBackupWatcherProvider).start();
-    container.read(uploadQueueServiceProvider);
-    container.read(downloadQueueServiceProvider);
-    container.read(realtimeSyncServiceProvider).startListening();
-
-    debugPrint('[AeroDrive] Headless background engine started successfully.');
+    debugPrint('[AeroDrive] Headless background engine started. Acquiring lock...');
+    _tryAcquireBackgroundLock();
   }, (error, stack) {
     debugPrint('[AeroDrive] Headless background engine fatal error: $error\n$stack');
   });

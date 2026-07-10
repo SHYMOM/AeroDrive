@@ -89,6 +89,11 @@ class FileRepository {
   Future<void> trashFile(String fileId) async {
     await _db.transaction(() async {
       await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fileId))).go();
+      await (_db.delete(_db.thumbnails)..where((t) => t.fileId.equals(fileId))).go();
+      await (_db.delete(_db.fileTags)..where((ft) => ft.fileId.equals(fileId))).go();
+      await (_db.delete(_db.photoFaces)..where((pf) => pf.fileId.equals(fileId))).go();
+      await (_db.delete(_db.filePlaces)..where((fp) => fp.fileId.equals(fileId))).go();
+      await (_db.delete(_db.shareLinks)..where((sl) => sl.fileId.equals(fileId))).go();
       await (_db.delete(_db.files)..where((f) => f.id.equals(fileId))).go();
     });
   }

@@ -276,7 +276,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                 ),
                 const SizedBox(height: 24),
                 ListTile(
-                  leading: const Icon(Icons.link, color: AppColors.primaryLight),
+                  leading: Icon(Icons.link, color: AppColors.primaryLight),
                   title: const Text('Link Existing Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   subtitle: const Text('Choose from Telegram channels you manage', style: TextStyle(fontSize: 12)),
                   onTap: () {
@@ -286,7 +286,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                 ),
                 Divider(color: AppColors.outline),
                 ListTile(
-                  leading: const Icon(Icons.add_circle_outline, color: AppColors.secondaryLight),
+                  leading: Icon(Icons.add_circle_outline, color: AppColors.secondaryLight),
                   title: const Text('Create Private Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   subtitle: const Text('Create a new private channel on Telegram', style: TextStyle(fontSize: 12)),
                   onTap: () {
@@ -350,7 +350,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                             side: BorderSide(color: AppColors.outline),
                           ),
                           child: ListTile(
-                            leading: const Icon(Icons.campaign, color: AppColors.primaryLight),
+                            leading: Icon(Icons.campaign, color: AppColors.primaryLight),
                             title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                             subtitle: Text('Account: ${client.displayName}', style: const TextStyle(fontSize: 11)),
                             trailing: const Icon(Icons.link, size: 20),
@@ -368,7 +368,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, color: AppColors.error, size: 36),
+                        Icon(Icons.error_outline, color: AppColors.error, size: 36),
                         const SizedBox(height: 8),
                         Text('Error: $err', style: const TextStyle(color: Colors.white54, fontSize: 12), textAlign: TextAlign.center),
                         const SizedBox(height: 8),

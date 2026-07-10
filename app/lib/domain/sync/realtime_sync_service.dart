@@ -46,7 +46,18 @@ class RealtimeSyncService {
       });
     }
 
-    Future.microtask(() => _initializeBackgroundSyncChats());
+    // Listen to primary authState changes to initialize chats when logged in
+    _ref.listen<TelegramAuthState>(telegramServiceProvider, (previous, next) {
+      if (next == TelegramAuthState.ready) {
+        _initializeBackgroundSyncChats();
+      }
+    });
+
+    // Also run immediately if already ready
+    final currentStatus = _ref.read(telegramServiceProvider);
+    if (currentStatus == TelegramAuthState.ready) {
+      _initializeBackgroundSyncChats();
+    }
   }
 
   void stopListening() {
@@ -273,10 +284,15 @@ class RealtimeSyncService {
 
   Future<int?> _getConfigChatId() async {
     if (_configChatId != null) return _configChatId;
-    try {
-      final configService = _ref.read(configSyncServiceProvider);
-      _configChatId = await configService.findConfigChannel();
-    } catch (_) {}
+
+    // Ensure we are fully logged in before querying config channel
+    final telegramAccounts = _ref.read(telegramManagerProvider);
+    if (telegramAccounts.isNotEmpty && telegramAccounts.first.authState == TelegramAuthState.ready) {
+      try {
+        final configService = _ref.read(configSyncServiceProvider);
+        _configChatId = await configService.findConfigChannel();
+      } catch (_) {}
+    }
     return _configChatId;
   }
 

@@ -22,9 +22,58 @@ enum TelegramAuthState {
   error,
 }
 
+class TelegramInitDebugInfo {
+  final String currentStep;
+  final String lastEvent;
+  final List<String> pendingRequests;
+  final String? lastError;
+
+  TelegramInitDebugInfo({
+    this.currentStep = 'Not started',
+    this.lastEvent = 'None',
+    this.pendingRequests = const [],
+    this.lastError,
+  });
+
+  TelegramInitDebugInfo copyWith({
+    String? currentStep,
+    String? lastEvent,
+    List<String>? pendingRequests,
+    String? lastError,
+  }) {
+    return TelegramInitDebugInfo(
+      currentStep: currentStep ?? this.currentStep,
+      lastEvent: lastEvent ?? this.lastEvent,
+      pendingRequests: pendingRequests ?? this.pendingRequests,
+      lastError: lastError ?? this.lastError,
+    );
+  }
+}
+
 class TelegramService extends StateNotifier<TelegramAuthState> {
   TelegramService({this.accountId = 'primary', this.isHeadless = false}) : super(TelegramAuthState.initial) {
     _initClient();
+  }
+
+  final debugInfo = ValueNotifier<TelegramInitDebugInfo>(TelegramInitDebugInfo());
+  final Map<String, String> _pendingRequestTypes = {};
+
+  void _updateDebugStep(String step) {
+    debugInfo.value = debugInfo.value.copyWith(currentStep: step);
+  }
+
+  void _updateDebugLastEvent(String event) {
+    debugInfo.value = debugInfo.value.copyWith(lastEvent: event);
+  }
+
+  void _updateDebugPendingRequests() {
+    debugInfo.value = debugInfo.value.copyWith(
+      pendingRequests: _pendingRequestTypes.values.toList(),
+    );
+  }
+
+  void _updateDebugError(String? error) {
+    debugInfo.value = debugInfo.value.copyWith(lastError: error);
   }
 
   final String accountId;
@@ -62,16 +111,19 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<void> _initClient() async {
+    _updateDebugStep('Loading credentials from .env');
     final apiIdStr = dotenv.env['TELEGRAM_API_ID'];
     final apiHash = dotenv.env['TELEGRAM_API_HASH'];
 
     if (apiIdStr == null || apiIdStr.isEmpty) {
       AppLogger.error('Missing or empty TELEGRAM_API_ID in .env');
+      _updateDebugError('Missing or empty TELEGRAM_API_ID in .env');
       state = TelegramAuthState.error;
       return;
     }
     if (apiHash == null || apiHash.isEmpty) {
       AppLogger.error('Missing or empty TELEGRAM_API_HASH in .env');
+      _updateDebugError('Missing or empty TELEGRAM_API_HASH in .env');
       state = TelegramAuthState.error;
       return;
     }
@@ -79,6 +131,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     final parsedId = int.tryParse(apiIdStr);
     if (parsedId == null) {
       AppLogger.error('TELEGRAM_API_ID is not a valid integer: $apiIdStr');
+      _updateDebugError('TELEGRAM_API_ID is not a valid integer: $apiIdStr');
       state = TelegramAuthState.error;
       return;
     }
@@ -86,10 +139,12 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     _apiHash = apiHash;
 
     try {
+      _updateDebugStep('Retrieving application documents directory');
       final docDir = await getApplicationDocumentsDirectory();
       _dbPath = '${docDir.path}/AeroDrive/tdlib/$accountId';
 
       // Ensure TDLib database directory exists before any TDLib calls
+      _updateDebugStep('Creating TDLib database directory: $_dbPath');
       final dbDirectory = Directory(_dbPath);
       if (!await dbDirectory.exists()) {
         await dbDirectory.create(recursive: true);
@@ -101,6 +156,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
           _tdlibInitialized = true;
         } else {
           try {
+            _updateDebugStep('Initializing TdPlugin dynamic library (${Platform.operatingSystem})');
             if (Platform.isWindows) {
               await TdPlugin.initialize('tdjson.dll');
             } else if (Platform.isAndroid) {
@@ -124,6 +180,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
               _tdlibInitCompleter.completeError(e, s);
             }
             AppLogger.error('TdPlugin.initialize failed', e, s);
+            _updateDebugError('TdPlugin.initialize failed: $e');
             state = TelegramAuthState.error;
             return;
           }
@@ -131,21 +188,25 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       } else {
         // Wait for any concurrent initialization to finish
         if (!_tdlibInitCompleter.isCompleted) {
+          _updateDebugStep('Waiting for concurrent TdPlugin initialization');
           await _tdlibInitCompleter.future;
         }
       }
 
       try {
+        _updateDebugStep('Creating TDLib client instance (tdCreate)');
         _clientId = TdPlugin.instance.tdCreate();
         _instances[_clientId] = this;
         AppLogger.info('TDLib client created for $accountId (clientId: $_clientId)');
       } catch (e, s) {
         AppLogger.error('tdCreate failed for $accountId', e, s);
+        _updateDebugError('tdCreate failed: $e');
         state = TelegramAuthState.error;
         return;
       }
 
       if (isHeadless) {
+        _updateDebugStep('Applying headless options configuration');
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
           "@type": "setOption",
           "name": "online",
@@ -170,12 +231,15 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       }));
 
       if (!_globalLoopStarted) {
+        _updateDebugStep('Starting global TDLib receive loop');
         _startGlobalLoop();
       }
 
+      _updateDebugStep('Initialization completed. Waiting for TDLib events.');
       AppLogger.info('_initClient completed for $accountId');
     } catch (e, s) {
       AppLogger.error('Failed to initialize TDLib for $accountId', e, s);
+      _updateDebugError('Failed to initialize: $e');
       state = TelegramAuthState.error;
     }
   }
@@ -184,7 +248,14 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     _globalLoopStarted = true;
     var idleCycles = 0;
     while (true) {
-      final rawStr = TdPlugin.instance.tdReceive(0.01);
+      String? rawStr;
+      try {
+        rawStr = TdPlugin.instance.tdReceive(0.01);
+      } catch (e) {
+        AppLogger.error('tdReceive error', e);
+        await Future.delayed(const Duration(milliseconds: 100));
+        continue;
+      }
       
       if (rawStr != null) {
         idleCycles = 0;
@@ -217,7 +288,8 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   void _processEvent(Map<String, dynamic> json) {
-    final type = json['@type'];
+    final type = json['@type'] as String? ?? 'Unknown';
+    _updateDebugLastEvent(type);
     _eventController.add(json);
 
     final extra = json['@extra'];
@@ -233,8 +305,10 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     if (type == 'updateAuthorizationState') {
       final authState = json['authorization_state']['@type'];
       AppLogger.info('TDLib Auth State ($accountId): $authState');
+      _updateDebugStep('Auth State Update: $authState');
       
       if (authState == 'authorizationStateWaitTdlibParameters') {
+        _updateDebugStep('Sending TDLib parameters (setTdlibParameters)');
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
           "@type": "setTdlibParameters",
           "use_test_dc": false,
@@ -254,34 +328,41 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
           "ignore_file_names": isHeadless,
         }));
       } else if (authState == 'authorizationStateWaitEncryptionKey') {
+        _updateDebugStep('Sending database encryption key (checkDatabaseEncryptionKey)');
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
           "@type": "checkDatabaseEncryptionKey",
           "encryption_key": ""
         }));
       } else if (authState == 'authorizationStateWaitPhoneNumber') {
+        _updateDebugStep('Waiting for user phone number input');
         state = TelegramAuthState.waitPhoneNumber;
       } else if (authState == 'authorizationStateWaitCode') {
+        _updateDebugStep('Waiting for Telegram verification code');
         state = TelegramAuthState.waitCode;
       } else if (authState == 'authorizationStateWaitPassword') {
+        _updateDebugStep('Waiting for 2FA password');
         final authStateData = json['authorization_state'] as Map<String, dynamic>?;
         passwordHint = authStateData?['password_hint'] as String?;
         hasRecoveryEmail = authStateData?['has_recovery_email_address'] == true;
         state = TelegramAuthState.waitPassword;
       } else if (authState == 'authorizationStateReady') {
+        _updateDebugStep('TDLib Ready. Fetching current user details (getMe)');
         _fetchMe().whenComplete(() {
+          _updateDebugStep('User details loaded. AeroDrive Ready.');
           state = TelegramAuthState.ready;
           onReady?.call();
         });
       } else if (authState == 'authorizationStateLoggingOut') {
+        _updateDebugStep('Logging out of Telegram...');
         state = TelegramAuthState.loggingOut;
       } else if (authState == 'authorizationStateClosed') {
+        _updateDebugStep('TDLib connection closed');
         state = TelegramAuthState.closed;
       }
     } else if (type == 'error') {
-      AppLogger.error('TDLib Error ($accountId): ${json['message']}');
-      if (state == TelegramAuthState.initial) {
-        state = TelegramAuthState.error;
-      }
+      final errorMsg = json['message'] as String? ?? 'Unknown TDLib error';
+      AppLogger.error('TDLib Error ($accountId): $errorMsg');
+      _updateDebugError(errorMsg);
     } else if (type == 'updateFile') {
       final file = json['file'];
       if (file != null && _photoFileId != null && file['id'] == _photoFileId) {
@@ -304,6 +385,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<void> setAuthenticationPhoneNumber(String phoneNumber) async {
+    this.phoneNumber = phoneNumber;
     await sendRequest({
       "@type": "setAuthenticationPhoneNumber",
       "phone_number": phoneNumber,
@@ -359,16 +441,17 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       _pendingRequests[requestId] = completer;
 
       request['@extra'] = requestId;
+      _pendingRequestTypes[requestId] = request['@type'] as String? ?? 'unknown';
+      _updateDebugPendingRequests();
+      
       TdPlugin.instance.tdSend(_clientId, jsonEncode(request));
 
       try {
-        return await completer.future.timeout(timeout, onTimeout: () {
-          _pendingRequests.remove(requestId);
+        final result = await completer.future.timeout(timeout, onTimeout: () {
           throw TimeoutException('TDLib request timed out: ${request['@type']}');
         });
+        return result;
       } catch (e) {
-        _pendingRequests.remove(requestId);
-
         // Check if this is a 429 FloodWait error
         if (e is Map && e['@type'] == 'error') {
           final code = e['code'] as int?;
@@ -392,6 +475,10 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         }
 
         rethrow;
+      } finally {
+        _pendingRequests.remove(requestId);
+        _pendingRequestTypes.remove(requestId);
+        _updateDebugPendingRequests();
       }
     }
     throw TimeoutException('TDLib request failed after $maxRetries retries: ${request['@type']}');
@@ -452,6 +539,101 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     } catch (e) {
       AppLogger.error('getChannelDescription failed', e);
       return null;
+    }
+  }
+
+  /// Groups AeroDrive connected channels into a Telegram Chat Filter Folder named 'AeroDrive'.
+  Future<void> updateTelegramFolder(List<int> chatIds) async {
+    try {
+      // 1. Get all chat filters
+      final filtersResponse = await sendRequest({"@type": "getChatFilters"});
+      final filters = filtersResponse['filters'] as List<dynamic>? ?? [];
+      
+      int? aeroDriveFilterId;
+      Map<String, dynamic>? existingFilter;
+      
+      for (final f in filters) {
+        if (f['title'] == 'AeroDrive') {
+          aeroDriveFilterId = f['id'] as int?;
+          break;
+        }
+      }
+      
+      // If filter exists, retrieve its full details
+      if (aeroDriveFilterId != null) {
+        final filterDetail = await sendRequest({
+          "@type": "getChatFilter",
+          "chat_filter_id": aeroDriveFilterId,
+        });
+        if (filterDetail['@type'] != 'error') {
+          existingFilter = filterDetail;
+        }
+      }
+      
+      final Set<int> targetChatIds = chatIds.toSet();
+      
+      if (existingFilter != null) {
+        // Update existing filter
+        final List<dynamic> included = List.from(existingFilter['included_chat_ids'] ?? []);
+        final Set<int> currentIncluded = included.map((e) => e as int).toSet();
+        
+        // Add new ones
+        currentIncluded.addAll(targetChatIds);
+        
+        final response = await sendRequest({
+          "@type": "editChatFilter",
+          "chat_filter_id": aeroDriveFilterId,
+          "filter": {
+            "@type": "chatFilter",
+            "title": "AeroDrive",
+            "icon_name": existingFilter['icon_name'] ?? "Folder",
+            "pinned_chat_ids": existingFilter['pinned_chat_ids'] ?? [],
+            "included_chat_ids": currentIncluded.toList(),
+            "excluded_chat_ids": existingFilter['excluded_chat_ids'] ?? [],
+            "exclude_muted": existingFilter['exclude_muted'] ?? false,
+            "exclude_read": existingFilter['exclude_read'] ?? false,
+            "exclude_archived": existingFilter['exclude_archived'] ?? false,
+            "include_contacts": existingFilter['include_contacts'] ?? false,
+            "include_non_contacts": existingFilter['include_non_contacts'] ?? false,
+            "include_groups": existingFilter['include_groups'] ?? false,
+            "include_broadcasts": existingFilter['include_broadcasts'] ?? false,
+            "include_bots": existingFilter['include_bots'] ?? false,
+          }
+        });
+        if (response['@type'] == 'error') {
+          AppLogger.error('Failed to edit AeroDrive Chat Filter Folder: ${response['message']}');
+        } else {
+          AppLogger.info('Updated Telegram folder AeroDrive successfully');
+        }
+      } else {
+        // Create new filter
+        final response = await sendRequest({
+          "@type": "createChatFilter",
+          "filter": {
+            "@type": "chatFilter",
+            "title": "AeroDrive",
+            "icon_name": "Folder",
+            "pinned_chat_ids": [],
+            "included_chat_ids": targetChatIds.toList(),
+            "excluded_chat_ids": [],
+            "exclude_muted": false,
+            "exclude_read": false,
+            "exclude_archived": false,
+            "include_contacts": false,
+            "include_non_contacts": false,
+            "include_groups": false,
+            "include_broadcasts": false,
+            "include_bots": false,
+          }
+        });
+        if (response['@type'] == 'error') {
+          AppLogger.error('Failed to create AeroDrive Chat Filter Folder: ${response['message']}');
+        } else {
+          AppLogger.info('Created Telegram folder AeroDrive successfully');
+        }
+      }
+    } catch (e, s) {
+      AppLogger.error('Failed to update Telegram folder AeroDrive', e, s);
     }
   }
 
@@ -803,6 +985,45 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       AppLogger.error('Failed to get chats from TDLib', e, s);
       return [];
     }
+  }
+
+  Future<void> resetAuthFlow() async {
+    AppLogger.info('Resetting auth flow for account: $accountId');
+    
+    // 1. Close current client
+    await closeClient();
+    
+    // 2. Remove instance from map
+    if (_clientId != 0) {
+      _instances.remove(_clientId);
+      _clientId = 0;
+    }
+    
+    // 3. Clear TDLib local database directory
+    try {
+      final dbDir = Directory(_dbPath);
+      if (await dbDir.exists()) {
+        await dbDir.delete(recursive: true);
+      }
+    } catch (e) {
+      AppLogger.error('Failed to delete TDLib directory $_dbPath during reset: $e');
+    }
+    
+    // 4. Reset local cache variables
+    userId = null;
+    firstName = null;
+    lastName = null;
+    phoneNumber = null;
+    photoPath = null;
+    username = null;
+    passwordHint = null;
+    hasRecoveryEmail = false;
+    _photoFileId = null;
+    chats.clear();
+    
+    // 5. Reinitialize client
+    state = TelegramAuthState.initial;
+    await _initClient();
   }
 
   TelegramAuthState get authState => state;

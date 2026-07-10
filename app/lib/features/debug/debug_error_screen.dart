@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/reset_helper.dart';
 import '../../main.dart' as app_main;
 
 /// A premium, custom-designed screen for viewing system diagnostics or reporting crashes.
@@ -224,7 +225,7 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                              Icon(Icons.error_outline, color: AppColors.error, size: 20),
                               const SizedBox(width: 8),
                               Text(
                                 'Exception Caught',
@@ -409,6 +410,18 @@ class _DebugErrorScreenState extends State<DebugErrorScreen> {
                     side: BorderSide(color: AppColors.outline),
                   ),
                 ),
+                if (_isCrashMode) ...[
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => AppResetHelper.showResetConfirmation(context),
+                    icon: const Icon(Icons.refresh_rounded, color: Colors.redAccent),
+                    label: const Text('Hard Reset App (Clear All Data)', style: TextStyle(color: Colors.redAccent)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.redAccent),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
               ],
             ),

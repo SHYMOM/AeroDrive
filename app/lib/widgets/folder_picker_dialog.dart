@@ -191,7 +191,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
           color: AppColors.fileFolder.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.home_rounded, color: AppColors.fileFolder, size: 22),
+        child: Icon(Icons.home_rounded, color: AppColors.fileFolder, size: 22),
       ),
       title: const Text('Root Directory', style: TextStyle(fontWeight: FontWeight.w500)),
       subtitle: const Text('Top level of your vault', style: TextStyle(fontSize: 12)),
@@ -214,7 +214,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
           color: AppColors.fileFolder.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.folder_rounded, color: AppColors.fileFolder, size: 22),
+        child: Icon(Icons.folder_rounded, color: AppColors.fileFolder, size: 22),
       ),
       title: Text(folder.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w500)),
       trailing: Row(

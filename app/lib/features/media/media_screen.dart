@@ -25,7 +25,7 @@ final allMediaFilesProvider = FutureProvider<List<FileData>>((ref) async {
   return (db.select(db.files)
     ..where((f) => (f.mimeType.like('image/%') | f.mimeType.like('video/%')))
     ..where((f) => f.deletedAt.isNull())
-    ..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])
+    ..orderBy([(t) => drift.OrderingTerm.desc(drift.coalesce([t.photoTakenAt, t.createdAt]))])
   ).get();
 });
 
@@ -68,12 +68,11 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     // ignore
   }
 
-  // Places (unique places)
-  final places = await db.select(db.places).get();
-  final int placesCount = places.length;
+  // Places (unique places with file associations)
+  final filePlaces = await db.select(db.filePlaces).get();
+  final int placesCount = filePlaces.map((fp) => fp.placeId).toSet().length;
 
   // Find cover files for Places (up to 4 images that have associated places)
-  final filePlaces = await db.select(db.filePlaces).get();
   final placeFileIds = filePlaces.map((fp) => fp.fileId).toSet().toList();
   final List<FileData> placeCoverFiles = [];
   if (placeFileIds.isNotEmpty) {
@@ -116,7 +115,7 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final allFiles = await (db.select(db.files)
     ..where((f) => f.mimeType.like('image/%') | f.mimeType.like('video/%'))
     ..where((f) => f.deletedAt.isNull())
-    ..orderBy([(t) => drift.OrderingTerm.desc(t.createdAt)])
+    ..orderBy([(t) => drift.OrderingTerm.desc(drift.coalesce([t.photoTakenAt, t.createdAt]))])
     ..limit(15)
   ).get();
   final FileData? memoryFile = allFiles.isNotEmpty ? allFiles.last : null;
@@ -210,7 +209,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
               children: [
                 if (_mediaTypeFilter != null)
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       setState(() {
                         _mediaTypeFilter = null;
@@ -219,7 +218,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   ),
                 Text(
                   _mediaTypeFilter == 'image/' ? 'All Images' : _mediaTypeFilter == 'video/' ? 'All Videos' : 'All media',
-                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -246,13 +245,13 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           children: [
             Text(
               _selectedAlbum != null ? _selectedAlbum!.name : 'Albums',
-              style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.bold),
             ),
             Row(
               children: [
                 if (_selectedAlbum != null)
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       setState(() {
                         _selectedAlbum = null;
@@ -283,15 +282,15 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             Expanded(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.05),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                 ),
                 child: TextField(
-                  style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  decoration: InputDecoration(
                     hintText: 'Times, places, file names...',
-                    hintStyle: TextStyle(color: Colors.white38, fontSize: 14),
+                    hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 14),
                     prefixIcon: Icon(Icons.search, color: AppColors.primary),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 12),
@@ -321,8 +320,8 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(value: 'refresh_ai', child: Text('Refresh Local AI', style: TextStyle(color: Colors.white))),
-                const PopupMenuItem(value: 'clear_history', child: Text('Clear History', style: TextStyle(color: Colors.white))),
+                PopupMenuItem(value: 'refresh_ai', child: Text('Refresh Local AI', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+                PopupMenuItem(value: 'clear_history', child: Text('Clear History', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
               ],
             ),
           ],
@@ -335,14 +334,14 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Row(
         children: [
-          const Text('Filtered by: ', style: TextStyle(color: Colors.white54, fontSize: 12)),
+          Text('Filtered by: ', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
           const SizedBox(width: 8),
           if (_filterYear != null)
             Chip(
               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              side: const BorderSide(color: AppColors.primary),
-              label: Text('$_filterYear', style: const TextStyle(color: AppColors.primary, fontSize: 11)),
-              deleteIcon: const Icon(Icons.close, size: 12, color: AppColors.primary),
+              side: BorderSide(color: AppColors.primary),
+              label: Text('$_filterYear', style: TextStyle(color: AppColors.primary, fontSize: 11)),
+              deleteIcon: Icon(Icons.close, size: 12, color: AppColors.primary),
               onDeleted: () {
                 setState(() {
                   _filterYear = null;
@@ -352,9 +351,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           if (_filterMonth != null)
             Chip(
               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              side: const BorderSide(color: AppColors.primary),
-              label: Text(_filterMonth!, style: const TextStyle(color: AppColors.primary, fontSize: 11)),
-              deleteIcon: const Icon(Icons.close, size: 12, color: AppColors.primary),
+              side: BorderSide(color: AppColors.primary),
+              label: Text(_filterMonth!, style: TextStyle(color: AppColors.primary, fontSize: 11)),
+              deleteIcon: Icon(Icons.close, size: 12, color: AppColors.primary),
               onDeleted: () {
                 setState(() {
                   _filterMonth = null;
@@ -364,9 +363,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           if (_selectedAlbum != null)
             Chip(
               backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
-              side: const BorderSide(color: AppColors.secondary),
-              label: Text(_selectedAlbum!.name, style: const TextStyle(color: AppColors.secondary, fontSize: 11)),
-              deleteIcon: const Icon(Icons.close, size: 12, color: AppColors.secondary),
+              side: BorderSide(color: AppColors.secondary),
+              label: Text(_selectedAlbum!.name, style: TextStyle(color: AppColors.secondary, fontSize: 11)),
+              deleteIcon: Icon(Icons.close, size: 12, color: AppColors.secondary),
               onDeleted: () {
                 setState(() {
                   _selectedAlbum = null;
@@ -404,9 +403,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           value: 'sort_newest',
           child: Row(
             children: [
-              Icon(Icons.arrow_downward, color: newestFirst ? AppColors.primary : Colors.white54, size: 18),
+              Icon(Icons.arrow_downward, color: newestFirst ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
               const SizedBox(width: 8),
-              Text('Newest First', style: TextStyle(color: newestFirst ? AppColors.primary : Colors.white)),
+              Text('Newest First', style: TextStyle(color: newestFirst ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
             ],
           ),
         ),
@@ -414,28 +413,28 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           value: 'sort_oldest',
           child: Row(
             children: [
-              Icon(Icons.arrow_upward, color: !newestFirst ? AppColors.primary : Colors.white54, size: 18),
+              Icon(Icons.arrow_upward, color: !newestFirst ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant, size: 18),
               const SizedBox(width: 8),
-              Text('Oldest First', style: TextStyle(color: !newestFirst ? AppColors.primary : Colors.white)),
+              Text('Oldest First', style: TextStyle(color: !newestFirst ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
             ],
           ),
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'columns_2',
-          child: Text('2 Columns', style: TextStyle(color: columnsCount == 2 ? AppColors.primary : Colors.white)),
+          child: Text('2 Columns', style: TextStyle(color: columnsCount == 2 ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
         ),
         PopupMenuItem(
           value: 'columns_3',
-          child: Text('3 Columns', style: TextStyle(color: columnsCount == 3 ? AppColors.primary : Colors.white)),
+          child: Text('3 Columns', style: TextStyle(color: columnsCount == 3 ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
         ),
         PopupMenuItem(
           value: 'columns_4',
-          child: Text('4 Columns', style: TextStyle(color: columnsCount == 4 ? AppColors.primary : Colors.white)),
+          child: Text('4 Columns', style: TextStyle(color: columnsCount == 4 ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
         ),
         PopupMenuItem(
           value: 'columns_5',
-          child: Text('5 Columns', style: TextStyle(color: columnsCount == 5 ? AppColors.primary : Colors.white)),
+          child: Text('5 Columns', style: TextStyle(color: columnsCount == 5 ? AppColors.primary : Theme.of(context).colorScheme.onSurface)),
         ),
       ],
     );
@@ -467,16 +466,22 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           files = files.where((f) => f.mimeType?.startsWith(_mediaTypeFilter!) == true).toList();
         }
         if (_filterYear != null) {
-          files = files.where((f) => f.createdAt != null && f.createdAt!.year == _filterYear).toList();
+          files = files.where((f) {
+            final date = f.photoTakenAt ?? f.createdAt;
+            return date != null && date.year == _filterYear;
+          }).toList();
         }
         if (_filterMonth != null) {
-          files = files.where((f) => f.createdAt != null && DateFormat('MMMM yyyy').format(f.createdAt!) == _filterMonth).toList();
+          files = files.where((f) {
+            final date = f.photoTakenAt ?? f.createdAt;
+            return date != null && DateFormat('MMMM yyyy').format(date) == _filterMonth;
+          }).toList();
         }
 
         final newestFirst = ref.watch(mediaSortProvider);
         files.sort((a, b) {
-          final da = a.createdAt ?? DateTime(0);
-          final db = b.createdAt ?? DateTime(0);
+          final da = a.photoTakenAt ?? a.createdAt ?? DateTime(0);
+          final db = b.photoTakenAt ?? b.createdAt ?? DateTime(0);
           return newestFirst ? db.compareTo(da) : da.compareTo(db);
         });
 
@@ -497,7 +502,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
@@ -538,7 +543,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Text(
                   headerText,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                 ),
               ),
               GridView.builder(
@@ -619,11 +624,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                       children: [
                         Text(
                           shortMonth,
-                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           '${monthFiles.length} photos',
-                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 12),
                         ),
                       ],
                     ),
@@ -688,11 +693,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                       children: [
                         Text(
                           '$key',
-                          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 32, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           '${yearFiles.length} items',
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14),
                         ),
                       ],
                     ),
@@ -733,13 +738,13 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
+                color: isSelected ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12) : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 view.name[0].toUpperCase() + view.name.substring(1),
                 style: TextStyle(
-                  color: isSelected ? AppColors.primary : Colors.white70,
+                  color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -775,7 +780,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
       );
     }
 
@@ -863,7 +868,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                                   folder.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.bold),
                                 ),
                                 Text(
                                   '${folderFiles.length}',
@@ -882,10 +887,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         ),
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
@@ -934,11 +939,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     '${albumFiles.length}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 12),
                   ),
                 ],
               ),
@@ -1092,11 +1097,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                                 children: [
                                   Text(
                                     tag['name'] as String,
-                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                   Text(
                                     '${tag['count']}',
-                                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 10),
                                   ),
                                 ],
                               ),
@@ -1197,11 +1202,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 
@@ -1281,11 +1286,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '$count',
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 10),
                 ),
               ],
             ),

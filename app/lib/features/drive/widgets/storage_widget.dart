@@ -41,7 +41,7 @@ class StorageWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Storage',
                   style: TextStyle(
                     color: AppColors.onSurfaceVariant,

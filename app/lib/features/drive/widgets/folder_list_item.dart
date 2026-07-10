@@ -64,14 +64,14 @@ class FolderListItem extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? Colors.white.withValues(alpha: 0.08) 
-            : Colors.white.withValues(alpha: 0.03),
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected 
-              ? const Color(0xFF38BDF8) 
-              : Colors.white.withValues(alpha: 0.05),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: ListTile(
@@ -94,9 +94,9 @@ class FolderListItem extends ConsumerWidget {
               ),
             ),
             if (folder.isFavorite)
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 16),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.star_rounded, color: Theme.of(context).colorScheme.primary, size: 16),
               ),
           ],
         ),
@@ -104,7 +104,7 @@ class FolderListItem extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             itemsCountText,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
           ),
         ),
         trailing: isSelectionMode
@@ -142,7 +142,7 @@ class FolderListItem extends ConsumerWidget {
   }
 
   Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white54),
+      icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurfaceVariant),
       color: AppColors.surfaceElevated,
       onSelected: (value) async {
         if (value == 'rename') {
@@ -164,16 +164,19 @@ class FolderListItem extends ConsumerWidget {
           _showInfoDialog(context, ref);
         }
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Colors.white))),
-        const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
-      ],
+      itemBuilder: (context) {
+        final theme = Theme.of(context);
+        return [
+          PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: theme.colorScheme.onSurface))),
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        ];
+      },
     );
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
@@ -212,25 +215,25 @@ class FolderListItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Rename Folder', style: TextStyle(color: Colors.white)),
+        title: Text('Rename Folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          decoration: InputDecoration(
             hintText: 'Folder Name',
-            hintStyle: TextStyle(color: Colors.white30),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15))),
+            focusedBorder: UnderlineInputBorder(borderSide: const BorderSide(color: AppColors.primary)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Rename', style: TextStyle(color: AppColors.primary)),
+            child: Text('Rename', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -250,16 +253,16 @@ class FolderListItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete Folder', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to delete "${folder.name}" and all its contents?', style: const TextStyle(color: Colors.white70)),
+        title: Text('Delete Folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Are you sure you want to delete "${folder.name}" and all its contents?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -379,43 +382,44 @@ class FolderListItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.primary),
-            SizedBox(width: 10),
-            Text('Folder Info', style: TextStyle(color: Colors.white)),
+            const Icon(Icons.info_outline, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Text('Folder Info', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('Name:', folder.name),
-            _buildInfoRow('Type:', 'Folder'),
-            _buildInfoRow('Contains:', countStr),
-            _buildInfoRow('Total Size:', sizeStr),
-            _buildInfoRow('Created:', createdStr),
+            _buildInfoRow(context, 'Name:', folder.name),
+            _buildInfoRow(context, 'Type:', 'Folder'),
+            _buildInfoRow(context, 'Contains:', countStr),
+            _buildInfoRow(context, 'Total Size:', sizeStr),
+            _buildInfoRow(context, 'Created:', createdStr),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+            child: Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13))),
+          Expanded(child: Text(value, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13))),
         ],
       ),
     );

@@ -37,7 +37,7 @@ class ImagesScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.image_outlined, size: 48, color: AppColors.fileImage),
+                  Icon(Icons.image_outlined, size: 48, color: AppColors.fileImage),
                   const SizedBox(height: 16),
                   Text('No images found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -83,7 +83,7 @@ class _ImageItem extends ConsumerWidget {
                   }
                   return Container(
                     color: AppColors.fileImage.withValues(alpha: 0.1),
-                    child: const Icon(Icons.image_outlined, color: AppColors.fileImage, size: 22),
+                    child: Icon(Icons.image_outlined, color: AppColors.fileImage, size: 22),
                   );
                 },
               ),

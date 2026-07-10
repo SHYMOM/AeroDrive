@@ -93,5 +93,11 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
 LazyDatabase _openConnection() => LazyDatabase(() async {
     final dbFolder = await getApplicationDocumentsDirectory();
     final file = io.File(p.join(dbFolder.path, 'aerodrive.sqlite'));
-    return NativeDatabase.createInBackground(file);
+    return NativeDatabase.createInBackground(
+      file,
+      setup: (db) {
+        db.execute('PRAGMA journal_mode=WAL;');
+        db.execute('PRAGMA busy_timeout=30000;');
+      },
+    );
   });

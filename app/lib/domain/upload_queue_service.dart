@@ -199,6 +199,8 @@ class UploadQueueService {
 
   void _startPolling() {
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+      if (_telegramManager.readyClients.isEmpty) return;
+
       // Determine how many concurrent slots are available
       final maxConcurrent = int.tryParse(
         await _settings.getSetting('parallel_threads') ?? '$_maxConcurrent',

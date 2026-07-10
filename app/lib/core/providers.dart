@@ -7,3 +7,7 @@ final databaseProvider = Provider<AeroDriveDatabase>((ref) {
   ref.onDispose(db.close);
   return db;
 });
+
+/// Tracks whether the user has navigated past the splash screen.
+/// Used to prevent redirecting back to splash after authentication.
+final hasNavigatedPastSplashProvider = StateProvider<bool>((ref) => false);

@@ -806,22 +806,30 @@ class ShareService {
       final int sourceChatId = chunks.first.channelId!;
       final List<int> sourceMessageIds = chunks.map((c) => c.messageId!).toList();
 
-      // Forward chunks copy
-      final forwardedMsgs = await telegram.sendRequest({
-        "@type": "forwardMessages",
-        "chat_id": shareChatId,
-        "from_chat_id": sourceChatId,
-        "message_ids": sourceMessageIds,
-        "send_copy": true,
-      });
+      // Forward chunks with robust error handling
+      List<int> newMsgIds = [];
+      try {
+        final forwardedMsgs = await telegram.sendRequest({
+          "@type": "forwardMessages",
+          "chat_id": shareChatId,
+          "from_chat_id": sourceChatId,
+          "message_ids": sourceMessageIds,
+          "send_copy": true,
+        });
 
-      if (forwardedMsgs['@type'] == 'error') {
-        throw Exception('Failed to forward file chunks to share channel: ${forwardedMsgs['message']}');
+        if (forwardedMsgs['@type'] == 'error') {
+          // 400 error often means source messages no longer exist or channel is archived
+          AppLogger.warning('forwardMessages failed, trying alternative: ${forwardedMsgs['message']}');
+          // Fall back to resending the chunks one by one
+          newMsgIds = await _resendChunksDirect(telegram, sourceChatId, sourceMessageIds, shareChatId, chunks);
+        } else {
+          final List messagesList = forwardedMsgs['messages'] ?? [];
+          newMsgIds = messagesList.map((m) => m['id'] as int).toList();
+        }
+      } catch (e) {
+        AppLogger.warning('forwardMessages threw, trying alternative: $e');
+        newMsgIds = await _resendChunksDirect(telegram, sourceChatId, sourceMessageIds, shareChatId, chunks);
       }
-
-      final List messagesList = forwardedMsgs['messages'] ?? [];
-      final List<int> newMsgIds = messagesList.map((m) => m['id'] as int).toList();
-      allForwardedMessageIds.addAll(newMsgIds);
 
       final keyAndIv = await _decryptFileDekAndIv(file);
       final dekBytes = keyAndIv[0];
@@ -1860,6 +1868,67 @@ class ShareService {
     // Remove the tiny pointer from the Config Channel Registry
     registry.removeAt(entryIndex);
     await _updateShareRegistry(registry);
+  }
+
+  /// Fallback when forwardMessages fails (e.g., 400 error from archived channels).
+  /// Re-sends each chunk's content by getting the original message and sending it as a copy.
+  Future<List<int>> _resendChunksDirect(
+    TelegramService telegram,
+    int sourceChatId,
+    List<int> sourceMessageIds,
+    int targetChatId,
+    List<ChunkData> chunks,
+  ) async {
+    final List<int> newIds = [];
+    for (var i = 0; i < sourceMessageIds.length && i < chunks.length; i++) {
+      try {
+        final msg = await telegram.sendRequest({
+          "@type": "getMessage",
+          "chat_id": sourceChatId,
+          "message_id": sourceMessageIds[i],
+        });
+        if (msg['@type'] == 'error') {
+          AppLogger.warning('Could not retrieve message ${sourceMessageIds[i]}: ${msg['message']}');
+          continue;
+        }
+        // Forward as a copy via getMessage content — re-send the document
+        final content = msg['content'];
+        if (content == null || content['@type'] != 'messageDocument') continue;
+
+        final document = content['document'];
+        if (document == null) continue;
+
+        final fileInfo = document['document'];
+        final remoteFileId = fileInfo?['id'];
+
+        if (remoteFileId == null) continue;
+
+        final sent = await telegram.sendRequest({
+          "@type": "sendMessage",
+          "chat_id": targetChatId,
+          "input_message_content": {
+            "@type": "inputMessageDocument",
+            "document": {
+              "@type": "inputFileRemote",
+              "id": remoteFileId,
+            },
+            "caption": chunks[i].hash != null
+                ? {"@type": "formattedText", "text": chunks[i].hash!, "entities": []}
+                : null,
+          },
+        });
+        if (sent['@type'] != 'error' && sent['id'] != null) {
+          newIds.add(sent['id'] as int);
+        }
+        await Future.delayed(const Duration(milliseconds: 250)); // Rate limiting
+      } catch (e) {
+        AppLogger.warning('Failed to resend chunk ${sourceMessageIds[i]}: $e');
+      }
+    }
+    if (newIds.isEmpty) {
+      throw Exception('Failed to forward or resend any chunks to the share channel.');
+    }
+    return newIds;
   }
 }
 

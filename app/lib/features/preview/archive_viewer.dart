@@ -124,7 +124,7 @@ class _ArchiveViewerState extends ConsumerState<ArchiveViewer> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.folder_zip, color: AppColors.fileArchive),
+              Icon(Icons.folder_zip, color: AppColors.fileArchive),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(

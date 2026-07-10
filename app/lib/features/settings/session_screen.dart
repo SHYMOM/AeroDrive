@@ -405,7 +405,7 @@ class SessionScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              Icon(Icons.error_outline, size: 64, color: AppColors.error),
               const SizedBox(height: 16),
               const Text(
                 'Failed to load active sessions',

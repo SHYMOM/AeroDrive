@@ -63,6 +63,14 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   @override
   Widget build(BuildContext context) {
+    final isConfigChecked = ref.watch(configCheckedProvider);
+    if (!isConfigChecked) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: widget.child,
+      );
+    }
+
     final location = GoRouterState.of(context).uri.path;
     final isRoot = _isRootRoute(location);
 
@@ -147,7 +155,7 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 }
 
 final class _DesktopLayout extends StatelessWidget {
-  const _DesktopLayout({
+  _DesktopLayout({
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.child,
@@ -170,7 +178,7 @@ final class _DesktopLayout extends StatelessWidget {
             child: Column(
               children: [
                 Expanded(child: child),
-                const GlobalProgressBar(),
+                GlobalProgressBar(),
               ],
             ),
           ),
@@ -199,7 +207,7 @@ final class _TabletLayout extends StatelessWidget {
 }
 
 final class _MobileLayout extends StatelessWidget {
-  const _MobileLayout({
+  _MobileLayout({
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.child,
@@ -230,11 +238,11 @@ final class _MobileLayout extends StatelessWidget {
       body: child,
       extendBody: true, // Required for floating glassmorphic nav bar
       bottomNavigationBar: hideNavBar
-          ? const GlobalProgressBar() // still show progress bar even if nav is hidden
+          ? GlobalProgressBar() // still show progress bar even if nav is hidden
           : Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const GlobalProgressBar(),
+                GlobalProgressBar(),
                 DecoratedBox(
                   decoration: BoxDecoration(
                     color: AppColors.background,
@@ -243,16 +251,18 @@ final class _MobileLayout extends StatelessWidget {
                   child: NavigationBar(
                 backgroundColor: AppColors.background,
                 elevation: 0,
-                selectedIndex: selectedIndex >= AppDestination.values.where((d) => d != AppDestination.settings).length 
-                    ? 0 
-                    : selectedIndex,
+                selectedIndex: () {
+                  final mobileItems = AppDestination.values.where((d) => d != AppDestination.settings).toList();
+                  final idx = mobileItems.indexWhere((d) => selectedIndex == AppDestination.values.indexOf(d));
+                  return idx < 0 ? 0 : idx;
+                }(),
                 onDestinationSelected: (i) {
                   final items = AppDestination.values.where((d) => d != AppDestination.settings).toList();
                   final dest = items[i];
                   onDestinationSelected(AppDestination.values.indexOf(dest));
                 },
                 indicatorColor: Colors.transparent, // Disable default pill indicator
-                animationDuration: const Duration(milliseconds: 400),
+                animationDuration: Duration(milliseconds: 400),
                 destinations: AppDestination.values.where((d) => d != AppDestination.settings).map((d) {
                   final isSelected = selectedIndex == AppDestination.values.indexOf(d);
                   return NavigationDestination(
@@ -263,15 +273,15 @@ final class _MobileLayout extends StatelessWidget {
                           Container(
                             width: 32,
                             height: 2,
-                            margin: const EdgeInsets.only(bottom: 6),
+                            margin: EdgeInsets.only(bottom: 6),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
-                              boxShadow: const [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
+                              boxShadow: [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
                               borderRadius: BorderRadius.circular(2),
                             ),
                           )
                         else
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8),
                         Icon(d.icon, color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant),
                       ],
                     ),
@@ -281,10 +291,10 @@ final class _MobileLayout extends StatelessWidget {
                         Container(
                           width: 32,
                           height: 2,
-                          margin: const EdgeInsets.only(bottom: 6),
+                          margin: EdgeInsets.only(bottom: 6),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
-                            boxShadow: const [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
+                            boxShadow: [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -303,7 +313,7 @@ final class _MobileLayout extends StatelessWidget {
 }
 
 class SidebarContent extends ConsumerWidget {
-  const SidebarContent({
+  SidebarContent({
     super.key,
     required this.selectedIndex,
     required this.onDestinationSelected,
@@ -326,7 +336,7 @@ class SidebarContent extends ConsumerWidget {
           const SizedBox(height: 48),
           // User Profile
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: 24),
             child: Row(
               children: [
                 Container(
@@ -334,7 +344,7 @@ class SidebarContent extends ConsumerWidget {
                   height: 48,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [AppColors.primary, AppColors.secondary],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -343,11 +353,11 @@ class SidebarContent extends ConsumerWidget {
                       BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 12)
                     ],
                   ),
-                  child: const Center(
-                    child: Text('A', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  child: Center(
+                    child: Text('A', style: TextStyle(color: AppColors.onPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +395,7 @@ class SidebarContent extends ConsumerWidget {
                   final dest = entry.value;
                   final isSelected = selectedIndex == idx;
                   return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.only(bottom: 8),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -398,7 +408,7 @@ class SidebarContent extends ConsumerWidget {
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
@@ -411,28 +421,32 @@ class SidebarContent extends ConsumerWidget {
                                 color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
                                 size: 24,
                               ),
-                              const SizedBox(width: 16),
-                              Text(
-                                dest.label,
-                                style: TextStyle(
-                                  color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                                  fontSize: 15,
-                                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  dest.label,
+                                  style: TextStyle(
+                                    color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                                    fontSize: 15,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                                  ),
                                 ),
                               ),
+                              if (dest == AppDestination.transfers)
+                                _TransferBadge(),
                             ],
                           ),
-                        ),
                       ),
                     ),
-                  );
+                  ),
+                );
                 }),
                 
                 Divider(color: AppColors.outline, height: 24),
                 
                 // Import Shared Link Option
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -444,11 +458,11 @@ class SidebarContent extends ConsumerWidget {
                         showDialog(context: context, builder: (context) => const ImportLinkDialog());
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
-                            const Icon(Icons.link, color: AppColors.secondary, size: 24),
-                            const SizedBox(width: 16),
+                            Icon(Icons.link, color: AppColors.secondary, size: 24),
+                            SizedBox(width: 16),
                             Text(
                               'Import Shared Link',
                               style: TextStyle(
@@ -466,7 +480,7 @@ class SidebarContent extends ConsumerWidget {
 
                 // My Shared Links Option
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -478,11 +492,11 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/settings/shared_links');
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
-                            const Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
-                            const SizedBox(width: 16),
+                            Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
+                            SizedBox(width: 16),
                             Text(
                               'My Shared Links',
                               style: TextStyle(
@@ -500,7 +514,7 @@ class SidebarContent extends ConsumerWidget {
 
                 // Trash Option
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -512,11 +526,11 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/trash');
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
-                            const Icon(Icons.delete_outline, color: AppColors.error, size: 24),
-                            const SizedBox(width: 16),
+                            Icon(Icons.delete_outline, color: AppColors.error, size: 24),
+                            SizedBox(width: 16),
                             Text(
                               'Trash',
                               style: TextStyle(
@@ -534,7 +548,7 @@ class SidebarContent extends ConsumerWidget {
 
                 // About Option
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 8),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
@@ -546,11 +560,11 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/settings/about');
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                         child: Row(
                           children: [
                             Icon(Icons.info_outline, color: AppColors.onSurfaceVariant, size: 24),
-                            const SizedBox(width: 16),
+                            SizedBox(width: 16),
                             Text(
                               'About',
                               style: TextStyle(
@@ -571,34 +585,34 @@ class SidebarContent extends ConsumerWidget {
           
           // ── Bottom Credit Signature ───────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1A0B3B), Color(0xFF0D1B4D)],
+                gradient: LinearGradient(
+                  colors: [Theme.of(context).colorScheme.surfaceContainerHighest, Theme.of(context).colorScheme.surface],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: const Color(0xFF7B61FF).withValues(alpha: 0.2)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
               ),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Made With ❤️ In 🇧🇩',
-                    style: TextStyle(color: Colors.white38, fontSize: 9, letterSpacing: 1),
+                    style: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 3),
                   ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: [Color(0xFF7B61FF), Color(0xFF4A90E2), Color(0xFFEC4899)],
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
                     ).createShader(bounds),
-                    child: const Text(
+                    child: Text(
                       'SHEIKH SHYMOM ISLAM',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.5,
@@ -625,11 +639,11 @@ class SidebarContent extends ConsumerWidget {
     final storageUsedAsync = ref.watch(totalStorageProvider);
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+        gradient: LinearGradient(
+          colors: [Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3), Theme.of(context).colorScheme.surfaceContainerHighest],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -644,21 +658,21 @@ class SidebarContent extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primary.withValues(alpha: 0.2),
                 ),
-                child: const Icon(Icons.all_inclusive, color: AppColors.primary, size: 16),
+                child: Icon(Icons.all_inclusive, color: AppColors.primary, size: 16),
               ),
-              const SizedBox(width: 10),
-              const Text(
+              SizedBox(width: 10),
+              Text(
                 'Storage',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           storageUsedAsync.when(
             data: (bytes) {
               // Just a visual representation since we have unlimited storage
@@ -672,35 +686,35 @@ class SidebarContent extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${_formatBytes(bytes)} used', style: const TextStyle(color: Colors.white, fontSize: 13)),
-                      const Text('∞', style: TextStyle(color: AppColors.secondary, fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text('${_formatBytes(bytes)} used', style: TextStyle(color: AppColors.onSurface, fontSize: 13)),
+                      Text('∞', style: TextStyle(color: AppColors.secondary, fontSize: 16, fontWeight: FontWeight.bold)),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: boundedValue,
                       minHeight: 4,
-                      backgroundColor: Colors.white12,
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                      backgroundColor: AppColors.outline.withValues(alpha: 0.3),
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
                     ),
                   ),
                 ]
               );
             },
-            loading: () => const LinearProgressIndicator(minHeight: 4, color: AppColors.secondary),
-            error: (_, _) => const Text('Error loading storage', style: TextStyle(color: Colors.white54, fontSize: 12)),
+            loading: () => LinearProgressIndicator(minHeight: 4, color: AppColors.secondary),
+            error: (_, _) => Text('Error loading storage', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(6),
               color: AppColors.secondary.withValues(alpha: 0.15),
               border: Border.all(color: AppColors.secondary.withValues(alpha: 0.3)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.shield_rounded, size: 12, color: AppColors.secondary),
@@ -717,3 +731,35 @@ class SidebarContent extends ConsumerWidget {
     );
   }
 }
+
+/// A small badge in the sidebar that shows the number of active transfers.
+class _TransferBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progressState = ref.watch(aggregateTransferProgressProvider);
+    return progressState.when(
+      data: (data) {
+        final active = (data['uploads'] as int) + (data['downloads'] as int);
+        if (active <= 0) return SizedBox.shrink();
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            '$active',
+            style: TextStyle(
+              color: AppColors.onPrimary,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+}
+

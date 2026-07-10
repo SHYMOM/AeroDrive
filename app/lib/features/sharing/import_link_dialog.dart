@@ -63,10 +63,10 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                 style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
               ),
               TextButton.icon(
-                icon: const Icon(Icons.folder_open, size: 16, color: AppColors.primary),
+                icon: Icon(Icons.folder_open, size: 16, color: AppColors.primary),
                 label: Text(
                   _targetFolderName,
-                  style: const TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
                 onPressed: () async {
                   final pickedId = await showDialog<String>(
@@ -193,7 +193,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Proceed', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          child: Text('Proceed', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                         ),
                       ],
                     ),
@@ -252,7 +252,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+                        child: Text('OK', style: TextStyle(color: AppColors.primary)),
                       )
                     ],
                   ),
@@ -326,7 +326,7 @@ class _SharePasswordPromptDialogState extends State<_SharePasswordPromptDialog> 
         ),
         TextButton(
           onPressed: () => Navigator.pop(context, _controller.text.trim()),
-          child: const Text('Decrypt', style: TextStyle(color: AppColors.primary)),
+          child: Text('Decrypt', style: TextStyle(color: AppColors.primary)),
         ),
       ],
     );

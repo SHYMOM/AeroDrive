@@ -104,7 +104,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(_selectedPlace != null ? Icons.arrow_back : Icons.close, color: Colors.white),
+          icon: Icon(_selectedPlace != null ? Icons.arrow_back : Icons.close, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () {
             if (_selectedPlace != null) {
               setState(() {
@@ -118,7 +118,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
         ),
         title: Text(
           _selectedPlace != null ? (_selectedPlace!.locality ?? 'Unknown Place') : 'Places & Locations',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: DecoratedBox(
@@ -127,8 +127,8 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF10B981).withValues(alpha: 0.15),
-              const Color(0xFF3B82F6).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -146,7 +146,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
       return const Center(child: CircularProgressIndicator());
     }
     if (_placeFiles.isEmpty) {
-      return const Center(child: Text('No photos at this location.', style: TextStyle(color: Colors.white54)));
+      return Center(child: Text('No photos at this location.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)));
     }
 
     return GridView.builder(
@@ -168,7 +168,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
     return placesAsync.when(
       data: (hierarchies) {
         if (hierarchies.isEmpty) {
-          return const Center(child: Text('No location data found in photos.', style: TextStyle(color: Colors.white54)));
+          return Center(child: Text('No location data found in photos.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)));
         }
 
         return RefreshIndicator(
@@ -189,13 +189,13 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(16),
                       gradient: LinearGradient(
-                        colors: [Colors.teal.shade800, Colors.blueGrey.shade900],
+                        colors: [Theme.of(context).colorScheme.primary.withValues(alpha: 0.7), Theme.of(context).colorScheme.surface],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
+                          color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.3),
                           blurRadius: 10,
                           offset: const Offset(0, 5),
                         ),
@@ -203,10 +203,10 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                     ),
                     child: Stack(
                       children: [
-                        const Positioned(
+                        Positioned(
                           right: -10,
                           bottom: -10,
-                          child: Icon(Icons.public, size: 100, color: Colors.white10),
+                          child: Icon(Icons.public, size: 100, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
                         ),
                         Align(
                           alignment: Alignment.centerLeft,
@@ -214,10 +214,10 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                             padding: const EdgeInsets.all(20),
                             child: Text(
                               hierarchy.country,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 letterSpacing: 1.2,
                               ),
                             ),
@@ -233,10 +233,10 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                           children: [
                             Text(
                               stateEntry.key,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -249,25 +249,25 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.03),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.location_city, size: 16, color: Colors.tealAccent),
+                                          Icon(Icons.location_city, size: 16, color: Theme.of(context).colorScheme.primary),
                                           const SizedBox(width: 8),
                                           Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 cityNode.place.locality ?? 'Unknown',
-                                                style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.white, fontSize: 13),
+                                                style: TextStyle(fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
                                               ),
                                               Text(
                                                 '${cityNode.photoCount} photos',
-                                                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                                                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                               ),
                                             ],
                                           ),
@@ -287,7 +287,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
 }
@@ -308,7 +308,7 @@ class _PlaceGridItem extends ConsumerWidget {
             },
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               clipBehavior: Clip.antiAlias,
@@ -320,3 +320,4 @@ class _PlaceGridItem extends ConsumerWidget {
         },
       );
 }
+

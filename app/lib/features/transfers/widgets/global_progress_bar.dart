@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -56,7 +57,9 @@ class GlobalProgressBar extends ConsumerWidget {
           label = 'Downloading $downCount items...';
         }
 
-        return Container(
+        return GestureDetector(
+          onTap: () => context.go('/transfers'),
+          child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.surface,
@@ -78,9 +81,9 @@ class GlobalProgressBar extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Row(
                   children: [
-                    if (upCount > 0) const Icon(Icons.upload, size: 16, color: AppColors.primary),
+                    if (upCount > 0) Icon(Icons.upload, size: 16, color: AppColors.primary),
                     if (upCount > 0 && downCount > 0) const SizedBox(width: 4),
-                    if (downCount > 0) const Icon(Icons.download, size: 16, color: AppColors.secondary),
+                    if (downCount > 0) Icon(Icons.download, size: 16, color: AppColors.secondary),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -99,17 +102,20 @@ class GlobalProgressBar extends ConsumerWidget {
                         fontSize: 12,
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right, size: 16, color: AppColors.onSurfaceVariant),
                   ],
                 ),
               ),
               LinearProgressIndicator(
                 value: progress,
                 backgroundColor: Colors.transparent,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 3,
               ),
             ],
           ),
+        ),
         );
       },
       loading: () => const SizedBox.shrink(),

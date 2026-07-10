@@ -5,14 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
 
 import '../../core/theme/app_colors.dart';
+import '../../features/telegram/telegram_service.dart';
 import '../../widgets/aerodrive_logo.dart';
-import 'testing_ended_screen.dart';
-
-/// Remote gate URL — returns "UNBLOCKED" or "BLOCKED"
-const _kGateUrl = 'https://pastebin.com/raw/Y9JuWHza';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -34,48 +30,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _runSync() async {
-    // ── Step 1: Gate check ─────────────────────────────────────────
-    if (mounted) setState(() { _statusText = 'Checking access...'; _progress = 0.1; });
+    // ── Step 1: Quick animation ───────────────────────────────────
+    if (mounted) setState(() { _statusText = 'Starting...'; _progress = 0.4; });
+    await Future<void>.delayed(const Duration(milliseconds: 200));
 
-    bool isBlocked = false;
-    try {
-      final response = await http
-          .get(Uri.parse(_kGateUrl))
-          .timeout(const Duration(seconds: 8));
-      final body = response.body.trim().toUpperCase();
-      isBlocked = body == 'BLOCKED';
-    } catch (_) {
-      // Network error — allow access so offline users aren't locked out
-      isBlocked = false;
-    }
+    if (mounted) setState(() { _statusText = 'Loading...'; _progress = 0.8; });
+    await Future<void>.delayed(const Duration(milliseconds: 200));
 
     if (!mounted) return;
 
-    if (isBlocked) {
-      // Replace the entire navigator stack with the block screen
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const TestingEndedScreen()),
-      );
-      return;
+    // ── Step 2: Navigate based on auth state ──────────────────────
+    final telegramState = ref.read(telegramServiceProvider);
+
+    if (telegramState == TelegramAuthState.ready) {
+      // Already authenticated, go to drive
+      setState(() { _statusText = 'Welcome back!'; _progress = 1.0; });
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+      if (mounted) context.go('/drive');
+    } else {
+      // Need to authenticate or finish connecting
+      setState(() { _progress = 1.0; });
+      if (mounted) context.go('/auth');
     }
-
-    // ── Step 2: Continue to normal auth flow ───────────────────────
-    if (mounted) setState(() { _statusText = 'Loading...'; _progress = 0.8; });
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-
-    if (mounted) context.go('/auth');
   }
-
 
   @override
   Widget build(BuildContext context) => Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
             radius: 1.5,
             colors: [
-              Color(0xFF0D0E23), // deepSpace
-              Color(0xFF1A0850), // dark edge
+              Theme.of(context).colorScheme.surface,
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
             ],
           ),
         ),
@@ -88,7 +75,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
               ).animate(onPlay: (controller) => controller.repeat())
                .moveY(begin: 0, end: 100, duration: 10.seconds, curve: Curves.linear),
             ),
-            
+
             // Content
             Center(
               child: Column(
@@ -100,7 +87,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
                           blurRadius: 30,
                           spreadRadius: 10,
                         ),
@@ -127,8 +114,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                             child: Text(
                               _statusText,
                               key: ValueKey(_statusText),
-                              style: const TextStyle(
-                                color: Colors.white70,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 fontSize: 14,
                                 letterSpacing: 0.5,
                               ),
@@ -144,7 +131,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               borderRadius: BorderRadius.circular(2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: AppColors.primary.withValues(alpha: 0.4),
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                                   blurRadius: 8,
                                 ),
                               ],
@@ -153,7 +140,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               borderRadius: BorderRadius.circular(2),
                               child: LinearProgressIndicator(
                                 value: _progress > 0 ? _progress : null,
-                                backgroundColor: Colors.white.withValues(alpha: 0.1),
+                                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
                                 valueColor: const AlwaysStoppedAnimation<Color>(
                                   AppColors.primary,
                                 ),
@@ -169,7 +156,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               Text(
                                 'Made With ❤️ In 🇧🇩',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.35),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.35),
                                   fontSize: 10,
                                   letterSpacing: 1.2,
                                 ),
@@ -177,13 +164,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               ),
                               const SizedBox(height: 4),
                               ShaderMask(
-                                shaderCallback: (bounds) => const LinearGradient(
-                                  colors: [Color(0xFF7B61FF), Color(0xFF4A90E2), Color(0xFFEC4899)],
+                                shaderCallback: (bounds) => LinearGradient(
+                                  colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary, Theme.of(context).colorScheme.tertiary],
                                 ).createShader(bounds),
-                                child: const Text(
+                                child: Text(
                                   'SHEIKH SHYMOM ISLAM',
                                   style: TextStyle(
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                     letterSpacing: 2,
@@ -204,8 +191,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         ),
       ),
     );
-}
-
+  }
 class StarfieldPainter extends CustomPainter {
   final Random random = Random(42); // fixed seed for consistent stars
 

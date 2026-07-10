@@ -14,22 +14,26 @@ class AeroThemeState {
     required this.accentColorValue,
     required this.fontScale,
     required this.highContrast,
+    this.localeString = 'System Default',
   });
   final ThemeMode themeMode;
   final int accentColorValue;
   final double fontScale;
   final bool highContrast;
+  final String localeString;
 
   AeroThemeState copyWith({
     ThemeMode? themeMode,
     int? accentColorValue,
     double? fontScale,
     bool? highContrast,
+    String? localeString,
   }) => AeroThemeState(
       themeMode: themeMode ?? this.themeMode,
       accentColorValue: accentColorValue ?? this.accentColorValue,
       fontScale: fontScale ?? this.fontScale,
       highContrast: highContrast ?? this.highContrast,
+      localeString: localeString ?? this.localeString,
     );
 
   /// Value equality: Riverpod uses this to decide whether to notify listeners.
@@ -42,22 +46,24 @@ class AeroThemeState {
         other.themeMode == themeMode &&
         other.accentColorValue == accentColorValue &&
         other.fontScale == fontScale &&
-        other.highContrast == highContrast;
+        other.highContrast == highContrast &&
+        other.localeString == localeString;
   }
 
   @override
-  int get hashCode => Object.hash(themeMode, accentColorValue, fontScale, highContrast);
+  int get hashCode => Object.hash(themeMode, accentColorValue, fontScale, highContrast, localeString);
 }
 
 class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   ThemeNotifier(this._ref) : super(const AeroThemeState(
-    themeMode: ThemeMode.system,
-    accentColorValue: 0xFF1A73E8, // default Google Blue accent
+    themeMode: ThemeMode.dark,
+    accentColorValue: 0xFF1A73E8, // default Professional Blue accent
     fontScale: 1,
     highContrast: false,
+    localeString: 'System Default',
   )) {
-    _updateAppColors(ThemeMode.system);
+    _updateAppColors(ThemeMode.dark);
     _loadTheme();
     PlatformDispatcher.instance.onPlatformBrightnessChanged = () {
       if (state.themeMode == ThemeMode.system) {
@@ -83,7 +89,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
       
       // Load Mode
       final themeStr = await settings.getSetting('app_theme');
-      ThemeMode mode = ThemeMode.system;
+      ThemeMode mode = ThemeMode.dark; // default to dark for professional look
       if (themeStr == 'light') mode = ThemeMode.light;
       if (themeStr == 'dark') mode = ThemeMode.dark;
 
@@ -105,11 +111,15 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
       final contrastStr = await settings.getSetting('app_high_contrast');
       final contrast = contrastStr == 'true';
 
+      // Load Locale
+      final localeStr = await settings.getSetting('app_language');
+
       state = AeroThemeState(
         themeMode: mode,
         accentColorValue: accentValue,
         fontScale: scale,
         highContrast: contrast,
+        localeString: localeStr ?? 'System Default',
       );
       _updateAppColors(mode);
     } catch (e, s) {
@@ -139,6 +149,12 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
   Future<void> setHighContrast(bool enabled) async {
     state = state.copyWith(highContrast: enabled);
     await _ref.read(settingsRepositoryProvider).setSetting('app_high_contrast', enabled.toString());
+  }
+
+  Future<void> setLocale(String locale) async {
+    state = state.copyWith(localeString: locale);
+    await _ref.read(settingsRepositoryProvider).setSetting('app_language', locale);
+    _ref.read(settingsUpdateProvider.notifier).state++;
   }
 }
 

@@ -199,7 +199,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.create_new_folder_outlined, color: AppColors.primary),
+                  icon: Icon(Icons.create_new_folder_outlined, color: AppColors.primary),
                   onPressed: () => _handleCreateFolder(context),
                   tooltip: 'Create New Folder',
                   constraints: const BoxConstraints(),
@@ -294,7 +294,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
               });
               _loadCurrentFolderContents();
             },
-            child: const Text('My Drive', style: TextStyle(color: AppColors.primary, fontSize: 13)),
+            child: Text('My Drive', style: TextStyle(color: AppColors.primary, fontSize: 13)),
           ),
           for (final crumb in _breadcrumbs) ...[
             Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant.withOpacity(0.5), size: 16),
@@ -305,7 +305,7 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
                 });
                 _loadCurrentFolderContents();
               },
-              child: Text(crumb.name, style: const TextStyle(color: AppColors.primary, fontSize: 13)),
+              child: Text(crumb.name, style: TextStyle(color: AppColors.primary, fontSize: 13)),
             ),
           ]
         ],

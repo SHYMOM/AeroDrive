@@ -79,14 +79,14 @@ class FileListItem extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? Colors.white.withValues(alpha: 0.08) 
-            : Colors.white.withValues(alpha: 0.03),
+        color: isSelected
+            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected 
-              ? const Color(0xFF38BDF8) 
-              : Colors.white.withValues(alpha: 0.05),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       child: ListTile(
@@ -140,9 +140,9 @@ class FileListItem extends ConsumerWidget {
               ),
             ),
             if (file.isFavorite)
-              const Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Icon(Icons.star_rounded, color: Color(0xFF38BDF8), size: 16),
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.star_rounded, color: Theme.of(context).colorScheme.primary, size: 16),
               ),
           ],
         ),
@@ -150,7 +150,7 @@ class FileListItem extends ConsumerWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Text(
             subtitleText,
-            style: const TextStyle(color: Colors.white54, fontSize: 11),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
           ),
         ),
         trailing: isSelectionMode
@@ -181,7 +181,7 @@ class FileListItem extends ConsumerWidget {
   }
 
   Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
-      icon: const Icon(Icons.more_vert, color: Colors.white54),
+      icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurfaceVariant),
       color: AppColors.surfaceElevated,
       onSelected: (value) async {
         if (value == 'download') {
@@ -218,17 +218,20 @@ class FileListItem extends ConsumerWidget {
           _showInfoDialog(context, ref);
         }
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: const TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Colors.white))),
-        const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
-      ],
+      itemBuilder: (context) {
+        final theme = Theme.of(context);
+        return [
+          PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: theme.colorScheme.onSurface))),
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        ];
+      },
     );
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
@@ -259,16 +262,16 @@ class FileListItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete File', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to delete "${file.name}"?', style: const TextStyle(color: Colors.white70)),
+        title: Text('Delete File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Are you sure you want to delete "${file.name}"?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -350,45 +353,46 @@ class FileListItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: AppColors.primary),
-            SizedBox(width: 10),
-            Text('File Info', style: TextStyle(color: Colors.white)),
+            const Icon(Icons.info_outline, color: AppColors.primary),
+            const SizedBox(width: 10),
+            Text('File Info', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('Name:', file.name),
-            _buildInfoRow('Type:', file.mimeType ?? 'Unknown'),
-            _buildInfoRow('Size:', sizeStr),
-            _buildInfoRow('Uploaded:', createdStr),
+            _buildInfoRow(context, 'Name:', file.name),
+            _buildInfoRow(context, 'Type:', file.mimeType ?? 'Unknown'),
+            _buildInfoRow(context, 'Size:', sizeStr),
+            _buildInfoRow(context, 'Uploaded:', createdStr),
             if (file.duration != null && file.duration! > 0)
-              _buildInfoRow('Video Duration:', _formatDuration(file.duration)),
-            _buildInfoRow('Photo Taken (EXIF):', photoTakenStr),
+              _buildInfoRow(context, 'Video Duration:', _formatDuration(file.duration)),
+            _buildInfoRow(context, 'Photo Taken (EXIF):', photoTakenStr),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+            child: Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13))),
+          Expanded(child: Text(value, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13))),
         ],
       ),
     );

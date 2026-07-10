@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:cryptography/cryptography.dart';
@@ -12,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/constants.dart';
+import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
@@ -21,6 +23,7 @@ import '../../domain/folder_scanner.dart';
 import '../../domain/recovery/recovery_scanner.dart';
 import '../../domain/sync/config_sync_service.dart';
 import '../sharing/share_service.dart';
+import '../telegram/telegram_service.dart';
 import '../transfers/transfers_screen.dart';
 import '../transfers/widgets/global_progress_bar.dart';
 import 'providers/drive_providers.dart';
@@ -31,6 +34,7 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
+import '../../widgets/sync_debug_overlay.dart';
 
 class DriveScreen extends ConsumerStatefulWidget {
   const DriveScreen({super.key});
@@ -67,17 +71,9 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         categoryPriority: category,
       );
 
-      final channelsStr = await settings.getSetting('storage_channels_list');
-      if (!mounted) return;
-      if (channelsStr == null || channelsStr.isEmpty || channelsStr == '[]') {
-        if (mounted && ref.read(isAppUnlockedProvider)) {
-          _checkConfigRoutine(); // Check for remote config before prompting if already unlocked
-        }
-      } else {
-        ref.read(configCheckedProvider.notifier).state = true;
-        if (mounted && ref.read(isAppUnlockedProvider)) {
-          _checkAndRecreateConfigBackup();
-        }
+      AppLogger.info('DriveScreen: initState postFrameCallback. isAppUnlocked=${ref.read(isAppUnlockedProvider)}');
+      if (mounted && ref.read(isAppUnlockedProvider)) {
+        _runConfigAndSetupCheck();
       }
       
       // Cleanup any temp joined sharing channels that were left joined due to interruption
@@ -88,204 +84,282 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     });
   }
 
-  Future<void> _checkConfigRoutine() async {
+  Future<void> _showPromptDialog({
+    required String title,
+    required String message,
+    required String buttonText,
+    required Future<void> Function() onConfirm,
+  }) async {
     if (!mounted) return;
-    
-    // Check if we've already done this during this session
-    final checked = ref.read(configCheckedProvider);
-    if (checked) {
-      _showChannelSetupPrompt(context);
-      return;
-    }
-    
-    ref.read(configCheckedProvider.notifier).state = true;
-    
-    // Show immediate loading dialog
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => PopScope(
         canPop: false,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Expanded(child: Text('Connecting securely...', style: TextStyle(color: Colors.white))),
-            ],
-          ),
-        ),
-      ),
-    );
-    
-    final configService = ref.read(configSyncServiceProvider);
-    final status = await configService.checkConfigStatus();
-    
-    if (!mounted) return;
-    
-    // Dismiss loading dialog
-    Navigator.of(context, rootNavigator: true).pop();
-
-    if (status == ConfigStatus.missing) {
-      // Channel doesn't exist. Tell user we are creating it, then show setup prompt.
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            backgroundColor: AppColors.surfaceElevated,
-            title: const Text('Creating Sync Channel', style: TextStyle(color: Colors.white)),
-            content: Text(
-              'We are creating a private Telegram channel named "AeroDrive Config" in your account. '
-              'It will be placed in your Archive folder. This channel stores your storage configuration securely so you can sync across devices.\n\n'
-              '⚠️ Please NEVER delete this channel, or you will lose your sync configuration!',
-              style: TextStyle(color: AppColors.onSurface),
-            ),
-            actions: [
-              FilledButton(
-                onPressed: () async {
-                  Navigator.pop(ctx);
-                  
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (dialogCtx) => PopScope(
-                      canPop: false,
-                      child: AlertDialog(
-                        backgroundColor: AppColors.surfaceElevated,
-                        content: Row(
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(width: 20),
-                            Expanded(child: Text('Creating your secure channel...', style: TextStyle(color: Colors.white))),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                  
-                  await configService.syncConfigToChannel();
-                  
-                  if (mounted) {
-                    Navigator.of(context, rootNavigator: true).pop(); // safely close loading dialog
-                    _showChannelSetupPrompt(context);
-                  }
-                },
-                child: const Text('Create Config Channel'),
-              ),
-            ],
-          ),
-        ),
-      );
-    } else if (status == ConfigStatus.found_unrestored) {
-      // Prompt to restore
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surfaceElevated,
-          title: const Text('Configuration Found', style: TextStyle(color: Colors.white)),
-          content: Text(
-            'We found a previous storage configuration saved in your AeroDrive Config channel. '
-            'Would you like to restore these channels and rebuild your database?',
-            style: TextStyle(color: AppColors.onSurface),
-          ),
+          title: Text(title, style: TextStyle(color: AppColors.onSurface)),
+          content: Text(message, style: TextStyle(color: AppColors.onSurface)),
           actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _showChannelSetupPrompt(context);
-              },
-              child: const Text('Skip', style: TextStyle(color: Colors.white54)),
-            ),
             FilledButton(
               onPressed: () async {
                 Navigator.pop(ctx);
-                final jsonConfig = await configService.restoreConfigFromChannel();
-                if (jsonConfig != null) {
-                  final settingsRepo = ref.read(settingsRepositoryProvider);
-                  try {
-                    if (jsonConfig.startsWith('{')) {
-                      final Map<String, dynamic> configMap = jsonDecode(jsonConfig);
-                      final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
-                      final activeChannel = configMap['active_channel_id'] as String? ?? '';
-                      final publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
-                      final publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
-                      final publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
-
-                      await settingsRepo.setSetting('storage_channels_list', rawChannels);
-                      if (activeChannel.isNotEmpty) {
-                        await settingsRepo.setSetting('active_channel_id', activeChannel);
-                      }
-                      if (publicShareChannelId.isNotEmpty) {
-                        await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
-                      }
-                      if (publicShareChannelUsername.isNotEmpty) {
-                        await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
-                      }
-                      if (publicShareChannelInvite.isNotEmpty) {
-                        await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
-                      }
-                      final tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
-                      await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
-                    } else {
-                      await settingsRepo.setSetting('storage_channels_list', jsonConfig);
-                      final List<dynamic> decoded = jsonDecode(jsonConfig);
-                      if (decoded.isNotEmpty) {
-                        final firstChannelId = decoded.first['id'].toString();
-                        await settingsRepo.setSetting('active_channel_id', firstChannelId);
-                      }
-                    }
-                  } catch (e) {
-                    debugPrint('Failed to restore config details: $e');
-                  }
-                  // Trigger disaster recovery
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Restored config. Rebuilding database...'))
-                    );
-                  }
-                  final masterKey = ref.read(masterKeyProvider);
-                  if (masterKey != null) {
-                     await ref.read(recoveryServiceProvider).runDisasterRecovery(
-                       masterKey: SecretKey(masterKey),
-                       onProgress: (scanned, recovered) {
-                         debugPrint('Recovered $recovered items from $scanned messages');
-                       }
-                     );
-                     ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
-                     ref.invalidate(folderContentsProvider);
-                     if (mounted) {
-                       ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Database rebuild complete!'))
-                       );
-                     }
-                  }
+                
+                // Show a secondary loader while onConfirm is running
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (dialogCtx) => PopScope(
+                    canPop: false,
+                    child: AlertDialog(
+                      backgroundColor: AppColors.surfaceElevated,
+                      content: Row(
+                        children: [
+                          const CircularProgressIndicator(),
+                          const SizedBox(width: 20),
+                          Expanded(child: Text('Processing...', style: TextStyle(color: AppColors.onSurface))),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+                
+                try {
+                  await onConfirm();
+                } catch (e) {
+                  AppLogger.error('Prompt action failed', e);
+                }
+                
+                if (mounted) {
+                   Navigator.of(context, rootNavigator: true).pop(); // dismiss loading dialog
                 }
               },
-              child: const Text('Restore & Rebuild'),
+              child: Text(buttonText),
             ),
           ],
         ),
-      );
-    } else {
-      _showChannelSetupPrompt(context);
-    }
+      ),
+    );
   }
 
-  Future<void> _checkAndRecreateConfigBackup() async {
+  Future<void> _runConfigAndSetupCheck() async {
+    AppLogger.info('DriveScreen: _runConfigAndSetupCheck() started.');
+    if (!mounted) return;
+
+    final configService = ref.read(configSyncServiceProvider);
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+
+    // Check if we've already checked config during this app session to avoid repeated checks
+    final checked = ref.read(configCheckedProvider);
+    AppLogger.info('DriveScreen: configChecked status = $checked');
+    if (checked) return;
+
+    // Ensure we show loading state in UI
+    ref.read(configCheckedProvider.notifier).state = false;
+
+    // Start check
+    AppLogger.info('DriveScreen: Running checkConfigStatus...');
+    ConfigStatus status;
     try {
-      final configService = ref.read(configSyncServiceProvider);
-      final status = await configService.checkConfigStatus();
-      if (!mounted) return;
-      if (status == ConfigStatus.missing) {
-        debugPrint('DriveScreen: Config channel was deleted remotely. Auto-recreating config channel backup...');
-        await configService.syncConfigToChannel();
-      }
+      status = await configService.checkConfigStatus().timeout(const Duration(seconds: 15));
+      AppLogger.info('DriveScreen: checkConfigStatus status returned = $status');
+    } on TimeoutException {
+      AppLogger.warning('Config check timed out after 15s — proceeding with local config');
+      if (mounted) ref.read(configCheckedProvider.notifier).state = true;
+      return;
     } catch (e) {
-      debugPrint('DriveScreen: Failed to check or recreate config backup: $e');
+      AppLogger.error('Config check failed', e);
+      if (mounted) ref.read(configCheckedProvider.notifier).state = true;
+      return;
+    }
+
+    if (!mounted) return;
+
+    final localChannels = await settingsRepo.getSetting('storage_channels_list');
+    final hasLocalConfig = localChannels != null && localChannels.isNotEmpty && localChannels != '[]';
+    AppLogger.info('DriveScreen: localConfig=$localChannels, hasLocalConfig=$hasLocalConfig');
+
+    if (status == ConfigStatus.missing) {
+      if (hasLocalConfig) {
+        AppLogger.info('DriveScreen: status is missing, hasLocalConfig is true. Showing recreated prompt.');
+        // Prompt that config channel was deleted remotely and we are recreating it
+        await _showPromptDialog(
+          title: 'Configuration Channel Deleted',
+          message: 'The secure configuration channel was deleted on Telegram. We will now recreate it and restore your sync configuration.',
+          buttonText: 'Recreate Channel',
+          onConfirm: () async {
+            await configService.syncConfigToChannel();
+          },
+        );
+      } else {
+        AppLogger.info('DriveScreen: status is missing, hasLocalConfig is false. Syncing config to channel and showing setup prompt.');
+        // No local config and no remote config, this is a fresh setup.
+        // Create the config channel first so it's always ready.
+        await configService.syncConfigToChannel();
+        if (mounted) {
+          _showChannelSetupPrompt(context);
+        }
+      }
+    } else if (status == ConfigStatus.missing_message) {
+      if (hasLocalConfig) {
+        AppLogger.info('DriveScreen: status is missing_message, hasLocalConfig is true. Showing resync prompt.');
+        // Prompt that config message was deleted remotely
+        await _showPromptDialog(
+          title: 'Configuration Message Deleted',
+          message: 'The configuration backup inside the channel was deleted. We will now re-encrypt and upload your local configuration.',
+          buttonText: 'Re-sync Configuration',
+          onConfirm: () async {
+            await configService.syncConfigToChannel();
+          },
+        );
+      }
+    } else if (status == ConfigStatus.found_unrestored) {
+      AppLogger.info('DriveScreen: status is found_unrestored. Auto-restoring configuration.');
+      // Auto-restore configuration and run recovery
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogCtx) => PopScope(
+            canPop: false,
+            child: AlertDialog(
+              backgroundColor: AppColors.surfaceElevated,
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Restoring configuration from Telegram...', style: TextStyle(color: AppColors.onSurface)),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+
+      final jsonConfig = await configService.restoreConfigFromChannel();
+      if (jsonConfig != null) {
+        try {
+          final telegramService = ref.read(telegramServiceProvider.notifier);
+          if (jsonConfig.startsWith('{')) {
+            final Map<String, dynamic> configMap = jsonDecode(jsonConfig);
+            final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
+            final activeChannel = configMap['active_channel_id'] as String? ?? '';
+            final publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
+            final publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
+            final publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
+
+            // Verify channels exist before saving
+            final List<dynamic> decoded = jsonDecode(rawChannels);
+            final List<Map<String, dynamic>> verifiedChannels = [];
+            for (final ch in decoded) {
+              final id = ch['id'];
+              if (id != null) {
+                final int chatId = id is String ? int.parse(id) : id as int;
+                try {
+                  final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
+                  final adminCheck = await telegramService.checkAdminStatus(chatId);
+                  if (adminCheck['is_admin'] == true) {
+                    verifiedChannels.add({
+                      'id': chatId,
+                      'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
+                      'accountId': ch['accountId'] ?? 'primary',
+                    });
+                  }
+                } catch (e) {
+                  AppLogger.warning('Channel $chatId does not exist: $e');
+                }
+              }
+            }
+
+            if (verifiedChannels.isNotEmpty) {
+              await settingsRepo.setSetting('storage_channels_list', jsonEncode(verifiedChannels));
+              
+              // If active channel is verified, keep it, otherwise pick first verified
+              if (activeChannel.isNotEmpty && verifiedChannels.any((c) => c['id'].toString() == activeChannel)) {
+                await settingsRepo.setSetting('active_channel_id', activeChannel);
+              } else {
+                await settingsRepo.setSetting('active_channel_id', verifiedChannels.first['id'].toString());
+              }
+
+              if (publicShareChannelId.isNotEmpty) {
+                await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
+              }
+              if (publicShareChannelUsername.isNotEmpty) {
+                await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
+              }
+              if (publicShareChannelInvite.isNotEmpty) {
+                await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
+              }
+              final tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
+              await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
+
+              // Run recovery
+              final masterKey = ref.read(masterKeyProvider);
+              if (masterKey != null) {
+                await ref.read(recoveryServiceProvider).runDisasterRecovery(
+                  masterKey: SecretKey(masterKey),
+                );
+                ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+                ref.invalidate(folderContentsProvider);
+              }
+            }
+          } else {
+            // Fallback for legacy simple channels format
+            final List<dynamic> decoded = jsonDecode(jsonConfig);
+            final List<Map<String, dynamic>> verifiedChannels = [];
+            for (final ch in decoded) {
+              final id = ch['id'];
+              if (id != null) {
+                final int chatId = id is String ? int.parse(id) : id as int;
+                try {
+                  final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
+                  final adminCheck = await telegramService.checkAdminStatus(chatId);
+                  if (adminCheck['is_admin'] == true) {
+                    verifiedChannels.add({
+                      'id': chatId,
+                      'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
+                      'accountId': ch['accountId'] ?? 'primary',
+                    });
+                  }
+                } catch (e) {
+                  AppLogger.warning('Channel $chatId does not exist: $e');
+                }
+              }
+            }
+
+            if (verifiedChannels.isNotEmpty) {
+              await settingsRepo.setSetting('storage_channels_list', jsonEncode(verifiedChannels));
+              final firstChannelId = verifiedChannels.first['id'].toString();
+              await settingsRepo.setSetting('active_channel_id', firstChannelId);
+
+              // Run recovery
+              final masterKey = ref.read(masterKeyProvider);
+              if (masterKey != null) {
+                await ref.read(recoveryServiceProvider).runDisasterRecovery(
+                  masterKey: SecretKey(masterKey),
+                );
+                ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+                ref.invalidate(folderContentsProvider);
+              }
+            }
+          }
+        } catch (e) {
+          AppLogger.error('Failed to auto-restore config details: $e');
+        }
+      }
+
+      // Dismiss loading dialog
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    // Mark config check complete so main UI is displayed
+    if (mounted) {
+      ref.read(configCheckedProvider.notifier).state = true;
+      // Also sync the Telegram folder structure to group all connected channels
+      configService.syncTelegramFolder();
     }
   }
 
@@ -295,7 +369,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Welcome to AeroDrive!', style: TextStyle(color: Colors.white)),
+        title: Text('Welcome to AeroDrive!', style: TextStyle(color: AppColors.onSurface)),
         content: Text(
           'To start uploading and syncing your files securely, you need to connect at least one Telegram storage channel.',
           style: TextStyle(color: AppColors.onSurface),
@@ -328,16 +402,9 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<bool>(isAppUnlockedProvider, (previous, next) async {
+      AppLogger.info('DriveScreen: ref.listen(isAppUnlockedProvider) changed: previous=$previous, next=$next');
       if (next) {
-        final settings = ref.read(settingsRepositoryProvider);
-        final channelsStr = await settings.getSetting('storage_channels_list');
-        if (!mounted) return;
-        final isConfigChecked = ref.read(configCheckedProvider);
-        if (!isConfigChecked && (channelsStr == null || channelsStr.isEmpty || channelsStr == '[]')) {
-          _checkConfigRoutine();
-        } else if (channelsStr != null && channelsStr.isNotEmpty && channelsStr != '[]') {
-          _checkAndRecreateConfigBackup();
-        }
+        _runConfigAndSetupCheck();
       }
     });
 
@@ -346,45 +413,53 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     if (!isConfigChecked) {
       return Scaffold(
         backgroundColor: AppColors.background,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      blurRadius: 20,
-                      spreadRadius: 2,
-                    )
-                  ],
-                ),
-                child: const CircularProgressIndicator(color: AppColors.primary),
+        body: Stack(
+          children: [
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.2),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        )
+                      ],
+                    ),
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                  SizedBox(height: 32),
+                  Text(
+                    'Initializing Secure Sync...',
+                    style: TextStyle(
+                      color: AppColors.onSurface,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Establishing end-to-end encryption with Telegram.',
+                    style: TextStyle(
+                      color: AppColors.onSurfaceVariant,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 32),
-              const Text(
-                'Initializing Secure Sync...',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Establishing end-to-end encryption with Telegram.',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
+            ),
+            const Align(
+              alignment: Alignment.topCenter,
+              child: SyncDebugOverlay(),
+            ),
+          ],
         ),
       );
     }
@@ -417,8 +492,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         },
         onDragEntered: (_) {},
         child: contentsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+          loading: () => Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: AppColors.onSurface))),
           data: (contents) {
             final folders = contents['folders'] as List<FolderData>? ?? [];
             final files = contents['files'] as List<FileData>? ?? [];
@@ -449,7 +524,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 // Header (My Drive or Breadcrumb Path overview)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -463,7 +538,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                     ),
-                                    const SizedBox(width: 12),
+                                    SizedBox(width: 12),
                                     Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                   ],
                                 )
@@ -496,18 +571,18 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     ),
                   ),
                 ),
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                SliverToBoxAdapter(child: SizedBox(height: 16)),
 
                 if (isGridView) ...[
                   // Grid Layout
                   if (folders.isNotEmpty) ...[
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
                         child: Text(
                           'Folders',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.onSurface.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
@@ -532,15 +607,15 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     ),
                   ],
                   if (folders.isNotEmpty && files.isNotEmpty)
-                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                    SliverToBoxAdapter(child: SizedBox(height: 20)),
                   if (files.isNotEmpty) ...[
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
                         child: Text(
                           'Files',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.onSurface.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
@@ -567,13 +642,13 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 ] else ...[
                   // List Layout
                   if (folders.isNotEmpty) ...[
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
                         child: Text(
                           'Folders',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.onSurface.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
@@ -592,15 +667,15 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     ),
                   ],
                   if (folders.isNotEmpty && files.isNotEmpty)
-                    const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    SliverToBoxAdapter(child: SizedBox(height: 16)),
                   if (files.isNotEmpty) ...[
-                    const SliverToBoxAdapter(
+                    SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
                         child: Text(
                           'Files',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: AppColors.onSurface.withValues(alpha: 0.7),
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
@@ -627,13 +702,13 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.folder_open, size: 64, color: AppColors.outline),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16),
                           Text('No items', style: TextStyle(color: AppColors.onSurfaceVariant)),
                         ],
                       ),
                     ),
                   ),
-                const SliverToBoxAdapter(child: SizedBox(height: 140)), // Padding for FAB
+                SliverToBoxAdapter(child: SizedBox(height: 140)), // Padding for FAB
               ],
             ),
           );
@@ -643,10 +718,10 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       floatingActionButton: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [AppColors.primaryDark, AppColors.primaryLight],
           ),
-          boxShadow: const [
+          boxShadow: [
             BoxShadow(
               color: AppColors.glowCyan,
               blurRadius: 12,
@@ -658,8 +733,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           onPressed: () => _showNewOptionsBottomSheet(context, currentFolderId),
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: const Text('New', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          icon: Icon(Icons.add, color: AppColors.onSurface),
+          label: Text('New', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
         ),
       ),
       bottomNavigationBar: (isMobile && !isKeyboardVisible)
@@ -677,7 +752,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         backgroundColor: AppColors.surfaceElevated,
         elevation: 4,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: Icon(Icons.close, color: AppColors.onSurface),
           onPressed: () {
             ref.read(isSelectionModeProvider.notifier).state = false;
             ref.read(selectedItemsProvider.notifier).state = {};
@@ -685,21 +760,21 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         ),
         title: Text(
           '${selectedItems.length} selected',
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download_rounded, color: Colors.white),
+            icon: Icon(Icons.download_rounded, color: AppColors.onSurface),
             tooltip: 'Download',
             onPressed: () => _handleDownloadSelected(context, selectedItems),
           ),
           IconButton(
-            icon: const Icon(Icons.copy_rounded, color: Colors.white),
+            icon: Icon(Icons.copy_rounded, color: AppColors.onSurface),
             tooltip: 'Copy',
             onPressed: () => _handleCopySelected(context, selectedItems),
           ),
           IconButton(
-            icon: const Icon(Icons.drive_file_move_rounded, color: Colors.white),
+            icon: Icon(Icons.drive_file_move_rounded, color: AppColors.onSurface),
             tooltip: 'Move',
             onPressed: () => _handleMoveSelected(context, selectedItems),
           ),
@@ -727,7 +802,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.cloud_outlined, color: AppColors.primary, size: 28),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Text(
             'AeroDrive',
             style: TextStyle(
@@ -751,7 +826,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               onTap: () => _showBackgroundTasksBottomSheet(context),
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -761,11 +836,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       child: CircularProgressIndicator(
                         value: progress,
                         strokeWidth: 2,
-                        backgroundColor: Colors.white10,
+                        backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                         valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       '${(progress * 100).toStringAsFixed(0)}%',
                       style: TextStyle(
@@ -804,16 +879,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
             child: Text(
               'My Drive',
               style: TextStyle(
-                color: isRootCurrent ? Colors.white : Colors.white38,
+                color: isRootCurrent ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.6),
                 fontSize: 14,
                 fontWeight: isRootCurrent ? FontWeight.bold : FontWeight.normal,
               ),
             ),
           ),
           for (final folder in breadcrumbs) ...[
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(Icons.chevron_right, size: 14, color: Colors.white24),
+              child: Icon(Icons.chevron_right, size: 14, color: AppColors.outline),
             ),
             GestureDetector(
               onTap: () {
@@ -825,7 +900,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               child: Text(
                 folder.name,
                 style: TextStyle(
-                  color: folder.id == currentFolderId ? Colors.white : Colors.white38,
+                  color: folder.id == currentFolderId ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.6),
                   fontSize: 14,
                   fontWeight: folder.id == currentFolderId ? FontWeight.bold : FontWeight.normal,
                 ),
@@ -906,12 +981,12 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete Items', style: TextStyle(color: Colors.white)),
+        title: Text('Delete Items', style: TextStyle(color: AppColors.onSurface)),
         content: Text('Are you sure you want to delete these ${selectedIds.length} items?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -1082,7 +1157,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       builder: (context) => DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.surfaceElevated,
-            borderRadius: const BorderRadius.only(
+            borderRadius: BorderRadius.only(
               topLeft: Radius.circular(24),
               topRight: Radius.circular(24),
             ),
@@ -1092,24 +1167,24 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Container(
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppColors.outline,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Padding(
+                SizedBox(height: 16),
+                Padding(
                   padding: EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
                       Text(
                         'Create or Upload',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1117,13 +1192,13 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.white10,
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                     child: Icon(Icons.create_new_folder, color: AppColors.primary),
                   ),
-                  title: const Text('New Folder', style: TextStyle(color: Colors.white)),
+                  title: Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
                     final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
@@ -1136,11 +1211,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.white10,
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                     child: Icon(Icons.upload_file, color: AppColors.secondary),
                   ),
-                  title: const Text('Upload Files', style: TextStyle(color: Colors.white)),
+                  title: Text('Upload Files', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
                     final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
@@ -1158,11 +1233,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   },
                 ),
                 ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.white10,
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                     child: Icon(Icons.drive_folder_upload, color: Colors.amber),
                   ),
-                  title: const Text('Upload Folder', style: TextStyle(color: Colors.white)),
+                  title: Text('Upload Folder', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
                     final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
@@ -1178,11 +1253,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                             context: context,
                             builder: (ctx) => AlertDialog(
                               backgroundColor: AppColors.surfaceElevated,
-                              title: const Text('Storage Permission Required', style: TextStyle(color: Colors.white)),
-                              content: const Text(
+                              title: Text('Storage Permission Required', style: TextStyle(color: AppColors.onSurface)),
+                              content: Text(
                                 'AeroDrive needs "Manage All Files" access to read and upload folders from your device.\n\n'
                                 'Please grant this permission in your device Settings > Apps > AeroDrive > Permissions.',
-                                style: TextStyle(color: Colors.white70),
+                                style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.7)),
                               ),
                               actions: [
                                 TextButton(
@@ -1220,7 +1295,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     }
                   },
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
             ),
           ),
@@ -1233,12 +1308,12 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Folder Selection Error', style: TextStyle(color: Colors.white)),
+        title: Text('Folder Selection Error', style: TextStyle(color: AppColors.onSurface)),
         content: Text(
           'Selecting folders in certain directories (like Downloads or Android/data) is not supported by Android\'s storage system.\n\n'
           'Please select a folder from another storage location (e.g. Device storage root or Documents).\n\n'
           'Error details: $error',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
@@ -1260,7 +1335,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
             return DecoratedBox(
               decoration: BoxDecoration(
                 color: AppColors.surfaceElevated,
-                borderRadius: const BorderRadius.only(
+                borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(24),
                   topRight: Radius.circular(24),
                 ),
@@ -1272,30 +1347,30 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Center(
                         child: Container(
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white24,
+                            color: AppColors.outline,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      const Padding(
+                      SizedBox(height: 16),
+                      Padding(
                         padding: EdgeInsets.symmetric(horizontal: 20),
                         child: Text(
                           'Sort options',
-                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                          style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const Divider(color: Colors.white10),
+                      Divider(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
                       
                       // Sort Criteria
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Sort By', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortCriteriaItem(context, 'Name', DriveSortCriteria.name, activeSort, setModalState),
@@ -1303,19 +1378,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       _buildSortCriteriaItem(context, 'Size', DriveSortCriteria.size, activeSort, setModalState),
                       _buildSortCriteriaItem(context, 'Type', DriveSortCriteria.type, activeSort, setModalState),
                       
-                      const Divider(color: Colors.white10),
+                      Divider(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
                       // Sort Order
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Order', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortOrderItem(context, 'Ascending', DriveSortOrder.ascending, activeSort, setModalState),
                       _buildSortOrderItem(context, 'Descending', DriveSortOrder.descending, activeSort, setModalState),
                       
-                      const Divider(color: Colors.white10),
+                      Divider(color: AppColors.outlineVariant.withValues(alpha: 0.3)),
                       // Prioritize Type
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                         child: Text('Prioritize Category', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                       _buildSortCategoryItem(context, 'None', DriveSortCategory.none, activeSort, setModalState),
@@ -1325,7 +1400,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       _buildSortCategoryItem(context, 'Programs First', DriveSortCategory.programs, activeSort, setModalState),
                       _buildSortCategoryItem(context, 'Others First', DriveSortCategory.others, activeSort, setModalState),
                       
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -1337,7 +1412,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
   }
 
   Widget _buildSortCriteriaItem(BuildContext context, String label, DriveSortCriteria criteria, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortCriteria>(
-      title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(label, style: TextStyle(color: AppColors.onSurface, fontSize: 14)),
       value: criteria,
       groupValue: activeSort.criteria,
       activeColor: AppColors.primary,
@@ -1352,7 +1427,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     );
 
   Widget _buildSortOrderItem(BuildContext context, String label, DriveSortOrder order, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortOrder>(
-      title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(label, style: TextStyle(color: AppColors.onSurface, fontSize: 14)),
       value: order,
       groupValue: activeSort.order,
       activeColor: AppColors.primary,
@@ -1367,7 +1442,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     );
 
   Widget _buildSortCategoryItem(BuildContext context, String label, DriveSortCategory category, DriveSortOption activeSort, StateSetter setModalState) => RadioListTile<DriveSortCategory>(
-      title: Text(label, style: const TextStyle(color: Colors.white, fontSize: 14)),
+      title: Text(label, style: TextStyle(color: AppColors.onSurface, fontSize: 14)),
       value: category,
       groupValue: activeSort.categoryPriority,
       activeColor: AppColors.primary,
@@ -1407,7 +1482,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+            child: Text('OK', style: TextStyle(color: AppColors.primary)),
           )
         ],
       ),
@@ -1419,7 +1494,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Encryption Error', style: TextStyle(color: Colors.white)),
+        title: Text('Encryption Error', style: TextStyle(color: AppColors.onSurface)),
         content: Text(
           'Your encryption keys could not be initialized properly. Please try restarting the app or logging out and logging back in.',
           style: TextStyle(color: AppColors.onSurfaceVariant),
@@ -1427,7 +1502,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+            child: Text('OK', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1458,21 +1533,21 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
-          title: const Text('Resume Interrupted Import', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          title: Text('Resume Interrupted Import', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold)),
           content: Text(
             'An import of "${interruptedTask['name']}" was interrupted. '
             'Remaining: ${_formatBytes(remainingBytes)} (approx $durationMin min). '
             'Would you like to resume importing?',
-            style: const TextStyle(color: Colors.white70),
+            style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.7)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Discard', style: TextStyle(color: Colors.white54)),
+              child: Text('Discard', style: TextStyle(color: AppColors.onSurfaceVariant)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Resume', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              child: Text('Resume', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1497,14 +1572,14 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         canPop: false,
         child: AlertDialog(
           backgroundColor: AppColors.surfaceElevated,
-          content: const Row(
+          content: Row(
             children: [
               CircularProgressIndicator(),
               SizedBox(width: 20),
               Expanded(
                 child: Text(
                   'Resuming import and copying chunks...',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(color: AppColors.onSurface),
                 ),
               ),
             ],
@@ -1529,12 +1604,12 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
           context: context,
           builder: (ctx) => AlertDialog(
             backgroundColor: AppColors.surfaceElevated,
-            title: const Text('Resume Failed', style: TextStyle(color: Colors.white)),
-            content: Text(e.toString(), style: const TextStyle(color: Colors.white70)),
+            title: Text('Resume Failed', style: TextStyle(color: AppColors.onSurface)),
+            content: Text(e.toString(), style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.7))),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK', style: TextStyle(color: AppColors.primary)),
+                child: Text('OK', style: TextStyle(color: AppColors.primary)),
               )
             ],
           ),
@@ -1547,7 +1622,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surfaceElevated,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
@@ -1564,10 +1639,10 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Background Tasks',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.onSurface,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1581,16 +1656,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Expanded(
                     child: transfersAsync.when(
                       data: (list) {
                         final active = list.where((item) => item.transfer.status == 'PENDING' || item.transfer.status == 'PROCESSING').toList();
                         if (active.isEmpty) {
-                          return const Center(
+                          return Center(
                             child: Text(
                               'No active background tasks',
-                              style: TextStyle(color: Colors.white54),
+                              style: TextStyle(color: AppColors.onSurfaceVariant),
                             ),
                           );
                         }
@@ -1617,17 +1692,17 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                               ),
                               title: Text(
                                 item.file?.name ?? item.transfer.fileId ?? 'Unknown File',
-                                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: AppColors.onSurface, fontSize: 13, fontWeight: FontWeight.w600),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 6),
+                                padding: EdgeInsets.only(top: 6),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
                                   child: LinearProgressIndicator(
                                     value: progress,
-                                    backgroundColor: Colors.white10,
+                                    backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                                     valueColor: AlwaysStoppedAnimation<Color>(
                                       isUpload ? AppColors.primary : AppColors.secondary,
                                     ),
@@ -1659,3 +1734,4 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     );
   }
 }
+

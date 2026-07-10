@@ -38,7 +38,7 @@ class AudiosScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.audiotrack_outlined, size: 48, color: AppColors.fileAudio),
+                  Icon(Icons.audiotrack_outlined, size: 48, color: AppColors.fileAudio),
                   const SizedBox(height: 16),
                   Text('No audio files found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -83,7 +83,7 @@ class _AudioItem extends ConsumerWidget {
                   }
                   return Container(
                     color: AppColors.fileAudio.withValues(alpha: 0.1),
-                    child: const Icon(Icons.audiotrack_outlined, color: AppColors.fileAudio, size: 22),
+                    child: Icon(Icons.audiotrack_outlined, color: AppColors.fileAudio, size: 22),
                   );
                 },
               ),

@@ -32,7 +32,7 @@ class StorageBanner extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: AppColors.surfaceVariant,
                 ),
-                child: const Icon(Icons.all_inclusive, color: AppColors.secondary, size: 32),
+                child: Icon(Icons.all_inclusive, color: AppColors.secondary, size: 32),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -59,7 +59,7 @@ class StorageBanner extends StatelessWidget {
                 onPressed: () {},
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.secondary,
-                  side: const BorderSide(color: AppColors.secondaryDark),
+                  side: BorderSide(color: AppColors.secondaryDark),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 icon: const Icon(Icons.diamond_outlined, size: 16),

@@ -90,23 +90,23 @@ class FileGridItem extends ConsumerWidget {
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E2D), // Slightly lighter surface #1E1E2D
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected 
-                ? const Color(0xFF38BDF8) // Glow cyan
-                : Colors.white.withValues(alpha: 0.08), // Subtle 1px stroke
+                ? Theme.of(context).colorScheme.primary // Glow cyan
+                : Theme.of(context).colorScheme.outlineVariant, // Subtle 1px stroke
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 blurRadius: 10,
               )
             else
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.2),
                 blurRadius: 8,
               ),
           ],
@@ -127,7 +127,7 @@ class FileGridItem extends ConsumerWidget {
                         if (isImg || isVid)
                           _FileThumbnail(file: file)
                         else
-                          _buildFilePlaceholder(),
+                          _buildFilePlaceholder(context),
                         
                         // Gradient overlay
                         Container(
@@ -136,9 +136,9 @@ class FileGridItem extends ConsumerWidget {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.black.withValues(alpha: 0.3),
+                                Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
                                 Colors.transparent,
-                                Colors.black.withValues(alpha: 0.3),
+                                Theme.of(context).colorScheme.surface.withValues(alpha: 0.3),
                               ],
                             ),
                           ),
@@ -151,10 +151,10 @@ class FileGridItem extends ConsumerWidget {
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.6),
+                              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: _buildTypeBadgeIcon(ext),
+                            child: _buildTypeBadgeIcon(ext, context),
                           ),
                         ),
                         
@@ -167,7 +167,7 @@ class FileGridItem extends ConsumerWidget {
                             child: IconButton(
                               icon: Icon(
                                 file.isFavorite ? Icons.star_rounded : Icons.star_outline_rounded,
-                                color: file.isFavorite ? const Color(0xFF38BDF8) : Colors.white70,
+                                color: file.isFavorite ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant,
                                 size: 20,
                               ),
                               onPressed: () => _toggleFavorite(ref),
@@ -185,16 +185,16 @@ class FileGridItem extends ConsumerWidget {
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.15),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.3),
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                                       width: 1.2,
                                     ),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.play_arrow_rounded,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     size: 24,
                                   ),
                                 ),
@@ -210,13 +210,13 @@ class FileGridItem extends ConsumerWidget {
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.75),
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 _formatDuration(file.duration),
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -232,14 +232,14 @@ class FileGridItem extends ConsumerWidget {
                             child: Container(
                               padding: const EdgeInsets.all(2),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.primary : Colors.black45,
+                                color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 1.5),
+                                border: Border.all(color: Theme.of(context).colorScheme.onSurface, width: 1.5),
                               ),
                               child: Icon(
                                 isSelected ? Icons.check : Icons.add,
                                 size: 12,
-                                color: isSelected ? Colors.black : Colors.transparent,
+                                color: isSelected ? Theme.of(context).colorScheme.surface : Colors.transparent,
                               ),
                             ),
                           ),
@@ -257,8 +257,8 @@ class FileGridItem extends ConsumerWidget {
                           file.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
                           ),
@@ -266,8 +266,8 @@ class FileGridItem extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$dateString • $sizeString',
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 10,
                           ),
                           maxLines: 1,
@@ -283,7 +283,7 @@ class FileGridItem extends ConsumerWidget {
               if (isSelected)
                 Positioned.fill(
                   child: Container(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                   ),
                 ),
             ],
@@ -293,7 +293,7 @@ class FileGridItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildTypeBadgeIcon(String ext) {
+  Widget _buildTypeBadgeIcon(String ext, BuildContext context) {
     if (file.mimeType?.startsWith('video/') == true) {
       return const Icon(Icons.play_arrow_rounded, color: Colors.amber, size: 14);
     }
@@ -308,14 +308,14 @@ class FileGridItem extends ConsumerWidget {
     switch (ext) {
       case 'psd':
       case 'ps':
-        textColor = const Color(0xFF38BDF8);
+        textColor = Theme.of(context).colorScheme.primary;
       case 'pdf':
         textColor = Colors.redAccent;
       case 'xlsx':
       case 'xls':
         textColor = Colors.greenAccent;
       default:
-        textColor = Colors.white70;
+        textColor = Theme.of(context).colorScheme.onSurfaceVariant;
     }
     return Text(
       text.toUpperCase(),
@@ -327,9 +327,9 @@ class FileGridItem extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilePlaceholder() => DecoratedBox(
+  Widget _buildFilePlaceholder(BuildContext context) => DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.02),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
       ),
       child: Center(
         child: FileTypeIcon(
@@ -341,7 +341,7 @@ class FileGridItem extends ConsumerWidget {
     );
 
   Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
-      icon: const Icon(Icons.more_horiz, size: 16, color: Colors.white70),
+      icon: Icon(Icons.more_horiz, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
       color: AppColors.surfaceElevated,
@@ -379,14 +379,14 @@ class FileGridItem extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: const TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
 
@@ -418,16 +418,16 @@ class FileGridItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete File', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to delete "${file.name}"?', style: const TextStyle(color: Colors.white70)),
+        title: Text('Delete File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Are you sure you want to delete "${file.name}"?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -507,15 +507,15 @@ class FileGridItem extends ConsumerWidget {
       ),
       color: AppColors.surfaceElevated,
       items: [
-        const PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: const TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
 
@@ -603,8 +603,8 @@ class _FileThumbnailState extends ConsumerState<_FileThumbnail> {
       return const Center(child: CircularProgressIndicator(strokeWidth: 2));
     }
     return ColoredBox(
-      color: Colors.white.withValues(alpha: 0.05),
-      child: const Icon(Icons.image_outlined, color: Colors.white24, size: 28),
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+      child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.24), size: 28),
     );
   }
 }

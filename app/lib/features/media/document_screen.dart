@@ -38,7 +38,7 @@ class DocumentsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.description_outlined, size: 48, color: AppColors.fileDocument),
+                  Icon(Icons.description_outlined, size: 48, color: AppColors.fileDocument),
                   const SizedBox(height: 16),
                   Text('No documents found', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.onSurface)),
                 ],
@@ -83,7 +83,7 @@ class _DocumentItem extends ConsumerWidget {
                   }
                   return Container(
                     color: AppColors.fileDocument.withValues(alpha: 0.1),
-                    child: const Icon(Icons.description_outlined, color: AppColors.fileDocument, size: 22),
+                    child: Icon(Icons.description_outlined, color: AppColors.fileDocument, size: 22),
                   );
                 },
               ),

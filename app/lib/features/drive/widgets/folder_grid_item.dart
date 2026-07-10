@@ -88,23 +88,23 @@ class FolderGridItem extends ConsumerWidget {
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFF1E1E2D),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF38BDF8)
-                : Colors.white.withValues(alpha: 0.08),
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.outlineVariant,
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: [
             if (isSelected)
               BoxShadow(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
                 blurRadius: 10,
               )
             else
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.2),
                 blurRadius: 8,
               ),
           ],
@@ -129,7 +129,7 @@ class FolderGridItem extends ConsumerWidget {
                   // Bottom Half: Folder Info
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                    color: Colors.black12,
+                    color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
                     width: double.infinity,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -139,8 +139,8 @@ class FolderGridItem extends ConsumerWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                             fontSize: 13,
                           ),
@@ -149,8 +149,8 @@ class FolderGridItem extends ConsumerWidget {
                         Text(
                           itemsCountText,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white54,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             fontSize: 10,
                           ),
                         ),
@@ -168,12 +168,12 @@ class FolderGridItem extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.black54,
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.star_rounded,
-                      color: Color(0xFF38BDF8),
+                      color: Theme.of(context).colorScheme.primary,
                       size: 14,
                     ),
                   ),
@@ -187,14 +187,14 @@ class FolderGridItem extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF38BDF8) : Colors.black45,
+                      color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.0),
+                      border: Border.all(color: Theme.of(context).colorScheme.onSurface, width: 1.0),
                     ),
                     child: Icon(
                       isSelected ? Icons.check : Icons.add,
                       size: 10,
-                      color: isSelected ? Colors.black : Colors.transparent,
+                      color: isSelected ? Theme.of(context).colorScheme.surface : Colors.transparent,
                     ),
                   ),
                 ),
@@ -203,7 +203,7 @@ class FolderGridItem extends ConsumerWidget {
               if (isSelected)
                 Positioned.fill(
                   child: Container(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.12),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
                   ),
                 ),
             ],
@@ -214,7 +214,7 @@ class FolderGridItem extends ConsumerWidget {
   }
 
   Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
-      icon: const Icon(Icons.more_horiz, size: 16, color: Colors.white70),
+      icon: Icon(Icons.more_horiz, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
       color: AppColors.surfaceElevated,
@@ -237,13 +237,13 @@ class FolderGridItem extends ConsumerWidget {
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
 
@@ -283,25 +283,25 @@ class FolderGridItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Rename Folder', style: TextStyle(color: Colors.white)),
+        title: Text('Rename Folder', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
+          decoration: InputDecoration(
             hintText: 'Folder Name',
-            hintStyle: TextStyle(color: Colors.white30),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
+            hintStyle: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.3)),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.24))),
             focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Rename', style: TextStyle(color: AppColors.primary)),
+            child: Text('Rename', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -321,16 +321,16 @@ class FolderGridItem extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
-        title: const Text('Delete Folder', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to delete "${folder.name}" and all its contents?', style: const TextStyle(color: Colors.white70)),
+        title: Text('Delete Folder', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
+        content: Text('Are you sure you want to delete "${folder.name}" and all its contents?', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.7))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -439,14 +439,14 @@ class FolderGridItem extends ConsumerWidget {
       ),
       color: AppColors.surfaceElevated,
       items: [
-        const PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Colors.white))),
-        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: const TextStyle(color: Colors.white))),
-        const PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Colors.white))),
+        PopupMenuItem(value: 'rename', child: Text('Rename', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'share', child: Text('Share', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'star', child: Text(folder.isFavorite ? 'Remove Star' : 'Star Folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
       ],
     );
 

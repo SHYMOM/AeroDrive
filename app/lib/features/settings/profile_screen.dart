@@ -62,7 +62,7 @@ class ProfileScreen extends ConsumerWidget {
             color: AppColors.surfaceElevated,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: AppColors.primary, width: 1.5),
+              side: BorderSide(color: AppColors.primary, width: 1.5),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -89,7 +89,7 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       child: Text(
                         '@${primary.username}',
-                        style: const TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],

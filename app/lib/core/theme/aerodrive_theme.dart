@@ -29,6 +29,14 @@ abstract final class AeroDriveTheme {
 
   /// Curated theme presets for AeroDrive.
   static const List<AeroThemePreset> presets = [
+    // ── Professional presets (top of list = default) ──────────────
+    AeroThemePreset(
+      name: 'Professional Dark',
+      primary: Color(0xFF1A73E8),
+      secondary: Color(0xFF4285F4),
+      icon: Icons.dark_mode,
+      gradient: [Color(0xFF1A73E8), Color(0xFF4285F4)],
+    ),
     AeroThemePreset(
       name: 'Google Blue',
       primary: Color(0xFF1A73E8),
@@ -36,6 +44,14 @@ abstract final class AeroDriveTheme {
       icon: Icons.cloud,
       gradient: [Color(0xFF1A73E8), Color(0xFF4285F4)],
     ),
+    AeroThemePreset(
+      name: 'Material Light',
+      primary: Color(0xFF1565C0),
+      secondary: Color(0xFF42A5F5),
+      icon: Icons.light_mode,
+      gradient: [Color(0xFF1565C0), Color(0xFF42A5F5)],
+    ),
+    // ── Fun/Lifestyle presets ─────────────────────────────────────
     AeroThemePreset(
       name: 'Neon Cyan',
       primary: Color(0xFF00E5FF),

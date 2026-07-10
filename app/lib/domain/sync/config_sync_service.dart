@@ -15,6 +15,7 @@ enum ConfigStatus {
   synced,
   found_unrestored,
   missing,
+  missing_message,
   error
 }
 
@@ -183,6 +184,7 @@ class ConfigSyncService {
       }
 
       AppLogger.info('ConfigSyncService: Config successfully synced to channel.');
+      await syncTelegramFolder();
     } catch (e, s) {
       AppLogger.error('ConfigSyncService: Error syncing config', e, s);
     }
@@ -217,10 +219,15 @@ class ConfigSyncService {
         if (localConfig == null || localConfig.isEmpty || localConfig == '[]') {
           return ConfigStatus.found_unrestored;
         } else {
-          return ConfigStatus.synced; // assuming we trust local if both exist for now, or we can merge
+          return ConfigStatus.synced;
+        }
+      } else {
+        if (localConfig != null && localConfig.isNotEmpty && localConfig != '[]') {
+          return ConfigStatus.missing_message;
+        } else {
+          return ConfigStatus.missing;
         }
       }
-      return ConfigStatus.synced;
     } catch (e) {
       return ConfigStatus.error;
     }
@@ -319,6 +326,34 @@ class ConfigSyncService {
         return channel['id'];
       }
     }
+
+    // Attempt 3: Search in archived chats (the config channel gets archived after creation)
+    final archivedId = await findInArchivedChats();
+    if (archivedId != null) return archivedId;
+
+    return null;
+  }
+
+  Future<int?> findInArchivedChats() async {
+    final telegramService = _ref.read(telegramServiceProvider.notifier);
+    try {
+      final response = await telegramService.sendRequest({
+        "@type": "getChats",
+        "chat_list": {"@type": "chatListArchive"},
+        "limit": 100
+      });
+      if (response['chat_ids'] != null) {
+        for (final chatId in response['chat_ids']) {
+          final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
+          final title = chat['title'] as String?;
+          if (title == _configChannelName || title == 'AeroDrive Config (Do Not Delete)') {
+            return chatId;
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('findInArchivedChats failed: $e');
+    }
     return null;
   }
 
@@ -376,6 +411,47 @@ class ConfigSyncService {
       AppLogger.info('ConfigSyncService: Set channel icon successfully.');
     } catch (e, s) {
       AppLogger.error('ConfigSyncService: Error setting channel icon', e, s);
+    }
+  }
+
+  /// Synchronizes Telegram Chat Filter Folder grouping all app-related channels.
+  Future<void> syncTelegramFolder() async {
+    final telegramService = _ref.read(telegramServiceProvider.notifier);
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+
+    final Set<int> chatIds = {};
+
+    // 1. Add storage channels
+    final savedChannelsJson = await settingsRepo.getSetting('storage_channels_list');
+    if (savedChannelsJson != null && savedChannelsJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(savedChannelsJson);
+        for (final ch in decoded) {
+          final id = ch['id'];
+          if (id != null) {
+            chatIds.add(id is String ? int.parse(id) : id as int);
+          }
+        }
+      } catch (e) {
+        AppLogger.error('syncTelegramFolder: failed to parse storage_channels_list', e);
+      }
+    }
+
+    // 2. Add public share channel
+    final publicShareChannelId = await settingsRepo.getSetting('public_share_channel_id');
+    if (publicShareChannelId != null && publicShareChannelId.isNotEmpty) {
+      final id = int.tryParse(publicShareChannelId);
+      if (id != null) chatIds.add(id);
+    }
+
+    // 3. Add config channel
+    final configChannelId = await findConfigChannel();
+    if (configChannelId != null) {
+      chatIds.add(configChannelId);
+    }
+
+    if (chatIds.isNotEmpty) {
+      await telegramService.updateTelegramFolder(chatIds.toList());
     }
   }
 }

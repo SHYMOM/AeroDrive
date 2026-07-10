@@ -71,7 +71,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
           ? Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.check_circle, color: AppColors.success, size: 48),
+                Icon(Icons.check_circle, color: AppColors.success, size: 48),
                 const SizedBox(height: 16),
                 const Text('Backup exported successfully!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
@@ -90,7 +90,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const CircularProgressIndicator(color: AppColors.primary),
+                    CircularProgressIndicator(color: AppColors.primary),
                     const SizedBox(height: 16),
                     Text('Exporting backup data...', style: TextStyle(color: AppColors.onSurfaceVariant)),
                   ],
@@ -549,7 +549,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: _pickFile,
-              icon: const Icon(Icons.file_open, color: AppColors.secondary),
+              icon: Icon(Icons.file_open, color: AppColors.secondary),
               label: const Text('Choose Backup File', style: TextStyle(color: Colors.white)),
             ),
           ],
@@ -718,7 +718,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         content = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppColors.primary),
+            CircularProgressIndicator(color: AppColors.primary),
             const SizedBox(height: 16),
             Text(
               'Importing backup data...',

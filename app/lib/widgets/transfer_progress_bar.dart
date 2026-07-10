@@ -99,9 +99,9 @@ class TransferProgressBar extends ConsumerWidget {
     if (hasUpload && hasDownload) {
       return Icon(Icons.sync, size: 14, color: AppColors.onSurfaceVariant.withValues(alpha: 0.7));
     } else if (hasUpload) {
-      return const Icon(Icons.cloud_upload_outlined, size: 14, color: AppColors.primaryLight);
+      return Icon(Icons.cloud_upload_outlined, size: 14, color: AppColors.primaryLight);
     } else {
-      return const Icon(Icons.cloud_download_outlined, size: 14, color: AppColors.secondaryLight);
+      return Icon(Icons.cloud_download_outlined, size: 14, color: AppColors.secondaryLight);
     }
   }
 

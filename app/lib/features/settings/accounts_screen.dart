@@ -452,12 +452,56 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
             style: TextStyle(fontSize: 13, color: Colors.white.withValues(alpha: 0.5)),
           ),
           const SizedBox(height: 20),
-          Center(
+           Center(
             child: OtpInput(
               length: 5,
               onCompleted: _verifyCode,
               activeColor: const Color(0xFF03DAC6),
             ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton.icon(
+                onPressed: _isVerifyingCode
+                    ? null
+                    : () async {
+                        await widget.client.resetAuthFlow();
+                      },
+                icon: const Icon(Icons.arrow_back, size: 16),
+                label: const Text('Change Number'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white70),
+              ),
+              TextButton.icon(
+                onPressed: _isVerifyingCode
+                    ? null
+                    : () async {
+                        final rawPhone = _phoneController.text.trim();
+                        final validation = PhoneValidator.validate(rawPhone);
+                        if (validation.isValid) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Resending verification code...')),
+                          );
+                          try {
+                            await widget.client.setAuthenticationPhoneNumber(validation.formattedNumber!);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to resend code: $e'),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        }
+                      },
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Resend Code'),
+                style: TextButton.styleFrom(foregroundColor: Colors.white70),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           Row(

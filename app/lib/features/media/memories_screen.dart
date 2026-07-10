@@ -23,12 +23,12 @@ class MemoriesScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Memories',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: DecoratedBox(
@@ -37,8 +37,8 @@ class MemoriesScreen extends ConsumerWidget {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF7C3AED).withValues(alpha: 0.15),
-              const Color(0xFF00E5FF).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -47,8 +47,8 @@ class MemoriesScreen extends ConsumerWidget {
         child: mediaFilesAsync.when(
           data: (files) {
             if (files.isEmpty) {
-              return const Center(
-                child: Text('No memories found.', style: TextStyle(color: Colors.white54)),
+              return Center(
+                child: Text('No memories found.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               );
             }
 
@@ -75,7 +75,7 @@ class MemoriesScreen extends ConsumerWidget {
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Stack(
@@ -99,11 +99,11 @@ class MemoriesScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 memoryTitle,
-                                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.bold),
                               ),
                               Text(
                                 dateStr,
-                                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13),
                               ),
                             ],
                           ),
@@ -116,7 +116,7 @@ class MemoriesScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         ),
       ),
     );
@@ -134,7 +134,7 @@ class _MemoryCover extends ConsumerWidget {
         if (snapshot.hasData && snapshot.data != null) {
           return Image.file(snapshot.data!, fit: BoxFit.cover);
         }
-        return Container(color: Colors.white.withValues(alpha: 0.05));
+        return Container(color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5));
       },
     );
 }

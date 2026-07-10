@@ -50,12 +50,12 @@ class QuickAccessToolsScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => context.pop(),
         ),
-        title: const Text(
+        title: Text(
           'Quick Access Tools',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
       ),
       body: DecoratedBox(
@@ -64,8 +64,8 @@ class QuickAccessToolsScreen extends ConsumerWidget {
             center: const Alignment(0, -0.3),
             radius: 1.8,
             colors: [
-              const Color(0xFF7C3AED).withValues(alpha: 0.15),
-              const Color(0xFF00E5FF).withValues(alpha: 0.05),
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
+              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
               AppColors.background,
               AppColors.background,
             ],
@@ -88,9 +88,9 @@ class QuickAccessToolsScreen extends ConsumerWidget {
 
                 return DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5)),
                   ),
                   child: InkWell(
                     onTap: () {
@@ -119,8 +119,8 @@ class QuickAccessToolsScreen extends ConsumerWidget {
                           const Spacer(),
                           Text(
                             cat['title'] as String,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -128,8 +128,8 @@ class QuickAccessToolsScreen extends ConsumerWidget {
                           const SizedBox(height: 4),
                           Text(
                             countText,
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                               fontSize: 12,
                             ),
                           ),
@@ -141,7 +141,7 @@ class QuickAccessToolsScreen extends ConsumerWidget {
               },
             ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         ),
       ),
     );

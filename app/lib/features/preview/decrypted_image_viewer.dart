@@ -115,6 +115,7 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
       final manager = ref.read(telegramManagerProvider.notifier);
       final bytesBuilder = BytesBuilder();
+      var processedBytes = 0;
 
       for (final chunk in chunks) {
         if (chunk.messageId == null || chunk.channelId == null) continue;
@@ -144,8 +145,10 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           data: chunkBytes,
           dekBytes: dekBytes,
           ctrIv: ctrIv,
+          globalByteOffset: processedBytes, // CRITICAL: pass offset for CTR mode multi-chunk decryption
         );
         bytesBuilder.add(decryptedBlock);
+        processedBytes += decryptedBlock.length;
       }
 
       final fullBytes = bytesBuilder.toBytes();

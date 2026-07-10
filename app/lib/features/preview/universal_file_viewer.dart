@@ -21,17 +21,17 @@ IconData fileTypeIcon(String? mime, String fileName) {
   if (m.startsWith('image/')) return Icons.image_outlined;
   if (m.startsWith('video/')) return Icons.videocam_outlined;
   if (m.startsWith('audio/')) return Icons.audiotrack_outlined;
-  if (m == 'application/pdf') return Icons.picture_as_pdf_outlined;
-  if (m == 'text/html' || ext == 'html' || ext == 'htm') return Icons.html_outlined;
-  if (m == 'text/x-markdown' || ext == 'md' || ext == 'markdown') return Icons.article_outlined;
-  if (['doc', 'docx'].contains(ext)) return Icons.description_outlined;
-  if (['xls', 'xlsx', 'csv'].contains(ext)) return Icons.table_chart_outlined;
-  if (['ppt', 'pptx'].contains(ext)) return Icons.slideshow_outlined;
-  if (['zip', 'rar', 'tar', '7z', 'gz'].any((e) => m.contains(e) || ext == e)) return Icons.folder_zip_outlined;
+  if (m == 'application/pdf') return Icons.picture_as_pdf;
+  if (m == 'text/html' || ext == 'html' || ext == 'htm') return Icons.html;
+  if (m == 'text/x-markdown' || ext == 'md' || ext == 'markdown') return Icons.article;
+  if (['doc', 'docx'].contains(ext)) return Icons.description;
+  if (['xls', 'xlsx', 'csv'].contains(ext)) return Icons.table_chart;
+  if (['ppt', 'pptx'].contains(ext)) return Icons.slideshow;
+  if (['zip', 'rar', 'tar', '7z', 'gz'].any((e) => m.contains(e) || ext == e)) return Icons.folder_zip;
   if (m.startsWith('text/') || ['java', 'py', 'dart', 'js', 'ts', 'c', 'cpp', 'cs', 'go', 'kt', 'swift', 'rs', 'rb', 'php', 'sh', 'bat', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'conf'].contains(ext)) {
-    return Icons.code_outlined;
+    return Icons.code;
   }
-  return Icons.insert_drive_file_outlined;
+  return Icons.insert_drive_file;
 }
 
 /// Returns a color for a given file type
@@ -122,13 +122,13 @@ class _UniversalFileViewerState extends ConsumerState<UniversalFileViewer> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading file...', style: TextStyle(color: Colors.white70)),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text('Loading file...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
           ],
         ),
       );
@@ -173,11 +173,11 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Failed to load ${file.name}',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 16),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text(error, style: const TextStyle(color: Colors.white54, fontSize: 12), textAlign: TextAlign.center),
+            Text(error, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12), textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -223,7 +223,7 @@ class _UnsupportedView extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               file.name,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
               textAlign: TextAlign.center,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -243,16 +243,16 @@ class _UnsupportedView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               file.mimeType ?? 'Unknown type',
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             Text(
               _formatSize(file.size),
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 12),
             ),
             const SizedBox(height: 32),
-            const Text(
+            Text(
               'This file type cannot be previewed in the app.',
-              style: TextStyle(color: Colors.white54),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -343,7 +343,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
         // Toolbar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: const Color(0xFF1A1A2E),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           child: Row(
             children: [
               // Language badge
@@ -361,13 +361,13 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
               ],
               Text(
                 '${lines.length} lines',
-                style: const TextStyle(color: Colors.white38, fontSize: 11),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 11),
               ),
               const Spacer(),
               // Line numbers toggle
               if (_isCode) IconButton(
                 icon: Icon(Icons.format_list_numbered, size: 18,
-                    color: _showLineNumbers ? Colors.white70 : Colors.white30),
+                    color: _showLineNumbers ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
                 tooltip: 'Toggle line numbers',
                 onPressed: () => setState(() => _showLineNumbers = !_showLineNumbers),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -376,7 +376,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
               // Word wrap toggle
               IconButton(
                 icon: Icon(Icons.wrap_text, size: 18,
-                    color: _wordWrap ? Colors.white70 : Colors.white30),
+                    color: _wordWrap ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
                 tooltip: 'Toggle word wrap',
                 onPressed: () => setState(() => _wordWrap = !_wordWrap),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -389,16 +389,16 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
                 onPressed: () => setState(() => _fontSize = (_fontSize - 1).clamp(8, 32)),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 padding: EdgeInsets.zero,
-                color: Colors.white54,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              Text('${_fontSize.toInt()}', style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              Text('${_fontSize.toInt()}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38), fontSize: 11)),
               IconButton(
                 icon: const Icon(Icons.text_increase, size: 16),
                 tooltip: 'Increase font size',
                 onPressed: () => setState(() => _fontSize = (_fontSize + 1).clamp(8, 32)),
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                 padding: EdgeInsets.zero,
-                color: Colors.white54,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -406,7 +406,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
         // Code content
         Expanded(
           child: Container(
-            color: const Color(0xFF0D1117),
+            color: Theme.of(context).colorScheme.surface,
             child: SingleChildScrollView(
               child: SingleChildScrollView(
                 scrollDirection: _wordWrap ? Axis.vertical : Axis.horizontal,
@@ -423,7 +423,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
     final codeStyle = TextStyle(
       fontFamily: 'monospace',
       fontSize: _fontSize,
-      color: const Color(0xFFE2E8F0),
+      color: Theme.of(context).colorScheme.onSurface,
       height: 1.6,
     );
 
@@ -449,7 +449,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
             children: List.generate(lines.length, (i) => Text(
               '${i + 1}',
               style: codeStyle.copyWith(
-                color: const Color(0xFF4A5568),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: _fontSize * 0.9,
               ),
               textAlign: TextAlign.right,
@@ -459,7 +459,7 @@ class _CodeTextViewerState extends State<_CodeTextViewer> {
           Container(
             width: 1,
             margin: const EdgeInsets.symmetric(horizontal: 12),
-            color: const Color(0xFF2D3748),
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
           // Code lines
           Column(
@@ -559,19 +559,13 @@ class _MarkdownViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = utf8.decode(data, allowMalformed: true);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(file.name, style: const TextStyle(fontSize: 14)),
-        backgroundColor: const Color(0xFF1A1A2E),
-      ),
-      body: Markdown(
-        data: text,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-          p: const TextStyle(color: Colors.white70),
-          h1: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          h2: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          code: const TextStyle(backgroundColor: Colors.black26),
-        ),
+    return Markdown(
+      data: text,
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+        h1: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+        h2: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+        code: const TextStyle(backgroundColor: Colors.black26),
       ),
     );
   }
@@ -587,17 +581,11 @@ class _HtmlViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final html = utf8.decode(data, allowMalformed: true);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(file.name, style: const TextStyle(fontSize: 14)),
-        backgroundColor: const Color(0xFF1A1A2E),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: HtmlWidget(
-          html,
-          textStyle: const TextStyle(color: Colors.white),
-        ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: HtmlWidget(
+        html,
+        textStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
     );
   }
@@ -615,13 +603,18 @@ class _PdfViewer extends StatefulWidget {
 
 class _PdfViewerState extends State<_PdfViewer> {
   PdfController? _pdfController;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _pdfController = PdfController(
-      document: PdfDocument.openData(widget.data),
-    );
+    try {
+      _pdfController = PdfController(
+        document: PdfDocument.openData(widget.data),
+      );
+    } catch (e) {
+      _error = 'Failed to load PDF: $e';
+    }
   }
 
   @override
@@ -632,29 +625,49 @@ class _PdfViewerState extends State<_PdfViewer> {
 
   @override
   Widget build(BuildContext context) {
-    if (_pdfController == null) return const Center(child: CircularProgressIndicator());
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.file.name, style: const TextStyle(fontSize: 14)),
-        backgroundColor: const Color(0xFF1A1A2E),
-        actions: [
-          PdfPageNumber(
-            controller: _pdfController!,
-            builder: (_, loadingState, page, pagesCount) => Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                '$page/${pagesCount ?? 0}',
-                style: const TextStyle(fontSize: 16),
-              ),
-            ),
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.picture_as_pdf, size: 64, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+            ],
           ),
-        ],
-      ),
-      body: PdfView(
-        controller: _pdfController!,
-        scrollDirection: Axis.vertical,
-      ),
+        ),
+      );
+    }
+    if (_pdfController == null) return const Center(child: CircularProgressIndicator());
+    return Column(
+      children: [
+        // Page number indicator
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          child: Row(
+            children: [
+              Text(widget.file.name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13)),
+              const Spacer(),
+              PdfPageNumber(
+                controller: _pdfController!,
+                builder: (_, loadingState, page, pagesCount) => Text(
+                  '$page/${pagesCount ?? 0}',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: PdfView(
+            controller: _pdfController!,
+            scrollDirection: Axis.vertical,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -722,20 +735,15 @@ class _DocxViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final markdownText = _parseDocx(data);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(file.name, style: const TextStyle(fontSize: 14)),
-        backgroundColor: const Color(0xFF1A1A2E),
-      ),
-      body: Markdown(
-        data: markdownText,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-          p: const TextStyle(color: Colors.white70),
-          h1: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          h2: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          code: const TextStyle(backgroundColor: Colors.black26),
-        ),
-      ),
+    final style = MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+      p: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+      h1: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+      h2: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
+      code: const TextStyle(backgroundColor: Colors.black26),
+    );
+    return Markdown(
+      data: markdownText,
+      styleSheet: style,
     );
   }
 }
