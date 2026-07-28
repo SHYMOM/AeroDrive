@@ -103,34 +103,34 @@ class SmartAnalyzer {
 
   Future<void> analyzeAndStore(File imageFile, String fileId) async {
     try {
-      // 1. EXIF Date and GPS extraction
+      // 1. EXIF Date and GPS extraction — streaming, never loads full file
       DateTime? photoTakenAt;
       double? latitude;
       double? longitude;
       try {
-        final fileBytes = await imageFile.readAsBytes();
-        final tags = await readExifFromBytes(fileBytes);
-        
-        final dateTag = tags['Image DateTime'] ?? tags['EXIF DateTimeOriginal'];
-        if (dateTag != null) {
-          try {
-            final str = dateTag.toString();
-            final parts = str.split(' ');
-            final datePart = parts[0].replaceAll(':', '-');
-            photoTakenAt = DateTime.parse('$datePart ${parts[1]}');
-          } catch (_) {}
-        }
+        final exifTags = await _readExifStreaming(imageFile);
+        if (exifTags != null) {
+          final dateTag = exifTags['Image DateTime'] ?? exifTags['EXIF DateTimeOriginal'];
+          if (dateTag != null) {
+            try {
+              final str = dateTag.toString();
+              final parts = str.split(' ');
+              final datePart = parts[0].replaceAll(':', '-');
+              photoTakenAt = DateTime.parse('$datePart ${parts[1]}');
+            } catch (_) {}
+          }
 
-        final latTag = tags['GPS GPSLatitude'];
-        final latRef = tags['GPS GPSLatitudeRef'];
-        final longTag = tags['GPS GPSLongitude'];
-        final longRef = tags['GPS GPSLongitudeRef'];
+          final latTag = exifTags['GPS GPSLatitude'];
+          final latRef = exifTags['GPS GPSLatitudeRef'];
+          final longTag = exifTags['GPS GPSLongitude'];
+          final longRef = exifTags['GPS GPSLongitudeRef'];
 
-        if (latTag != null && latRef != null && longTag != null && longRef != null) {
-          try {
-            latitude = _convertExifGps(latTag, latRef.toString());
-            longitude = _convertExifGps(longTag, longRef.toString());
-          } catch (_) {}
+          if (latTag != null && latRef != null && longTag != null && longRef != null) {
+            try {
+              latitude = _convertExifGps(latTag, latRef.toString());
+              longitude = _convertExifGps(longTag, longRef.toString());
+            } catch (_) {}
+          }
         }
       } catch (e) {
         AppLogger.error('SmartAnalyzer: Failed to parse EXIF for $fileId', e);
@@ -147,36 +147,41 @@ class SmartAnalyzer {
       }
 
       // 2. Machine Learning labels and face detection
-      final isDesktop = kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-      List<String> labels = [];
-      List<Rect> faceRects = [];
-
-      if (isDesktop) {
-        // Mock data for desktop testing
-        labels = ['Nature', 'Sky', 'Outdoor', 'Pet'];
-        final decoded = await img.decodeImageFile(imageFile.path);
-        if (decoded != null) {
-          final hw = decoded.width / 4;
-          final hh = decoded.height / 4;
-          faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
-        }
+      // Skip ML processing for files > 50MB to prevent OOM on devices with limited heap.
+      final fileSize = await imageFile.length();
+      if (fileSize > _maxAnalysisSize) {
+        AppLogger.info('SmartAnalyzer: Skipping ML/face analysis for large file $fileId (${fileSize ~/ (1024*1024)} MB)');
       } else {
-        final inputImage = InputImage.fromFile(imageFile);
-        
-        final labeler = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.7));
-        final mlLabels = await labeler.processImage(inputImage);
-        labels = mlLabels.map((l) => l.label).toList();
-        labeler.close();
+        final isDesktop = kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+        List<String> labels = [];
+        List<Rect> faceRects = [];
 
-        final faceDetector = FaceDetector(options: FaceDetectorOptions());
-        final faces = await faceDetector.processImage(inputImage);
-        faceRects = faces.map((f) => f.boundingBox).toList();
-        faceDetector.close();
-      }
+        if (isDesktop) {
+          labels = ['Nature', 'Sky', 'Outdoor', 'Pet'];
+          final decoded = await img.decodeImageFile(imageFile.path);
+          if (decoded != null) {
+            final hw = decoded.width / 4;
+            final hh = decoded.height / 4;
+            faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
+          }
+        } else {
+          final inputImage = InputImage.fromFile(imageFile);
 
-      await _storeLabels(labels, fileId);
-      if (faceRects.isNotEmpty) {
-        await _processAndStoreFaces(imageFile, faceRects, fileId);
+          final labeler = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.7));
+          final mlLabels = await labeler.processImage(inputImage);
+          labels = mlLabels.map((l) => l.label).toList();
+          labeler.close();
+
+          final faceDetector = FaceDetector(options: FaceDetectorOptions());
+          final facesList = await faceDetector.processImage(inputImage);
+          faceRects = facesList.map((f) => f.boundingBox).toList();
+          faceDetector.close();
+        }
+
+        await _storeLabels(labels, fileId);
+        if (faceRects.isNotEmpty) {
+          await _processAndStoreFaces(imageFile, faceRects, fileId);
+        }
       }
     } catch (e) {
       AppLogger.error('SmartAnalyzer failed for $fileId', e);
@@ -209,6 +214,24 @@ class SmartAnalyzer {
     }
   }
 
+  /// Streams EXIF from the file header without loading the entire file into memory.
+  /// Only reads the first 128KB, which is sufficient for EXIF data in standard JPEG/TIFF files.
+  Future<Map<String, IfdTag>?> _readExifStreaming(File file) async {
+    try {
+      final raf = await file.open(mode: FileMode.read);
+      try {
+        final header = await raf.read(128 * 1024);
+        return await readExifFromBytes(header);
+      } finally {
+        await raf.close();
+      }
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static const int _maxAnalysisSize = 50 * 1024 * 1024;
+
   Future<AnalysisResult> analyzeImageForUpload(File imageFile, String fileId) async {
     DateTime? photoTakenAt;
     double? latitude;
@@ -219,31 +242,34 @@ class SmartAnalyzer {
     String? country;
 
     try {
-      // 1. EXIF Date and GPS extraction
+      final fileLength = await imageFile.length();
+      final bool isLargeFile = fileLength > _maxAnalysisSize;
+
+      // 1. EXIF Date and GPS extraction — streaming, never loads full file
       try {
-        final fileBytes = await imageFile.readAsBytes();
-        final exifTags = await readExifFromBytes(fileBytes);
-        
-        final dateTag = exifTags['Image DateTime'] ?? exifTags['EXIF DateTimeOriginal'];
-        if (dateTag != null) {
-          try {
-            final str = dateTag.toString();
-            final parts = str.split(' ');
-            final datePart = parts[0].replaceAll(':', '-');
-            photoTakenAt = DateTime.parse('$datePart ${parts[1]}');
-          } catch (_) {}
-        }
+        final exifTags = await _readExifStreaming(imageFile);
+        if (exifTags != null) {
+          final dateTag = exifTags['Image DateTime'] ?? exifTags['EXIF DateTimeOriginal'];
+          if (dateTag != null) {
+            try {
+              final str = dateTag.toString();
+              final parts = str.split(' ');
+              final datePart = parts[0].replaceAll(':', '-');
+              photoTakenAt = DateTime.parse('$datePart ${parts[1]}');
+            } catch (_) {}
+          }
 
-        final latTag = exifTags['GPS GPSLatitude'];
-        final latRef = exifTags['GPS GPSLatitudeRef'];
-        final longTag = exifTags['GPS GPSLongitude'];
-        final longRef = exifTags['GPS GPSLongitudeRef'];
+          final latTag = exifTags['GPS GPSLatitude'];
+          final latRef = exifTags['GPS GPSLatitudeRef'];
+          final longTag = exifTags['GPS GPSLongitude'];
+          final longRef = exifTags['GPS GPSLongitudeRef'];
 
-        if (latTag != null && latRef != null && longTag != null && longRef != null) {
-          try {
-            latitude = _convertExifGps(latTag, latRef.toString());
-            longitude = _convertExifGps(longTag, longRef.toString());
-          } catch (_) {}
+          if (latTag != null && latRef != null && longTag != null && longRef != null) {
+            try {
+              latitude = _convertExifGps(latTag, latRef.toString());
+              longitude = _convertExifGps(longTag, longRef.toString());
+            } catch (_) {}
+          }
         }
       } catch (e) {
         AppLogger.error('SmartAnalyzer: Failed to parse EXIF', e);
@@ -264,35 +290,40 @@ class SmartAnalyzer {
       }
 
       // 2. Machine Learning labels and face detection
-      final isDesktop = kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
-      List<Rect> faceRects = [];
-
-      if (isDesktop) {
-        tags = ['Nature', 'Sky', 'Outdoor', 'Pet'];
-        final decoded = await img.decodeImageFile(imageFile.path);
-        if (decoded != null) {
-          final hw = decoded.width / 4;
-          final hh = decoded.height / 4;
-          faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
-        }
+      // Skip ML processing for files > 50MB to prevent OOM on devices with limited heap.
+      if (isLargeFile) {
+        AppLogger.info('SmartAnalyzer: Skipping ML/face analysis for large file $fileId (${fileLength ~/ (1024*1024)} MB)');
       } else {
-        final inputImage = InputImage.fromFile(imageFile);
-        
-        final labeler = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.7));
-        final mlLabels = await labeler.processImage(inputImage);
-        tags = mlLabels.map((l) => l.label).toList();
-        labeler.close();
+        final isDesktop = kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+        List<Rect> faceRects = [];
 
-        final faceDetector = FaceDetector(options: FaceDetectorOptions());
-        final facesList = await faceDetector.processImage(inputImage);
-        faceRects = facesList.map((f) => f.boundingBox).toList();
-        faceDetector.close();
-      }
+        if (isDesktop) {
+          tags = ['Nature', 'Sky', 'Outdoor', 'Pet'];
+          final decoded = await img.decodeImageFile(imageFile.path);
+          if (decoded != null) {
+            final hw = decoded.width / 4;
+            final hh = decoded.height / 4;
+            faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
+          }
+        } else {
+          final inputImage = InputImage.fromFile(imageFile);
 
-      await _storeLabels(tags, fileId);
-      
-      if (faceRects.isNotEmpty) {
-        faces = await _processAndStoreFacesForUpload(imageFile, faceRects, fileId);
+          final labeler = ImageLabeler(options: ImageLabelerOptions(confidenceThreshold: 0.7));
+          final mlLabels = await labeler.processImage(inputImage);
+          tags = mlLabels.map((l) => l.label).toList();
+          labeler.close();
+
+          final faceDetector = FaceDetector(options: FaceDetectorOptions());
+          final facesList = await faceDetector.processImage(inputImage);
+          faceRects = facesList.map((f) => f.boundingBox).toList();
+          faceDetector.close();
+        }
+
+        await _storeLabels(tags, fileId);
+
+        if (faceRects.isNotEmpty) {
+          faces = await _processAndStoreFacesForUpload(imageFile, faceRects, fileId);
+        }
       }
     } catch (e) {
       AppLogger.error('SmartAnalyzer analyzeImageForUpload failed', e);
@@ -311,8 +342,14 @@ class SmartAnalyzer {
 
   Future<List<Map<String, dynamic>>> _processAndStoreFacesForUpload(File imageFile, List<Rect> faceRects, String fileId) async {
     final List<Map<String, dynamic>> facesResult = [];
-    img.Image? decodedImage;
 
+    final fileLength = await imageFile.length();
+    if (fileLength > _maxAnalysisSize) {
+      AppLogger.info('SmartAnalyzer: Skipping face crop for large file $fileId (${fileLength ~/ (1024*1024)} MB)');
+      return facesResult;
+    }
+
+    img.Image? decodedImage;
     try {
       decodedImage = await img.decodeImageFile(imageFile.path);
     } catch (_) {}
@@ -380,8 +417,13 @@ class SmartAnalyzer {
   }
 
   Future<void> _processAndStoreFaces(File imageFile, List<Rect> faceRects, String fileId) async {
-    img.Image? decodedImage;
+    final fileLength = await imageFile.length();
+    if (fileLength > _maxAnalysisSize) {
+      AppLogger.info('SmartAnalyzer: Skipping face crop for large file $fileId (${fileLength ~/ (1024*1024)} MB)');
+      return;
+    }
 
+    img.Image? decodedImage;
     try {
       decodedImage = await img.decodeImageFile(imageFile.path);
     } catch (_) {}

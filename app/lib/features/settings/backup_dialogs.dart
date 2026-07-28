@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io' as io;
 
 import 'package:drift/drift.dart' show InsertMode, Value;
-import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
@@ -41,15 +41,11 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
     }
 
     try {
-      const typeGroup = XTypeGroup(
-        label: 'AeroDrive Backup (*.aerobackup)',
-        extensions: <String>['aerobackup'],
-      );
-      final FileSaveLocation? result = await getSaveLocation(
-        suggestedName: 'aerodrive_backup.aerobackup',
-        acceptedTypeGroups: [typeGroup],
-      );
-      return result?.path;
+      final String? dirPath = await FilePicker.getDirectoryPath();
+      if (dirPath != null) {
+        return p.join(dirPath, 'aerodrive_backup.aerobackup');
+      }
+      return null;
     } catch (e) {
       final dir = await getApplicationDocumentsDirectory();
       return p.join(dir.path, 'aerodrive_backup.aerobackup');
@@ -224,19 +220,22 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
 
   Future<void> _pickFile() async {
     try {
-      XFile? file;
+      FilePickerResult? result;
       try {
-        const typeGroup = XTypeGroup(
-          label: 'AeroDrive Backup (*.aerobackup)',
-          extensions: <String>['aerobackup'],
+        result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['aerobackup'],
         );
-        file = await openFile(acceptedTypeGroups: [typeGroup]);
       } catch (e) {
         final dir = await getApplicationDocumentsDirectory();
         final path = p.join(dir.path, 'aerodrive_backup.aerobackup');
         final fallbackFile = io.File(path);
         if (await fallbackFile.exists()) {
-          file = XFile(path);
+          result = FilePickerResult([PlatformFile(
+            name: 'aerodrive_backup.aerobackup',
+            path: path,
+            size: await fallbackFile.length(),
+          )]);
         } else {
           throw Exception(
             'System file picker is unavailable, and no backup file was found in the App Documents directory at "aerodrive_backup.aerobackup". To restore, place your backup file there.',
@@ -244,13 +243,15 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         }
       }
 
-      if (file == null) return;
+      if (result == null || result.files.isEmpty) return;
 
       setState(() {
         _stage = ImportStage.loading;
       });
 
-      final content = await file.readAsString();
+      final filePath = result.files.single.path;
+      if (filePath == null) throw Exception('Picked file has no path');
+      final content = await io.File(filePath).readAsString();
       final data = jsonDecode(content);
 
       if (data is! Map<String, dynamic> || data['version'] == null || (!data.containsKey('database') && !data.containsKey('settings'))) {
@@ -276,7 +277,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
 
       setState(() {
         _backupData = data;
-        _selectedFilePath = file!.path;
+        _selectedFilePath = filePath;
         _importDatabase = hasDb;
         _importSettings = hasSettings;
         _folderCount = folderCount;

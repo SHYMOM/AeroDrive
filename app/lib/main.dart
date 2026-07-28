@@ -33,6 +33,7 @@ import 'domain/upload_queue_service.dart';
 import 'domain/download_queue_service.dart';
 import 'domain/folder_scanner.dart';
 import 'domain/streaming/streaming_server.dart';
+import 'domain/upload_crash_debugger.dart' as crash;
 import 'domain/sync/realtime_sync_service.dart';
 import 'features/debug/debug_error_screen.dart';
 import 'features/drive/providers/drive_providers.dart';
@@ -506,6 +507,20 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     super.initState();
     _initDeepLinks();
     _checkScheduledBackup();
+
+    // Detect any crashed upload from the previous session.
+    // The file logger writes continuously during uploads so the log
+    // survives an OOM kill. If active_upload.log exists on startup,
+    // the upload was interrupted.
+    Future.microtask(() async {
+      try {
+        final crashLog = await crash.UploadFileLogger.detectCrashedUpload();
+        if (crashLog != null) {
+          AppLogger.warning('Previous upload crashed. Crash log detected in Downloads/AeroDrive/logs/');
+          // The log was renamed to crash_<ts>.log by detectCrashedUpload()
+        }
+      } catch (_) {}
+    });
     Future.microtask(() async {
       try {
         ref.read(autoBackupWatcherProvider).start();
@@ -671,7 +686,13 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
 
 /// Safely logs a critical/global error and presents the DebugErrorScreen.
 void _handleGlobalError(Object error, StackTrace stack) {
+  // Save crash log (sync-ish — delegates async write to a microtask)
   AppLogger.saveCrashLog(error, stack);
+
+  // Also write a standalone crash report to the public Downloads/AeroDrive/logs/
+  // directory so the user can easily find and share it. This runs async but
+  // the error handler must return immediately, so we fire-and-forget.
+  _savePublicCrashReport(error, stack);
 
   try {
     runApp(
@@ -689,6 +710,55 @@ void _handleGlobalError(Object error, StackTrace stack) {
   } catch (e, s) {
     debugPrint('[AeroDrive] Fail-safe crash navigation failed: $e\n$s');
   }
+}
+
+/// Writes a crash report to Downloads/AeroDrive/logs/ so the user can share it.
+void _savePublicCrashReport(Object error, StackTrace stack) {
+  // Use a microtask so we don't block the error handler
+  Future.microtask(() async {
+    try {
+      Directory logDir;
+      if (Platform.isAndroid) {
+        logDir = Directory('/storage/emulated/0/Download/AeroDrive/logs');
+      } else {
+        final downloadDir = await getDownloadsDirectory();
+        if (downloadDir != null) {
+          logDir = Directory('${downloadDir.path}${Platform.pathSeparator}AeroDrive${Platform.pathSeparator}logs');
+        } else {
+          final appDir = await getApplicationDocumentsDirectory();
+          logDir = Directory('${appDir.path}${Platform.pathSeparator}AeroDrive${Platform.pathSeparator}logs');
+        }
+      }
+
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filePath = '${logDir.path}${Platform.pathSeparator}crash_$timestamp.log';
+
+      final buffer = StringBuffer();
+      buffer.writeln('=== AERO DRIVE CRASH REPORT ===');
+      buffer.writeln('Timestamp: ${DateTime.now().toIso8601String()}');
+      buffer.writeln('App Version: 0.1.0-alpha.1');
+      buffer.writeln('');
+      buffer.writeln('Exception: $error');
+      buffer.writeln('');
+      buffer.writeln('Stack Trace:');
+      buffer.writeln(stack.toString());
+      buffer.writeln('');
+      buffer.writeln('=== APPLICATION LOG BUFFER ===');
+      for (final log in AppLogger.logs) {
+        buffer.writeln(log);
+      }
+
+      await File(filePath).writeAsString(buffer.toString());
+      debugPrint('[AeroDrive] Public crash report saved to: $filePath');
+    } catch (e) {
+      // Can't do much — we're already in an error handler
+      debugPrint('[AeroDrive] Failed to save public crash report: $e');
+    }
+  });
 }
 
 RawServerSocket? _backgroundLockSocket;

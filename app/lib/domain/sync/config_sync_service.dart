@@ -259,8 +259,8 @@ class ConfigSyncService {
             if (text != null && text.contains('WARNING: DO NOT DELETE')) {
               // Extract base64 encrypted string
               final parts = text.split('\n\n');
-              if (parts.length >= 3) {
-                final encryptedBase64 = parts.last;
+              if (parts.isNotEmpty) {
+                final encryptedBase64 = parts.last.trim();
                 final encryptedBytes = base64Decode(encryptedBase64);
                 
                 final secretBox = SecretBox.fromConcatenation(

@@ -87,6 +87,85 @@ class EncryptionEngine {
   }
 
   /// Encrypts a source file into a temporary encrypted file using Stream-to-Disk architecture.
+  /// Encrypts a specific byte range [startOffset, startOffset + chunkLength) of [sourceFile]
+  /// directly to [outputFilePath] on disk using a 4MB memory buffer.
+  Future<String> encryptSingleChunkToDisk({
+    required File sourceFile,
+    required String outputFilePath,
+    required int startOffset,
+    required int chunkLength,
+    required List<int> dekBytes,
+    List<int>? ctrIv,
+  }) async {
+    const int bufferSize = 4 * 1024 * 1024;
+
+    final openFile = await sourceFile.open();
+    final outputFile = File(outputFilePath);
+    final sink = outputFile.openWrite();
+    try {
+      await openFile.setPosition(startOffset);
+      var bytesProcessed = 0;
+      final buffer = Uint8List(bufferSize);
+
+      if (ctrIv != null) {
+        final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
+        final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
+
+        while (bytesProcessed < chunkLength) {
+          final toRead = (chunkLength - bytesProcessed < bufferSize)
+              ? chunkLength - bytesProcessed
+              : bufferSize;
+          final bytesRead = await openFile.readInto(buffer, 0, toRead);
+          if (bytesRead == 0) break;
+
+          final int startBlock = (startOffset + bytesProcessed) ~/ 16;
+          final incrementedNonce = incrementNonce(ctrIv, startBlock);
+
+          final block = Uint8List.fromList(buffer.sublist(0, bytesRead));
+          final secretBox = await ctrAlgorithm.encrypt(
+            block,
+            secretKey: secretKey,
+            nonce: incrementedNonce,
+          );
+
+          sink.add(secretBox.cipherText);
+          bytesProcessed += bytesRead;
+          await Future.delayed(Duration.zero);
+        }
+      } else {
+        final secretKey = await _cipher.newSecretKeyFromBytes(dekBytes);
+
+        while (bytesProcessed < chunkLength) {
+          final toRead = (chunkLength - bytesProcessed < bufferSize)
+              ? chunkLength - bytesProcessed
+              : bufferSize;
+          final bytesRead = await openFile.readInto(buffer, 0, toRead);
+          if (bytesRead == 0) break;
+
+          final nonce = _cipher.newNonce();
+          final block = Uint8List.fromList(buffer.sublist(0, bytesRead));
+          final secretBox = await _cipher.encrypt(
+            block,
+            secretKey: secretKey,
+            nonce: nonce,
+          );
+
+          sink.add(secretBox.nonce);
+          sink.add(secretBox.mac.bytes);
+          sink.add(secretBox.cipherText);
+
+          bytesProcessed += bytesRead;
+          await Future.delayed(Duration.zero);
+        }
+      }
+    } finally {
+      await openFile.close();
+      await sink.flush();
+      await sink.close();
+    }
+    return outputFilePath;
+  }
+
   /// Enforces a strict 4MB RAM buffer per the design requirements.
   /// Max logical chunk limit is 1.5GB. If the file exceeds this, it splits into multiple `.enc` files.
   /// If [ctrIv] is provided, uses AES-256-CTR mode (for seekable video streaming).
@@ -103,12 +182,12 @@ class EncryptionEngine {
 
     final file = await sourceFile.open();
     final fileLength = await file.length();
-    
+
     var totalBytesProcessed = 0;
     var currentChunkBytes = 0;
     var chunkIndex = 0;
     final List<String> chunkPaths = [];
-    
+
     var currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
     IOSink currentSink = currentTempFile.openWrite();
     chunkPaths.add(currentTempFile.path);
@@ -116,16 +195,22 @@ class EncryptionEngine {
     if (ctrIv != null) {
       final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
       final secretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
+      final buffer = Uint8List(bufferSize);
 
       while (totalBytesProcessed < fileLength) {
         final bytesToRead = (fileLength - totalBytesProcessed < bufferSize)
             ? fileLength - totalBytesProcessed
             : bufferSize;
-        final block = await file.read(bytesToRead);
+        final bytesRead = await file.readInto(buffer, 0, bytesToRead);
+        if (bytesRead == 0) break;
 
         final int startBlock = totalBytesProcessed ~/ 16;
         final incrementedNonce = incrementNonce(ctrIv, startBlock);
 
+        // CRITICAL: Copy, not a view — buffer.buffer is shared backing store
+        // that would be overwritten on the next iteration before the async
+        // encrypt completes. This was causing file corruption.
+        final block = Uint8List.fromList(buffer.sublist(0, bytesRead));
         final secretBox = await ctrAlgorithm.encrypt(
           block,
           secretKey: secretKey,
@@ -134,8 +219,8 @@ class EncryptionEngine {
 
         currentSink.add(secretBox.cipherText);
 
-        totalBytesProcessed += block.length;
-        currentChunkBytes += block.length;
+        totalBytesProcessed += bytesRead;
+        currentChunkBytes += bytesRead;
 
         if (currentChunkBytes >= limit && totalBytesProcessed < fileLength) {
           await currentSink.flush();
@@ -143,22 +228,27 @@ class EncryptionEngine {
 
           chunkIndex++;
           currentChunkBytes = 0;
-          
+
           currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
           chunkPaths.add(currentTempFile.path);
         }
+        await Future.delayed(Duration.zero);
       }
     } else {
       final secretKey = await _cipher.newSecretKeyFromBytes(dekBytes);
+      final buffer = Uint8List(bufferSize);
 
       while (totalBytesProcessed < fileLength) {
         final bytesToRead = (fileLength - totalBytesProcessed < bufferSize)
             ? fileLength - totalBytesProcessed
             : bufferSize;
-        final block = await file.read(bytesToRead);
+        final bytesRead = await file.readInto(buffer, 0, bytesToRead);
+        if (bytesRead == 0) break;
 
         final nonce = _cipher.newNonce();
+        // CRITICAL: Copy, not a view — same corruption bug as above.
+        final block = Uint8List.fromList(buffer.sublist(0, bytesRead));
         final secretBox = await _cipher.encrypt(
           block,
           secretKey: secretKey,
@@ -169,8 +259,8 @@ class EncryptionEngine {
         currentSink.add(secretBox.mac.bytes);
         currentSink.add(secretBox.cipherText);
 
-        totalBytesProcessed += block.length;
-        currentChunkBytes += block.length;
+        totalBytesProcessed += bytesRead;
+        currentChunkBytes += bytesRead;
 
         if (currentChunkBytes >= limit && totalBytesProcessed < fileLength) {
           await currentSink.flush();
@@ -178,11 +268,12 @@ class EncryptionEngine {
 
           chunkIndex++;
           currentChunkBytes = 0;
-          
+
           currentTempFile = File('$outputDirectory${Platform.pathSeparator}temp_chunk_$chunkIndex.enc');
           currentSink = currentTempFile.openWrite();
           chunkPaths.add(currentTempFile.path);
         }
+        await Future.delayed(Duration.zero);
       }
     }
 

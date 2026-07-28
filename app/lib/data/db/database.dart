@@ -33,7 +33,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -85,6 +85,19 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
             await m.deleteTable('photo_faces');
           } catch (_) {}
           await m.createTable(photoFaces);
+        }
+        if (from < 11) {
+          // Phase 0: Add Channel purpose and auto-create columns
+          await m.addColumn(channels, channels.purpose);
+          await m.addColumn(channels, channels.descriptionCached);
+          await m.addColumn(channels, channels.isAutoCreated);
+        }
+        if (from < 12) {
+          // Phase 0: Add dedicated DEK storage to TransferQueue
+          await m.addColumn(transferQueue, transferQueue.encryptedDek);
+          await m.addColumn(transferQueue, transferQueue.encryptionAlgo);
+          await m.addColumn(transferQueue, transferQueue.encryptionNonce);
+          await m.addColumn(transferQueue, transferQueue.streamingIv);
         }
       },
     );

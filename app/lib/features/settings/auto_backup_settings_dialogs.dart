@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -322,7 +322,7 @@ class _AddBackupProfileDialogState extends ConsumerState<AddBackupProfileDialog>
     }
 
     try {
-      final String? result = await getDirectoryPath();
+      final String? result = await FilePicker.getDirectoryPath();
       if (result != null) {
         setState(() {
           _selectedPath = result;

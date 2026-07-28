@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/infrastructure_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/phone_validator.dart';
 import '../../core/widgets/otp_input.dart';
@@ -20,6 +21,15 @@ class AccountsScreen extends ConsumerStatefulWidget {
 
 class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   bool _hasPendingAccount(List<TelegramService> accounts) => accounts.any((c) => c.authState != TelegramAuthState.ready);
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final accounts = ref.read(telegramManagerProvider);
+      ref.read(infrastructureProvisioningServiceProvider).ensureAccountPromotionsAndFolder(accounts: accounts);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -37,6 +37,7 @@ class ActiveUploadInfo {
     required this.totalChunks,
     required this.chatId,
     required this.messageId,
+    required this.fileName,
   });
   final String queueId;
   final String fileId;
@@ -44,6 +45,7 @@ class ActiveUploadInfo {
   final int totalChunks;
   final int chatId;
   final int messageId;
+  final String fileName;
 }
 
 /// Payload for the isolate-based thumbnail extraction.
@@ -90,6 +92,7 @@ class UploadQueueService {
   UploadQueueService(this._ref, this._db, this._settings, this._telegramManager, this._orchestrator) {
     _startPolling();
     _listenToTdlibEvents();
+    _startConfirmationWatcher();
   }
   final ProviderRef _ref;
   final AeroDriveDatabase _db;
@@ -99,6 +102,7 @@ class UploadQueueService {
 
   Timer? _pollingTimer;
   StreamSubscription? _tdlibSub;
+  Timer? _confirmationWatcher;
 
   // Bug 4 fix: replace single bool with a set of active queue IDs so we can
   // process multiple uploads concurrently instead of blocking on a global flag.
@@ -110,11 +114,27 @@ class UploadQueueService {
   // Maps TDLib file_id -> ActiveUploadInfo for progress tracking
   final Map<int, ActiveUploadInfo> _uploadFileIdMap = {};
 
+  // Phase 3: Round-robin index for distributing thumbnail uploads across accounts
+  int _thumbnailClientIndex = 0;
+
   // Maps "messageId:chatId" -> ActiveUploadInfo for completion tracking
   final Map<String, ActiveUploadInfo> _uploadMessageMap = {};
 
   // Track chunk upload progress: fileId -> {chunkIndex: bytesUploaded}
   final Map<String, Map<int, int>> _uploadProgress = {};
+
+  // ── Chunk confirmation recovery ──
+  // Tracks file IDs where all chunks uploaded to Telegram but confirmation
+  // (updateMessageSendSucceeded) hasn't arrived for all chunks yet.
+  final Set<String> _pendingFinalization = {};
+
+  // Tracks when each file's chunks were all sent (for timeout detection).
+  final Map<String, DateTime> _allChunksSentAt = {};
+
+  // ── Confirmation timeout ──
+  // If updateMessageSendSucceeded hasn't arrived for all chunks within this
+  // duration after the last chunk was sent, we try to finalize from the DB.
+  static const Duration _confirmationTimeout = Duration(minutes: 5);
 
   String _getMimeType(String fileName) {
     final ext = fileName.split('.').last.toLowerCase();
@@ -195,6 +215,85 @@ class UploadQueueService {
     sink.close();
     final hash = await sink.hash();
     return hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// Periodically checks if all chunks for a file are in the chunks table
+  /// and triggers finalization if the confirmation timeout has elapsed.
+  void _startConfirmationWatcher() {
+    _confirmationWatcher = Timer.periodic(const Duration(seconds: 30), (_) async {
+      final now = DateTime.now();
+      final timedOut = <String>[];
+      for (final entry in _allChunksSentAt.entries) {
+        if (now.difference(entry.value) > _confirmationTimeout) {
+          timedOut.add(entry.key);
+        }
+      }
+
+      for (final fileId in timedOut) {
+        _allChunksSentAt.remove(fileId);
+        _pendingFinalization.remove(fileId);
+        AppLogger.warning('Confirmation timeout for file $fileId — attempting recovery finalization');
+
+        try {
+          // Check if all chunks are in the DB
+          final chunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
+          // Find the queue info from any remaining uploadMessageMap entry
+          final queueId = _uploadMessageMap.values
+              .where((v) => v.fileId == fileId)
+              .map((v) => v.queueId)
+              .toSet()
+              .firstOrNull;
+
+          if (queueId != null) {
+            final item = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(queueId))).getSingleOrNull();
+            if (item != null) {
+              final originalFileId = item.fileId;
+              final fileName = originalFileId?.split('|').firstOrNull
+                  ?.split(RegExp(r'[\\/]')).last ?? 'Unknown';
+
+              // Try to get totalChunks from the file record (inserted during processQueueItem)
+              final fileRecord = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
+              final totalChunks = fileRecord?.totalChunks ?? chunks.length;
+
+              if (totalChunks > 0 && chunks.length >= totalChunks) {
+                AppLogger.info('Recovery: All $totalChunks chunks confirmed in DB, finalizing file $fileId');
+                // Register a synthetic entry so _finalizeUpload can find it
+                final lastChunk = chunks.last;
+                final syntheticKey = '${lastChunk.messageId}:${lastChunk.channelId}';
+                _uploadMessageMap[syntheticKey] = ActiveUploadInfo(
+                  queueId: queueId,
+                  fileId: fileId,
+                  chunkIndex: lastChunk.chunkIndex ?? 0,
+                  totalChunks: totalChunks,
+                  chatId: lastChunk.channelId ?? 0,
+                  messageId: lastChunk.messageId ?? 0,
+                  fileName: fileName,
+                );
+                await _finalizeUpload(syntheticKey, null);
+              } else {
+                AppLogger.warning('Recovery: Only ${chunks.length}/$totalChunks chunks found for file $fileId, marking as failed');
+                await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))
+                    .write(const TransferQueueCompanion(
+                  status: drift.Value('FAILED'),
+                  errorMessage: drift.Value('Chunks not confirmed by Telegram after multiple retries'),
+                ));
+                _uploadProgress.remove(fileId);
+                _uploadFileIdMap.removeWhere((_, v) => v.queueId == queueId);
+                _uploadMessageMap.removeWhere((_, v) => v.queueId == queueId);
+
+                // Clean up orphaned DB records
+                try {
+                  await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fileId))).go();
+                  await (_db.delete(_db.files)..where((f) => f.id.equals(fileId))).go();
+                } catch (_) {}
+              }
+            }
+          }
+        } catch (e) {
+          AppLogger.error('Confirmation recovery failed for file $fileId', e);
+        }
+      }
+    });
   }
 
   void _startPolling() {
@@ -313,15 +412,17 @@ class UploadQueueService {
                 status: drift.Value('FAILED'),
                 errorMessage: drift.Value('Telegram rejected the upload.'),
               ));
-              
+
             NotificationService.instance.showUploadFailed(
               NotificationService.instance.getSafeNotificationId(info.queueId),
-              'File Upload',
+              info.fileName,
               'Telegram rejected the upload.',
             );
             _uploadMessageMap.remove(matchKey);
             _uploadFileIdMap.removeWhere((_, v) => v.queueId == info.queueId);
             _uploadProgress.remove(info.fileId);
+            _pendingFinalization.remove(info.fileId);
+            _allChunksSentAt.remove(info.fileId);
           }
         }
       } else if (type == 'updateFile') {
@@ -353,7 +454,7 @@ class UploadQueueService {
             if (totalFileBytes > 0) {
               NotificationService.instance.showUploadProgress(
                 NotificationService.instance.getSafeNotificationId(info.queueId),
-                'File Upload',
+                info.fileName,
                 totalUploaded,
                 totalFileBytes,
               );
@@ -434,7 +535,7 @@ class UploadQueueService {
         [tempFile.path],
         caption: finalCaption,
       );
-      
+
       // We don't delete tempFile immediately since handoffToTelegram is async and might need it.
       // It will be cleaned up by OS temp directory cleaner or can be safely ignored for small thumbnails.
     } catch (e) {
@@ -639,13 +740,13 @@ class UploadQueueService {
       try {
         final cipher = AesGcm.with256bits();
         final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
-        
+
         final encryptedPath = await ThumbnailCacheManager.saveThumbnail(
           fileId: fileId,
           plaintextBytes: finalThumbBytes,
           masterKey: secretKey,
         );
-        
+
         await (_db.update(_db.files)..where((f) => f.id.equals(fileId))).write(
           FilesCompanion(
             thumbnailPath: drift.Value(encryptedPath),
@@ -731,6 +832,7 @@ class UploadQueueService {
         path,
         queueId: item.id,
         fileId: fileId,
+        fileName: fileName,
         chunkIndex: i,
         totalChunks: totalChunks,
         caption: chunkCaption,
@@ -739,6 +841,10 @@ class UploadQueueService {
     }
 
     await Future.wait(uploadFutures);
+
+    // All chunks have been sent to Telegram. Track this for the confirmation
+    // recovery watcher in case updateMessageSendSucceeded never arrives.
+    _allChunksSentAt[fileId] = DateTime.now();
   }
 
   Future<void> _uploadChunkWithTracking(
@@ -747,12 +853,13 @@ class UploadQueueService {
     String chunkPath, {
     required String queueId,
     required String fileId,
+    required String fileName,
     required int chunkIndex,
     required int totalChunks,
     String? caption,
   }) async {
     AppLogger.info('_uploadChunkWithTracking: chunk=$chunkIndex/$totalChunks fileId=$fileId captionPresent=${caption != null} captionLen=${caption?.length ?? 0}');
-    
+
     const maxRetries = 3;
     for (var attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -785,6 +892,7 @@ class UploadQueueService {
             totalChunks: totalChunks,
             chatId: chatId,
             messageId: messageId,
+            fileName: fileName,
           );
 
           _uploadMessageMap[key] = info;
@@ -815,7 +923,7 @@ class UploadQueueService {
         }
       } catch (e, s) {
         AppLogger.error('Upload chunk $chunkIndex attempt ${attempt + 1}/$maxRetries failed', e, s);
-        
+
         if (attempt < maxRetries - 1) {
           final backoff = Duration(seconds: 2 * (attempt + 1));
           AppLogger.info('Retrying chunk $chunkIndex in ${backoff.inSeconds}s...');
@@ -830,12 +938,24 @@ class UploadQueueService {
           _uploadMessageMap.removeWhere((_, v) => v.queueId == queueId);
           _uploadFileIdMap.removeWhere((_, v) => v.queueId == queueId);
           _uploadProgress.remove(fileId);
+          _pendingFinalization.remove(fileId);
+          _allChunksSentAt.remove(fileId);
+
+          // Clean up orphaned DB records (file + chunks) so they don't
+          // appear as "Files in online" despite a failed upload.
+          try {
+            await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fileId))).go();
+            await (_db.delete(_db.files)..where((f) => f.id.equals(fileId))).go();
+            AppLogger.info('Cleaned up orphaned DB records for failed upload fileId=$fileId');
+          } catch (cleanupErr) {
+            AppLogger.warning('Failed to clean up orphaned records: $cleanupErr');
+          }
         }
       }
     }
   }
 
-  Future<void> _finalizeUpload(String messageKey, Map<String, dynamic> message) async {
+  Future<void> _finalizeUpload(String messageKey, Map<String, dynamic>? message) async {
     final uploadInfo = _uploadMessageMap[messageKey];
     if (uploadInfo == null) return;
     final queueId = uploadInfo.queueId;
@@ -937,9 +1057,11 @@ class UploadQueueService {
       _uploadProgress.remove(fileId);
       _uploadFileIdMap.removeWhere((_, v) => v.queueId == queueId);
       _uploadMessageMap.removeWhere((_, v) => v.queueId == queueId);
+      _pendingFinalization.remove(fileId);
+      _allChunksSentAt.remove(fileId);
 
       AppLogger.info('Upload Completed and Finalized for $fileName!');
-      
+
       NotificationService.instance.showUploadComplete(
         NotificationService.instance.getSafeNotificationId(queueId),
         fileName,
@@ -987,7 +1109,7 @@ class UploadQueueService {
   ///   - Videos:  skipped (media_kit frame extraction to be added in Phase D)
   /// A strict 5-second timeout + catch-all ensures the upload never crashes.
   Future<void> _uploadThumbnail(String fileId, String originalPath,
-      Map<String, dynamic> fileMessage, List<int> masterKey) async {
+      Map<String, dynamic>? fileMessage, List<int> masterKey) async {
     AppLogger.info('_uploadThumbnail START for fileId=$fileId');
     try {
       final originalFile = File(originalPath);
@@ -1070,7 +1192,7 @@ class UploadQueueService {
       final thumbCaptionBase64 = base64Encode(thumbCaptionBuilder.toBytes());
 
       // 5. Determine target channel from the file message
-      final chatId = fileMessage['chat_id'] as int?;
+      final chatId = fileMessage?['chat_id'] as int?;
       if (chatId == null) {
         AppLogger.warning('_uploadThumbnail: no chat_id in file message');
         await thumbFile.delete();
@@ -1114,5 +1236,6 @@ class UploadQueueService {
   void dispose() {
     _pollingTimer?.cancel();
     _tdlibSub?.cancel();
+    _confirmationWatcher?.cancel();
   }
 }

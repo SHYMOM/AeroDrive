@@ -105,6 +105,7 @@ class _PreviewOverlayState extends ConsumerState<_PreviewOverlay> {
       try {
         final container = ProviderScope.containerOf(context);
         final bytes = await loadDecryptedFile(container, widget.file);
+        if (bytes == null) return;
         if (mounted) {
           setState(() {
             _decryptedBytes = bytes;

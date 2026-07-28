@@ -102,29 +102,10 @@ class StreamingServer {
         return Response(401, body: 'Vault is locked');
       }
 
-      final cipher = AesGcm.with256bits();
-      final masterKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
-
-      final parts = fileData.sha256Hash!.contains('|') 
-          ? fileData.sha256Hash!.split('|') 
-          : fileData.sha256Hash!.split(':');
-      if (parts.length < 3) {
-        return Response(500, body: 'Invalid key material in database');
-      }
-
-      final dekNonce = base64Decode(parts[0]);
-      final dekMac = base64Decode(parts[1]);
-      final dekCipherText = base64Decode(parts[2]);
-      
-      final dekBytes = await cipher.decrypt(
-        SecretBox(dekCipherText, nonce: dekNonce, mac: Mac(dekMac)),
-        secretKey: masterKey,
-      );
-
-      List<int>? ctrIv;
-      if (parts.length >= 4) {
-        ctrIv = base64Decode(parts[3]);
-      }
+      final engine = EncryptionEngine();
+      final unwrapped = await engine.unwrapDek(fileData.sha256Hash!, masterKeyBytes);
+      final dekBytes = unwrapped[0]!;
+      final ctrIv = unwrapped[1];
 
       // 4. Handle Range Header
       final rangeHeader = request.headers['range'];

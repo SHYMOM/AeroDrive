@@ -1,4 +1,9 @@
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/logger.dart';
+import '../../core/providers/infrastructure_providers.dart';
+import '../../core/providers/security_providers.dart';
 import '../../features/telegram/telegram_service.dart';
 
 enum AuthState { initial, loading, unauthenticated, authenticated }
@@ -21,9 +26,16 @@ class AuthNotifier extends StateNotifier<AuthState> {
     // Listen to Telegram auth state changes
     _ref.listen(_telegramAuthStateProvider, (prev, next) {
       if (next == TelegramAuthState.ready) {
-        // Once authenticated, lock it in
         _hasBeenAuthenticated = true;
-        state = AuthState.authenticated;
+        state = AuthState.loading;
+
+        // Ensure channels are provisioned/discovered BEFORE proceeding to main UI
+        _ensureInfrastructure().then((_) {
+          state = AuthState.authenticated;
+        }).catchError((e) {
+          AppLogger.error('AuthNotifier: Infrastructure setup failed', e);
+          state = AuthState.authenticated;
+        });
       } else if (next == TelegramAuthState.waitPhoneNumber ||
                  next == TelegramAuthState.waitCode ||
                  next == TelegramAuthState.waitPassword) {
@@ -41,11 +53,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final initialState = _ref.read(_telegramAuthStateProvider);
     if (initialState == TelegramAuthState.ready) {
       _hasBeenAuthenticated = true;
-      state = AuthState.authenticated;
+      state = AuthState.loading;
+
+      _ensureInfrastructure().then((_) {
+        state = AuthState.authenticated;
+      }).catchError((e) {
+        AppLogger.error('AuthNotifier: Initial infrastructure setup failed', e);
+        state = AuthState.authenticated;
+      });
     } else if (initialState == TelegramAuthState.initial) {
       state = AuthState.loading;
     } else if (!_hasBeenAuthenticated) {
       state = AuthState.unauthenticated;
+    }
+  }
+
+  /// Ensures AeroDrive channel infrastructure exists.
+  /// Tries discovery first, falls back to provisioning.
+  Future<void> _ensureInfrastructure() async {
+    try {
+      final masterKeyBytes = _ref.read(masterKeyProvider);
+      if (masterKeyBytes == null) {
+        AppLogger.warning('Auth: master key not available yet, skipping infra check');
+        return;
+      }
+
+      final masterKey = SecretKey(masterKeyBytes);
+      await _ref.read(ensureInfrastructureProvider(masterKey).future);
+    } catch (e, s) {
+      AppLogger.error('Auth: Infrastructure provisioning/discovery failed', e, s);
     }
   }
 

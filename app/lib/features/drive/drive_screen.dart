@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:cross_file/cross_file.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:drift/drift.dart' as drift;
-import 'package:file_selector/file_selector.dart';
+import 'package:file_picker/file_picker.dart';
+import 'file_picker_util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1222,13 +1224,25 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
-                    final List<XFile> result = await openFiles();
-                    if (result.isNotEmpty) {
-                      final scanner = ref.read(folderScannerProvider);
-                      for (final file in result) {
-                        await scanner.scanAndQueueDirectory(file.path, currentFolderId);
+                    try {
+                      final paths = await pickFilesForUpload();
+                      if (paths.isNotEmpty) {
+                        final scanner = ref.read(folderScannerProvider);
+                        for (final path in paths) {
+                          await scanner.scanAndQueueDirectory(path, currentFolderId);
+                        }
+                        ref.invalidate(folderContentsProvider);
                       }
-                      ref.invalidate(folderContentsProvider);
+                    } catch (e, s) {
+                      AppLogger.error('DriveScreen: Failed to select or queue files for upload', e, s);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Could not open selected file: $e'),
+                            backgroundColor: AppColors.error,
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
@@ -1282,7 +1296,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
 
                     String? directoryPath;
                     try {
-                      directoryPath = await getDirectoryPath();
+                      directoryPath = await FilePicker.getDirectoryPath();
                     } catch (e) {
                       if (context.mounted) {
                         _showFolderSelectionError(context, e);

@@ -55,3 +55,36 @@ abstract final class AppConstants {
   static const double radiusLarge = 16;
   static const double radiusXLarge = 20;
 }
+
+/// Channel infrastructure constants for auto-provisioning and discovery.
+abstract final class ChannelConstants {
+  /// Number of storage channels created during first-time provisioning.
+  static const int defaultStorageChannelCount = 3;
+
+  /// Display name for the config/metadata channel.
+  static const String configChannelName = 'AeroDrive Config';
+
+  /// Display name for the public sharing channel.
+  static const String sharedChannelName = 'AeroDrive Shared';
+
+  /// Base name for storage channels (index 1..N appended).
+  static const String storageChannelBaseName = 'AeroDrive Storage';
+
+  /// Telegram folder name that groups all AeroDrive channels.
+  static const String folderName = 'AeroDrive';
+
+  /// Marker string placed in the config channel description for identification.
+  static const String configChannelMarker = '[AERODRIVE_CONFIG_v1]';
+
+  /// Current version of the channel description encoding scheme.
+  static const String descriptionVersion = '1';
+
+  // ── Description purpose tags ─────────────────────────────────────────
+  static const String descriptionPurposeStorage = 'storage';
+  static const String descriptionPurposeConfig = 'config';
+  static const String descriptionPurposeShared = 'shared';
+
+  // ── Channel description encryption ───────────────────────────────────
+  /// Prefix for infrastructure metadata stored in channel descriptions.
+  static const String infraDescriptionPrefix = 'AERODRIVE_INFRA_v1:';
+}

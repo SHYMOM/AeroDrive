@@ -98,20 +98,28 @@ class FolderScanner {
 
   /// Queues a single file for upload.
   Future<void> _queueSingleFile(String path, String? targetFolderId) async {
-    final f = File(path);
-    final fileSize = await f.length();
-    final queueId = _uuid.v4();
-    await _db.into(_db.transferQueue).insert(
-      TransferQueueCompanion.insert(
-        id: queueId,
-        type: const drift.Value('UPLOAD_FILE'),
-        status: const drift.Value('PENDING'),
-        priority: const drift.Value(1),
-        totalBytes: drift.Value(fileSize),
-        fileId: drift.Value('${f.path}|${targetFolderId ?? ''}'),
-        createdAt: drift.Value(DateTime.now()),
-      ),
-    );
+    try {
+      final f = File(path);
+      if (!await f.exists()) {
+        AppLogger.warning('FolderScanner: File does not exist at $path');
+        return;
+      }
+      final fileSize = await f.length();
+      final queueId = _uuid.v4();
+      await _db.into(_db.transferQueue).insert(
+        TransferQueueCompanion.insert(
+          id: queueId,
+          type: const drift.Value('UPLOAD_FILE'),
+          status: const drift.Value('PENDING'),
+          priority: const drift.Value(1),
+          totalBytes: drift.Value(fileSize),
+          fileId: drift.Value('${f.path}|${targetFolderId ?? ''}'),
+          createdAt: drift.Value(DateTime.now()),
+        ),
+      );
+    } catch (e, s) {
+      AppLogger.error('FolderScanner: Failed to queue single file at $path', e, s);
+    }
   }
 
   /// Recursively walks a directory tree, creates DB folder entries, and queues

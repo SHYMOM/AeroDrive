@@ -65,7 +65,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ]),
                   _buildSettingsGroup('Storage Channels', Icons.dns_outlined, cs, [
                     _SettingsItem('Storage Channels', 'Manage storage backends', Icons.dns_outlined, onTap: () => context.push('/settings/channels')),
-                    _SettingsItem('Load Balancing Strategy', 'Round Robin / Fill First / Random', Icons.balance, onTap: () => context.push('/settings/channels/load_balancing')),
                     _SettingsItem('Channel Health Check', 'Verify integrity of channel messages', Icons.health_and_safety_outlined, onTap: () => context.push('/settings/channels/health')),
                   ]),
                   _buildSettingsGroup('Backup & Restore', Icons.settings_backup_restore, cs, [

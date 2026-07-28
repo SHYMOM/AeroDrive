@@ -86,9 +86,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   static final Completer<void> _tdlibInitCompleter = Completer<void>();
   static final Map<int, TelegramService> _instances = {};
   
-  late final int _apiId;
-  late final String _apiHash;
-  late final String _dbPath;
+  int _apiId = 0;
+  String _apiHash = '';
+  String _dbPath = '';
 
   int? userId;
   String? firstName;
@@ -542,75 +542,75 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
   }
 
-  /// Groups AeroDrive connected channels into a Telegram Chat Filter Folder named 'AeroDrive'.
+  /// Groups AeroDrive connected channels into a Telegram Chat Folder named 'AeroDrive'.
   Future<void> updateTelegramFolder(List<int> chatIds) async {
     try {
-      // 1. Get all chat filters
-      final filtersResponse = await sendRequest({"@type": "getChatFilters"});
-      final filters = filtersResponse['filters'] as List<dynamic>? ?? [];
+      // 1. Get all chat folders (TDLib API: getChatFolders, not deprecated getChatFilters)
+      final foldersResponse = await sendRequest({"@type": "getChatFolders"});
+      final folders = foldersResponse['chat_folders'] as List<dynamic>? ?? [];
       
-      int? aeroDriveFilterId;
-      Map<String, dynamic>? existingFilter;
+      int? aeroDriveFolderId;
+      Map<String, dynamic>? existingFolder;
       
-      for (final f in filters) {
+      for (final f in folders) {
         if (f['title'] == 'AeroDrive') {
-          aeroDriveFilterId = f['id'] as int?;
+          aeroDriveFolderId = f['id'] as int?;
           break;
         }
       }
       
-      // If filter exists, retrieve its full details
-      if (aeroDriveFilterId != null) {
-        final filterDetail = await sendRequest({
-          "@type": "getChatFilter",
-          "chat_filter_id": aeroDriveFilterId,
+      // If folder exists, retrieve its full details
+      if (aeroDriveFolderId != null) {
+        final folderDetail = await sendRequest({
+          "@type": "getChatFolder",
+          "chat_folder_id": aeroDriveFolderId,
         });
-        if (filterDetail['@type'] != 'error') {
-          existingFilter = filterDetail;
+        if (folderDetail['@type'] != 'error') {
+          existingFolder = folderDetail;
         }
       }
       
       final Set<int> targetChatIds = chatIds.toSet();
       
-      if (existingFilter != null) {
-        // Update existing filter
-        final List<dynamic> included = List.from(existingFilter['included_chat_ids'] ?? []);
+      if (existingFolder != null) {
+        // Update existing folder
+        final List<dynamic> included = List.from(existingFolder['included_chat_ids'] ?? []);
         final Set<int> currentIncluded = included.map((e) => e as int).toSet();
         
         // Add new ones
         currentIncluded.addAll(targetChatIds);
         
         final response = await sendRequest({
-          "@type": "editChatFilter",
-          "chat_filter_id": aeroDriveFilterId,
-          "filter": {
-            "@type": "chatFilter",
+          "@type": "editChatFolder",
+          "chat_folder_id": aeroDriveFolderId,
+          "folder": {
+            "@type": "chatFolder",
             "title": "AeroDrive",
-            "icon_name": existingFilter['icon_name'] ?? "Folder",
-            "pinned_chat_ids": existingFilter['pinned_chat_ids'] ?? [],
+            "icon_name": existingFolder['icon_name'] ?? "Folder",
+            "pinned_chat_ids": existingFolder['pinned_chat_ids'] ?? [],
             "included_chat_ids": currentIncluded.toList(),
-            "excluded_chat_ids": existingFilter['excluded_chat_ids'] ?? [],
-            "exclude_muted": existingFilter['exclude_muted'] ?? false,
-            "exclude_read": existingFilter['exclude_read'] ?? false,
-            "exclude_archived": existingFilter['exclude_archived'] ?? false,
-            "include_contacts": existingFilter['include_contacts'] ?? false,
-            "include_non_contacts": existingFilter['include_non_contacts'] ?? false,
-            "include_groups": existingFilter['include_groups'] ?? false,
-            "include_broadcasts": existingFilter['include_broadcasts'] ?? false,
-            "include_bots": existingFilter['include_bots'] ?? false,
+            "excluded_chat_ids": existingFolder['excluded_chat_ids'] ?? [],
+            "exclude_muted": existingFolder['exclude_muted'] ?? false,
+            "exclude_read": existingFolder['exclude_read'] ?? false,
+            "exclude_archived": existingFolder['exclude_archived'] ?? false,
+            "include_contacts": existingFolder['include_contacts'] ?? false,
+            "include_non_contacts": existingFolder['include_non_contacts'] ?? false,
+            "include_groups": existingFolder['include_groups'] ?? false,
+            "include_channels": existingFolder['include_channels'] ?? false,
+            "include_bots": existingFolder['include_bots'] ?? false,
           }
         });
         if (response['@type'] == 'error') {
-          AppLogger.error('Failed to edit AeroDrive Chat Filter Folder: ${response['message']}');
+          AppLogger.error('Failed to edit AeroDrive Chat Folder: ${response['message']}');
         } else {
           AppLogger.info('Updated Telegram folder AeroDrive successfully');
         }
       } else {
-        // Create new filter
+        // Create new folder
         final response = await sendRequest({
-          "@type": "createChatFilter",
-          "filter": {
-            "@type": "chatFilter",
+          "@type": "createChatFolder",
+          "folder": {
+            "@type": "chatFolder",
             "title": "AeroDrive",
             "icon_name": "Folder",
             "pinned_chat_ids": [],
@@ -622,12 +622,12 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
             "include_contacts": false,
             "include_non_contacts": false,
             "include_groups": false,
-            "include_broadcasts": false,
+            "include_channels": false,
             "include_bots": false,
           }
         });
         if (response['@type'] == 'error') {
-          AppLogger.error('Failed to create AeroDrive Chat Filter Folder: ${response['message']}');
+          AppLogger.error('Failed to create AeroDrive Chat Folder: ${response['message']}');
         } else {
           AppLogger.info('Created Telegram folder AeroDrive successfully');
         }
@@ -744,7 +744,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
     AppLogger.info('Full Payload JSON: $payloadJson');
 
-    return sendRequest(payload);
+    return sendRequest(payload, timeout: const Duration(hours: 6));
   }
 
   Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
@@ -987,29 +987,28 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
   }
 
+  /// Resets the entire Telegram authentication flow for this account.
+  /// This is a major operation that removes all associated session data.
+  /// Typically called when a user wants to log out completely or when
+  /// authentication becomes corrupted.
   Future<void> resetAuthFlow() async {
+    // Only proceed if we have an active client to clean up.
+    // If already in initial state with no client, skip to avoid
+    // re-initializing a fresh instance (which causes late field errors).
+    if (_clientId == 0 && state == TelegramAuthState.initial) {
+      return;
+    }
+
     AppLogger.info('Resetting auth flow for account: $accountId');
-    
-    // 1. Close current client
-    await closeClient();
-    
-    // 2. Remove instance from map
+    closeClient();
+
+    // Remove instance from map
     if (_clientId != 0) {
       _instances.remove(_clientId);
       _clientId = 0;
     }
-    
-    // 3. Clear TDLib local database directory
-    try {
-      final dbDir = Directory(_dbPath);
-      if (await dbDir.exists()) {
-        await dbDir.delete(recursive: true);
-      }
-    } catch (e) {
-      AppLogger.error('Failed to delete TDLib directory $_dbPath during reset: $e');
-    }
-    
-    // 4. Reset local cache variables
+
+    // Clear local cache variables
     userId = null;
     firstName = null;
     lastName = null;
@@ -1020,8 +1019,8 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     hasRecoveryEmail = false;
     _photoFileId = null;
     chats.clear();
-    
-    // 5. Reinitialize client
+
+    // Reinitialize client
     state = TelegramAuthState.initial;
     await _initClient();
   }

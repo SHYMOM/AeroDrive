@@ -8,7 +8,6 @@ import '../data/crypto/encryption_engine.dart';
 import '../features/telegram/telegram_service.dart';
 
 class EncryptJobPayload {
-
   EncryptJobPayload({
     required this.sourceFilePath,
     required this.outputDirectory,
@@ -16,6 +15,7 @@ class EncryptJobPayload {
     this.chunkLimit,
     this.ctrIv,
   });
+
   final String sourceFilePath;
   final String outputDirectory;
   final List<int> dekBytes;
@@ -23,8 +23,57 @@ class EncryptJobPayload {
   final List<int>? ctrIv;
 }
 
+class _SingleChunkPayload {
+  _SingleChunkPayload({
+    required this.sourceFilePath,
+    required this.outputFilePath,
+    required this.startOffset,
+    required this.chunkLength,
+    required this.dekBytes,
+    this.ctrIv,
+  });
+
+  final String sourceFilePath;
+  final String outputFilePath;
+  final int startOffset;
+  final int chunkLength;
+  final List<int> dekBytes;
+  final List<int>? ctrIv;
+}
+
 class UploadOrchestrator {
   UploadOrchestrator();
+
+  Future<String> processSingleChunkForUpload({
+    required File sourceFile,
+    required String outputFilePath,
+    required int startOffset,
+    required int chunkLength,
+    required List<int> dekBytes,
+    List<int>? ctrIv,
+  }) async {
+    final payload = _SingleChunkPayload(
+      sourceFilePath: sourceFile.path,
+      outputFilePath: outputFilePath,
+      startOffset: startOffset,
+      chunkLength: chunkLength,
+      dekBytes: dekBytes,
+      ctrIv: ctrIv,
+    );
+    return compute(_runSingleChunkEncryptionIsolate, payload);
+  }
+
+  static Future<String> _runSingleChunkEncryptionIsolate(_SingleChunkPayload payload) async {
+    final engine = EncryptionEngine();
+    return engine.encryptSingleChunkToDisk(
+      sourceFile: File(payload.sourceFilePath),
+      outputFilePath: payload.outputFilePath,
+      startOffset: payload.startOffset,
+      chunkLength: payload.chunkLength,
+      dekBytes: payload.dekBytes,
+      ctrIv: payload.ctrIv,
+    );
+  }
 
   Future<List<String>> processFileForUpload(File sourceFile, List<int> dekBytes, {List<int>? ctrIv}) async {
     final fileLength = await sourceFile.length();

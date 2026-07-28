@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -50,6 +51,7 @@ abstract final class AppLogger {
   static void error(String message, [Object? error, StackTrace? stack]) {
     final errorString = error != null ? '\nError: $error' : '';
     final stackString = stack != null ? '\nStack: $stack' : '';
+    _addLog('[ERROR] $message$errorString$stackString');
     debugPrint('[ERROR] $message$errorString$stackString');
   }
 
@@ -74,9 +76,61 @@ abstract final class AppLogger {
         buffer.writeln(log);
       }
       await file.writeAsString(buffer.toString());
+
+      // ALSO save to the public Download/AeroDrive/logs/ folder so users can
+      // access the crash report via file manager or USB.
+      await _saveToPublicLogs(error, stack);
     } catch (e) {
       // Direct console write in case file write fails
       stderr.writeln('[AppLogger] Failed to write crash log: $e');
+    }
+  }
+
+  /// Saves a crash report to the public Downloads/AeroDrive/logs/ directory.
+  /// This is the location the user can easily find and share.
+  static Future<String> _saveToPublicLogs(Object error, StackTrace stack) async {
+    try {
+      Directory logDir;
+      if (Platform.isAndroid) {
+        logDir = Directory('/storage/emulated/0/Download/AeroDrive/logs');
+      } else {
+        final downloadDir = await getDownloadsDirectory();
+        if (downloadDir != null) {
+          logDir = Directory('${downloadDir.path}${Platform.pathSeparator}AeroDrive${Platform.pathSeparator}logs');
+        } else {
+          final appDir = await getApplicationDocumentsDirectory();
+          logDir = Directory('${appDir.path}${Platform.pathSeparator}AeroDrive${Platform.pathSeparator}logs');
+        }
+      }
+
+      if (!await logDir.exists()) {
+        await logDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filePath = '${logDir.path}${Platform.pathSeparator}crash_$timestamp.log';
+
+      final buffer = StringBuffer();
+      buffer.writeln('=== AERO DRIVE CRASH REPORT ===');
+      buffer.writeln('Timestamp: ${DateTime.now().toIso8601String()}');
+      buffer.writeln('');
+      buffer.writeln('Exception: $error');
+      buffer.writeln('');
+      buffer.writeln('Stack Trace:');
+      buffer.writeln(stack.toString());
+      buffer.writeln('');
+      buffer.writeln('=== APPLICATION LOG BUFFER ===');
+      for (final log in _logs) {
+        buffer.writeln(log);
+      }
+
+      await File(filePath).writeAsString(buffer.toString());
+      debugPrint('[AppLogger] Crash report saved to public logs: $filePath');
+      return filePath;
+    } catch (e) {
+      // Write to stderr so it shows up in logcat / debug console
+      stderr.writeln('[AppLogger] Failed to save public crash log: $e');
+      rethrow; // Let caller know it failed
     }
   }
 

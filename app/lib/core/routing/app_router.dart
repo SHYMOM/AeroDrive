@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/auth_provider.dart';
 import '../../features/auth/auth_screen.dart';
+import '../../features/auth/infrastructure_setup_screen.dart';
 import '../../features/debug/debug_error_screen.dart';
 import '../../features/drive/drive_screen.dart';
 import '../../features/drive/quick_access_tools_screen.dart';
@@ -104,14 +105,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuth = authState == AuthState.authenticated;
       final isAuthLoading = authState == AuthState.loading;
       final isGoingToAuth = location == '/auth';
+      final isGoingToSetup = location == '/setup';
 
-      // If not authenticated and not heading to auth → redirect to auth
-      if (!isAuth && !isGoingToAuth && !isAuthLoading) {
+      if (isAuthLoading && !isGoingToSetup) {
+        return '/setup';
+      }
+
+      // If not authenticated and not heading to auth/setup → redirect to auth
+      if (!isAuth && !isGoingToAuth && !isGoingToSetup && !isAuthLoading) {
         return '/auth';
       }
 
-      // If authenticated and on auth → go to drive
-      if (isAuth && isGoingToAuth) {
+      // If authenticated and on auth/setup → go to drive
+      if (isAuth && (isGoingToAuth || isGoingToSetup)) {
         return AppDestination.drive.path;
       }
 
@@ -125,6 +131,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/auth',
         builder: (context, state) => const AuthScreen(),
+      ),
+      GoRoute(
+        path: '/setup',
+        builder: (context, state) => const InfrastructureSetupScreen(),
       ),
       GoRoute(
         path: '/diagnostics',

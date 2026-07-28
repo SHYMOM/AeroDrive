@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
@@ -79,6 +80,52 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         // ignore
       }
     }
+
+    final accounts = ref.read(telegramManagerProvider);
+    final primaryTelegram = accounts.firstWhere(
+      (c) => c.authState == TelegramAuthState.ready,
+      orElse: () => accounts.first,
+    );
+
+    for (final ch in loaded) {
+      final id = ch['id'];
+      if (id != null) {
+        final chatId = id is String ? int.tryParse(id) : id as int;
+        if (chatId != null) {
+          try {
+            final chat = await primaryTelegram.sendRequest({"@type": "getChat", "chat_id": chatId});
+            final resolvedTitle = chat['title'] as String?;
+            if (resolvedTitle != null && resolvedTitle.isNotEmpty && resolvedTitle != 'Unknown chat') {
+              ch['title'] = resolvedTitle;
+              ch['name'] = resolvedTitle;
+            }
+
+            final photo = chat['photo'] as Map<String, dynamic>?;
+            if (photo != null) {
+              final small = photo['small'] as Map<String, dynamic>?;
+              if (small != null) {
+                final fileId = small['id'] as int?;
+                final local = small['local'] as Map<String, dynamic>?;
+                if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {
+                  ch['photoPath'] = local['path'];
+                } else if (fileId != null) {
+                  try {
+                    await primaryTelegram.downloadFile(fileId);
+                    final fileInfo = await primaryTelegram.sendRequest({"@type": "getFile", "file_id": fileId});
+                    final updatedLocal = fileInfo['local'] as Map<String, dynamic>?;
+                    if (updatedLocal != null && updatedLocal['path'] != null && (updatedLocal['path'] as String).isNotEmpty) {
+                      ch['photoPath'] = updatedLocal['path'];
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+          } catch (_) {
+            if (ch['name'] != null) ch['title'] = ch['name'];
+          }
+        }
+      }
+    }
     
     if (mounted) {
       setState(() {
@@ -93,8 +140,18 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     final settings = ref.read(settingsRepositoryProvider);
     await settings.setSetting('storage_channels_list', jsonEncode(_storageChannels));
     
-    // Sync the new configuration to the dedicated config channel
-    ref.read(configSyncServiceProvider).syncConfigToChannel();
+    final allChannelIds = _storageChannels
+        .map((c) => c['id'] is String ? int.parse(c['id']) : c['id'] as int)
+        .toList();
+    await settings.setSetting('active_channel_ids', jsonEncode(allChannelIds));
+    if (allChannelIds.isNotEmpty) {
+      await settings.setSetting('active_channel_id', allChannelIds.first.toString());
+    }
+
+    // Sync the new configuration to dedicated config channel and Telegram folder
+    final configService = ref.read(configSyncServiceProvider);
+    await configService.syncConfigToChannel();
+    await configService.syncTelegramFolder();
   }
 
   Future<bool?> _showPoolConfirmationDialog(String channelTitle) async {
@@ -156,6 +213,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         final newChannel = {
           'id': chatId,
           'title': title,
+          'name': title,
           'accountId': accountId,
         };
 
@@ -485,6 +543,7 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                         final newChannel = {
                           'id': chatId,
                           'title': title,
+                          'name': title,
                           'accountId': selectedAccountId,
                         };
 
@@ -615,66 +674,69 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                             ),
                           ),
                         ) else SliverList(
-                          delegate: SliverChildBuilderDelegate(
+delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final chat = _storageChannels[index];
-                              final title = chat['title'] ?? 'Unknown Chat';
+                              final title = chat['title'] ?? chat['name'] ?? 'Storage Channel';
                               final id = chat['id'].toString();
                               final boundAccount = chat['accountId'] ?? 'primary';
-                              final isActive = _activeChannelId == id;
+                              final photoPath = chat['photoPath'] as String?;
+                              Widget leadingAvatar;
+                              if (photoPath != null && File(photoPath).existsSync()) {
+                                leadingAvatar = CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: FileImage(File(photoPath)),
+                                );
+                              } else {
+                                leadingAvatar = CircleAvatar(
+                                  backgroundColor: Colors.green.withValues(alpha: 0.2),
+                                  child: const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  ),
+                                );
+                              }
 
                               return ListTile(
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                                leading: CircleAvatar(
-                                  backgroundColor: isActive ? Colors.green.withValues(alpha: 0.2) : AppColors.primaryLight.withValues(alpha: 0.2),
-                                  child: Icon(
-                                    isActive ? Icons.check_circle : Icons.cloud,
-                                    color: isActive ? Colors.green : AppColors.primaryLight,
-                                  ),
-                                ),
+                                leading: leadingAvatar,
                                 title: Text(
                                   title,
-                                  style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.green : Colors.white),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                                 subtitle: Text(
-                                  'Bound Account: ${accounts.firstWhere((c) => c.accountId == boundAccount, orElse: () => accounts.first).displayName}\nTap to select as primary backend',
-                                  style: const TextStyle(fontSize: 12),
+                                  'Bound Account: ${accounts.firstWhere((c) => c.accountId == boundAccount, orElse: () => accounts.first).displayName}\nStatus: Active (Multi-channel round-robin storage)',
+                                  style: const TextStyle(fontSize: 12, color: Colors.white70),
                                 ),
-                                trailing: isActive
-                                    ? const Text('ACTIVE', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12))
-                                    : IconButton(
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.green),
+                                      ),
+                                      child: const Text(
+                                        'ACTIVE',
+                                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11),
+                                      ),
+                                    ),
+                                    if (_storageChannels.length > 1) ...[
+                                      const SizedBox(width: 8),
+                                      IconButton(
                                         icon: const Icon(Icons.delete, color: Colors.redAccent),
                                         onPressed: () {
                                           setState(() {
                                             _storageChannels.removeWhere((c) => c['id'].toString() == id);
-                                            if (_activeChannelId == id) _activeChannelId = null;
                                           });
                                           _saveChannelsList();
                                         },
                                       ),
-                                onTap: () async {
-                                  final settings = ref.read(settingsRepositoryProvider);
-                                  await settings.setSetting('active_channel_id', id);
-                                  await settings.setSetting('active_channel_name', title);
-                                  await settings.setSetting('active_channel_account_id', boundAccount);
-                                  setState(() => _activeChannelId = id);
-
-                                  // Store the master password salt in the channel description.
-                                  final chatId = int.tryParse(id);
-                                  if (chatId != null) {
-                                    final telegram = ref.read(telegramServiceProvider.notifier);
-                                    await _storeSaltInChannel(telegram, chatId);
-                                  }
-
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Selected "$title" as the active storage channel!'),
-                                        backgroundColor: AppColors.success,
-                                      ),
-                                    );
-                                  }
-                                },
+                                    ],
+                                  ],
+                                ),
                               );
                             },
                             childCount: _storageChannels.length,

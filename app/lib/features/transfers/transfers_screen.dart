@@ -150,7 +150,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
               final status = item.transfer.status;
               switch (_currentFilter) {
                 case TransferFilter.active:
-                  return status == 'PENDING' || status == 'PROCESSING';
+                  return status == 'PENDING' || status == 'PROCESSING' || status == 'ENCRYPTING';
                 case TransferFilter.completed:
                   return status == 'COMPLETED';
                 case TransferFilter.failed:
@@ -222,7 +222,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             ),
                             const SizedBox(width: 8),
                             _buildStatusBadge(status),
-                            if (status == 'PENDING' || status == 'PROCESSING' || status == 'FAILED') ...[
+                            if (status == 'PENDING' || status == 'PROCESSING' || status == 'ENCRYPTING' || status == 'FAILED') ...[
                               const SizedBox(width: 8),
                               IconButton(
                                 icon: Icon(Icons.close, size: 18, color: Colors.grey),
@@ -233,7 +233,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             ],
                           ],
                         ),
-                        if (status == 'PROCESSING') ...[
+                        if (status == 'PROCESSING' || status == 'ENCRYPTING') ...[
                           const SizedBox(height: 12),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
@@ -331,9 +331,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
       case 'PENDING':
         color = Colors.orangeAccent;
         text = 'PENDING';
+      case 'ENCRYPTING':
+        color = Colors.amber;
+        text = 'ENCRYPTING';
       case 'PROCESSING':
         color = Colors.blueAccent;
-        text = 'ACTIVE';
+        text = 'UPLOADING';
       case 'COMPLETED':
         color = Colors.green;
         text = 'SUCCESS';

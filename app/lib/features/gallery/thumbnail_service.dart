@@ -226,7 +226,13 @@ class ThumbnailService {
       final masterKeyBytes = await masterKey.extractBytes();
 
       // Get the first chunk to decrypt the image
-      final dbChunk = await (db.select(db.chunks)..where((c) => c.fileId.equals(file.id))..orderBy([(t) => drift.OrderingTerm.asc(t.chunkIndex)])).getSingleOrNull();
+      // Use .get() instead of .getSingleOrNull() to avoid "Bad state: Too many elements"
+      // when duplicate chunk rows exist in the DB.
+      final allChunks = await (db.select(db.chunks)
+        ..where((c) => c.fileId.equals(file.id))
+        ..orderBy([(t) => drift.OrderingTerm.asc(t.chunkIndex)])
+      ).get();
+      final dbChunk = allChunks.isNotEmpty ? allChunks.first : null;
       if (dbChunk == null || dbChunk.messageId == null || dbChunk.channelId == null) {
         AppLogger.warning('_generateAndCacheThumbnail: No chunks found for file ${file.id}');
         return null;

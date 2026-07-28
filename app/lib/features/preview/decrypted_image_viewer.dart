@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/logger.dart';
 import '../../core/providers.dart';
@@ -26,7 +25,8 @@ class DecryptedImageViewer extends ConsumerStatefulWidget {
 }
 
 class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
-  Uint8List? _decryptedBytes;
+  File? _decryptedFile;
+  Uint8List? _thumbnailBytes;
   bool _isLoading = true;
   String? _error;
   final TransformationController _transformationController = TransformationController();
@@ -54,6 +54,7 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
   void dispose() {
     _transformationController.removeListener(_onScaleChanged);
     _transformationController.dispose();
+    _decryptedFile?.deleteSync();
     super.dispose();
   }
 
@@ -69,11 +70,6 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
       }
 
       final db = ref.read(databaseProvider);
-      final engine = EncryptionEngine();
-
-      final dekResult = await engine.unwrapDek(file.sha256Hash!, masterKeyBytes);
-      final dekBytes = dekResult[0]!;
-      final ctrIv = dekResult[1];
 
       // 1. Try thumbnail first (as placeholder)
       final thumb = await (db.select(db.thumbnails)..where((t) => t.fileId.equals(file.id))).getSingleOrNull();
@@ -91,8 +87,7 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           );
           if (mounted) {
             setState(() {
-              _decryptedBytes = Uint8List.fromList(thumbPlain);
-              _isLoading = false;
+              _thumbnailBytes = Uint8List.fromList(thumbPlain);
             });
           }
         } catch (e) {
@@ -100,60 +95,72 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
         }
       }
 
-      // 2. Load the original chunks in the background/foreground
+      // 2. Stream full decryption to a temp file (never loads full file into memory)
+      final tempDir = await getTemporaryDirectory();
+      final tempPath = '${tempDir.path}${Platform.pathSeparator}decrypted_view_${file.id}';
+      final tempFile = File(tempPath);
+
+      final manager = ref.read(telegramManagerProvider.notifier);
       final chunks = await (db.select(db.chunks)
         ..where((c) => c.fileId.equals(file.id))
         ..orderBy([(c) => OrderingTerm.asc(c.chunkIndex)])
       ).get();
 
       if (chunks.isEmpty) {
-        if (_decryptedBytes == null && mounted) {
+        if (_thumbnailBytes == null && mounted) {
           setState(() { _error = 'No chunk data found'; _isLoading = false; });
         }
         return;
       }
 
-      final manager = ref.read(telegramManagerProvider.notifier);
-      final bytesBuilder = BytesBuilder();
+      final engine = EncryptionEngine();
+      final dekResult = await engine.unwrapDek(file.sha256Hash!, masterKeyBytes);
+      final dekBytes = dekResult[0]!;
+      final ctrIv = dekResult[1];
+      final outputSink = tempFile.openWrite();
       var processedBytes = 0;
 
-      for (final chunk in chunks) {
-        if (chunk.messageId == null || chunk.channelId == null) continue;
+      try {
+        for (final chunk in chunks) {
+          if (chunk.messageId == null || chunk.channelId == null) continue;
 
-        final telegram = manager.getClient('primary');
-        final message = await telegram.getMessage(chunk.channelId!, chunk.messageId!);
+          final telegram = manager.getClient('primary');
+          final message = await telegram.getMessage(chunk.channelId!, chunk.messageId!);
 
-        final content = message['content'];
-        int? remoteFileId;
-        if (content != null && content['@type'] == 'messageDocument') {
-          remoteFileId = content['document']['document']['id'] as int?;
+          final content = message['content'];
+          int? remoteFileId;
+          if (content != null && content['@type'] == 'messageDocument') {
+            remoteFileId = content['document']['document']['id'] as int?;
+          }
+
+          if (remoteFileId == null) {
+            AppLogger.warning('No remote file ID for chunk ${chunk.chunkIndex}');
+            continue;
+          }
+
+          final int chunkSize = chunk.size ?? (20 * 1024 * 1024);
+          final chunkBytes = await _downloadFullChunk(telegram, remoteFileId, chunkSize);
+          if (chunkBytes.isEmpty) {
+            AppLogger.warning('Empty chunk data for ${chunk.chunkIndex}');
+            continue;
+          }
+
+          final decryptedBlock = await engine.decryptBytes(
+            data: chunkBytes,
+            dekBytes: dekBytes,
+            ctrIv: ctrIv,
+            globalByteOffset: processedBytes,
+          );
+          outputSink.add(decryptedBlock);
+          processedBytes += decryptedBlock.length;
         }
-
-        if (remoteFileId == null) {
-          AppLogger.warning('No remote file ID for chunk ${chunk.chunkIndex}');
-          continue;
-        }
-
-        final int chunkSize = chunk.size ?? (20 * 1024 * 1024);
-        final chunkBytes = await _downloadFullChunk(telegram, remoteFileId, chunkSize);
-        if (chunkBytes.isEmpty) {
-          AppLogger.warning('Empty chunk data for ${chunk.chunkIndex}');
-          continue;
-        }
-
-        final decryptedBlock = await engine.decryptBytes(
-          data: chunkBytes,
-          dekBytes: dekBytes,
-          ctrIv: ctrIv,
-          globalByteOffset: processedBytes, // CRITICAL: pass offset for CTR mode multi-chunk decryption
-        );
-        bytesBuilder.add(decryptedBlock);
-        processedBytes += decryptedBlock.length;
+      } finally {
+        await outputSink.flush();
+        await outputSink.close();
       }
 
-      final fullBytes = bytesBuilder.toBytes();
-      if (fullBytes.isEmpty) {
-        if (_decryptedBytes == null && mounted) {
+      if (processedBytes == 0) {
+        if (_thumbnailBytes == null && mounted) {
           setState(() { _error = 'Decrypted data is empty'; _isLoading = false; });
         }
         return;
@@ -161,13 +168,13 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
 
       if (mounted) {
         setState(() {
-          _decryptedBytes = fullBytes;
+          _decryptedFile = tempFile;
           _isLoading = false;
         });
       }
     } catch (e, s) {
       AppLogger.error('Failed to decrypt image', e, s);
-      if (_decryptedBytes == null && mounted) {
+      if (_decryptedFile == null && _thumbnailBytes == null && mounted) {
         setState(() { _error = 'Failed to decrypt: $e'; _isLoading = false; });
       }
     }
@@ -187,7 +194,6 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
     final localPath = local['path'] as String?;
     if (localPath == null || localPath.isEmpty) return Uint8List(0);
 
-    // If synchronous download didn't complete, poll with getFile
     if (local['is_downloading_completed'] != true) {
       for (var i = 0; i < 60; i++) {
         await Future.delayed(const Duration(milliseconds: 500));
@@ -204,7 +210,6 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           }
           break;
         }
-        // Also check if download failed
         if (getFileRes['@type'] == 'error') break;
       }
       return Uint8List(0);
@@ -247,7 +252,9 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
           ],
         ),
       );
-    }    if (_error != null) {
+    }
+
+    if (_error != null) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -260,13 +267,35 @@ class _DecryptedImageViewerState extends ConsumerState<DecryptedImageViewer> {
       );
     }
 
-    if (_decryptedBytes != null) {
+    // Show thumbnail placeholder while streaming starts
+    if (_thumbnailBytes != null && _decryptedFile == null) {
       return InteractiveViewer(
         transformationController: _transformationController,
         panEnabled: _panEnabled,
         child: Center(
           child: Image.memory(
-            _decryptedBytes!,
+            _thumbnailBytes!,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.broken_image, size: 64, color: Colors.white24),
+                  const SizedBox(height: 16),
+                  Text('Failed to render image: $error'),
+                ],
+              ),
+          ),
+        ),
+      );
+    }
+
+    if (_decryptedFile != null) {
+      return InteractiveViewer(
+        transformationController: _transformationController,
+        panEnabled: _panEnabled,
+        child: Center(
+          child: Image.file(
+            _decryptedFile!,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) => Column(
                 mainAxisSize: MainAxisSize.min,

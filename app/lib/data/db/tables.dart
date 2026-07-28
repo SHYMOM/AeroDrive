@@ -74,6 +74,16 @@ class Channels extends Table {
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   BoolColumn get isHidden => boolean().withDefault(const Constant(false))(); // Duress-mode hidden channels
 
+  // Phase 0: Channel purpose for auto-infrastructure
+  /// 'storage' | 'config' | 'shared' — categorizes channel role in AeroDrive infrastructure.
+  TextColumn get purpose => text().nullable()();
+
+  /// Cached channel description text for offline access to encrypted metadata.
+  TextColumn get descriptionCached => text().nullable()();
+
+  /// True if this channel was auto-created during first-time provisioning.
+  BoolColumn get isAutoCreated => boolean().withDefault(const Constant(false))();
+
   @override
   Set<Column> get primaryKey => {id};
 }
@@ -133,7 +143,7 @@ class ShareLinks extends Table {
 // 9. Upload/Download Queue
 class TransferQueue extends Table {
   TextColumn get id => text()();
-  TextColumn get fileId => text().nullable()(); 
+  TextColumn get fileId => text().nullable()();
   TextColumn get type => text().nullable()();
   TextColumn get status => text().nullable()();
   IntColumn get priority => integer().withDefault(const Constant(0))();
@@ -142,6 +152,19 @@ class TransferQueue extends Table {
   IntColumn get retryCount => integer().withDefault(const Constant(0))();
   TextColumn get errorMessage => text().nullable()();
   DateTimeColumn get createdAt => dateTime().nullable()();
+
+  // Phase 0: Dedicated DEK storage (replacing errorMessage abuse)
+  /// AES-256-GCM wrapped Data Encryption Key (nonce + cipherText + mac).
+  BlobColumn get encryptedDek => blob().nullable()();
+
+  /// Encryption algorithm: 'AES-256-GCM' | 'AES-256-CTR'.
+  TextColumn get encryptionAlgo => text().nullable()();
+
+  /// GCM nonce in base64 encoding.
+  TextColumn get encryptionNonce => text().nullable()();
+
+  /// CTR streaming IV in base64 (for seekable video encryption).
+  TextColumn get streamingIv => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

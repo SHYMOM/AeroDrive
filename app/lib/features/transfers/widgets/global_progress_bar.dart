@@ -14,7 +14,7 @@ final aggregateTransferProgressProvider = StreamProvider<Map<String, dynamic>>((
     var transferredBytes = 0;
 
     for (final q in queues) {
-      if (q.status == 'PENDING' || q.status == 'PROCESSING') {
+      if (q.status == 'PENDING' || q.status == 'PROCESSING' || q.status == 'ENCRYPTING') {
         if (q.type == 'UPLOAD_FILE') activeUploads++;
         if (q.type == 'DOWNLOAD_FILE') activeDownloads++;
         totalBytes += (q.totalBytes ?? 0);
