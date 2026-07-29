@@ -204,7 +204,19 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
                           children: [
                             const Icon(Icons.error_outline, size: 64, color: Colors.redAccent),
                             const SizedBox(height: 16),
-                            Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                            Text(_error!, style: const TextStyle(color: Colors.redAccent), textAlign: TextAlign.center),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _error = null;
+                                  _isLoading = true;
+                                });
+                                _initStream();
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
                           ],
                         ),
                       )

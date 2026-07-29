@@ -135,8 +135,8 @@
     "semantic_hash": "135818ce5d053c3b51246008623d98ee"
   },
   "app/lib/data/crypto/encryption_engine.dart": {
-    "mtime": 1785154711.242761,
-    "ast_hash": "1dedb8e18d85176dd7e55f79bbcc9dd6",
+    "mtime": 1785228869.6985815,
+    "ast_hash": "af5e51df780c6a4c82087fcc4eaa9437",
     "semantic_hash": ""
   },
   "app/lib/data/crypto/streaming_encryption_engine.dart": {
@@ -210,9 +210,9 @@
     "semantic_hash": "f6f8d5f2f4681efe3f8515416899ec15"
   },
   "app/lib/domain/download_queue_service.dart": {
-    "mtime": 1783315149.686839,
-    "ast_hash": "7b0b71cc0af57d9ab9fb8c96466cb5e6",
-    "semantic_hash": "7b0b71cc0af57d9ab9fb8c96466cb5e6"
+    "mtime": 1785295017.948723,
+    "ast_hash": "e9eb319b2e36bcd0fb2b4653ecf1a0cb",
+    "semantic_hash": ""
   },
   "app/lib/domain/folder_scanner.dart": {
     "mtime": 1785141474.2080932,
@@ -250,9 +250,9 @@
     "semantic_hash": ""
   },
   "app/lib/domain/streaming/streaming_server.dart": {
-    "mtime": 1785140282.5306773,
-    "ast_hash": "64faf4769e1e09d34ba2f16f05d4a575",
-    "semantic_hash": "64faf4769e1e09d34ba2f16f05d4a575"
+    "mtime": 1785295009.7325118,
+    "ast_hash": "18c13df737c6263f8757726cb6e9cc9d",
+    "semantic_hash": ""
   },
   "app/lib/domain/sync/config_sync_service.dart": {
     "mtime": 1785140215.1016085,
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "app/lib/domain/upload_queue_service.dart": {
-    "mtime": 1785226164.7660215,
-    "ast_hash": "1cea7c82b2dd203325bf61fd06df3e1d",
+    "mtime": 1785295001.3566587,
+    "ast_hash": "e52974a10ef986c8e6272002f5f37600",
     "semantic_hash": ""
   },
   "app/lib/domain/video_thumbnail_service.dart": {
@@ -330,9 +330,9 @@
     "semantic_hash": ""
   },
   "app/lib/features/drive/fullscreen_video_screen.dart": {
-    "mtime": 1783033498.9270904,
-    "ast_hash": "9c7ba4e461e588c7b265fd5fcb232366",
-    "semantic_hash": "9c7ba4e461e588c7b265fd5fcb232366"
+    "mtime": 1785295027.7777984,
+    "ast_hash": "a6f25d7d764ede78c65d6824418a7a03",
+    "semantic_hash": ""
   },
   "app/lib/features/drive/media_player_screen.dart": {
     "mtime": 1783033733.0492327,
@@ -1235,8 +1235,8 @@
     "semantic_hash": "1672844ad91138ac182d56c10c2b5b25"
   },
   "app/lib/domain/streaming_upload_pipeline.dart": {
-    "mtime": 1785184502.0195394,
-    "ast_hash": "8377dc461e599603d88ac4456e9799f2",
+    "mtime": 1785228962.3242266,
+    "ast_hash": "fb9f50e9bc33bd78aea4eb95173c45fd",
     "semantic_hash": ""
   },
   "app/lib/domain/upload_crash_debugger.dart": {

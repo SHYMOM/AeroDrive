@@ -3,8 +3,10 @@ setlocal EnableDelayedExpansion
 title Build AeroDrive Android
 color 0B
 
-set "BUILD_LOG=%USERPROFILE%\Desktop\aerodrive_build_%DATE:~-4,4%%DATE:~-10,2%%DATE:~-7,2%_%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%.log"
-set "BUILD_LOG=!BUILD_LOG: =0!"
+set "LOG_DATE=%DATE:~-4,4%%DATE:~-10,2%%DATE:~-7,2%"
+set "LOG_TIME=%TIME:~0,2%%TIME:~3,2%%TIME:~6,2%"
+set "LOG_TIME=!LOG_TIME: =0!"
+set "BUILD_LOG=%USERPROFILE%\Desktop\aerodrive_build_!LOG_DATE!_!LOG_TIME!.log"
 
 echo ==========================================
 echo    AeroDrive Android Build Script
@@ -83,8 +85,13 @@ if not defined ANDROID_HOME (
 set "APP_DIR=%~dp0app"
 cd /d "%APP_DIR%"
 
-echo [1/3] Fetching Flutter dependencies...
-echo [1/3] Fetching Flutter dependencies... >> "!BUILD_LOG!"
+echo [1/4] Cleaning previous build...
+echo [1/4] Cleaning previous build... >> "!BUILD_LOG!"
+call "!FLUTTER!" clean >> "!BUILD_LOG!" 2>&1
+
+echo.
+echo [2/4] Fetching Flutter dependencies...
+echo [2/4] Fetching Flutter dependencies... >> "!BUILD_LOG!"
 call "!FLUTTER!" pub get >> "!BUILD_LOG!" 2>&1
 if %errorlevel% neq 0 (
     echo - Retrying with offline flag...
@@ -93,8 +100,8 @@ if %errorlevel% neq 0 (
 )
 
 echo.
-echo [2/3] Building Android APK (Release)...
-echo [2/3] Building Android APK (Release)... >> "!BUILD_LOG!"
+echo [3/4] Building Android APK (Release)...
+echo [3/4] Building Android APK (Release)... >> "!BUILD_LOG!"
 echo.
 call "!FLUTTER!" build apk --release --target-platform android-arm64,android-arm,android-x64 >> "!BUILD_LOG!" 2>&1
 

@@ -218,15 +218,20 @@ class DownloadQueueService {
       return;
     }
 
-    // Count only chunks with valid messageId and channelId
-    final validChunks = dbChunks.where((c) => c.messageId != null && c.channelId != null).toList();
-    if (validChunks.isEmpty) {
+    // Count only chunks with confirmed positive messageId and valid channelId
+    final validChunks = dbChunks.where((c) => c.messageId != null && c.messageId! > 0 && c.channelId != null).toList();
+    final totalChunks = dbFile.totalChunks ?? dbChunks.length;
+
+    if (validChunks.length < totalChunks) {
+      final missingCount = totalChunks - validChunks.length;
+      AppLogger.error('DownloadQueue: File $actualFileId is incomplete ($missingCount/$totalChunks chunks missing or unconfirmed)');
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
-          .write(const TransferQueueCompanion(status: drift.Value('FAILED'), errorMessage: drift.Value('All chunks have missing message or channel IDs.')));
+          .write(TransferQueueCompanion(
+            status: const drift.Value('FAILED'),
+            errorMessage: drift.Value('File upload was incomplete ($missingCount/$totalChunks chunks missing or unconfirmed).'),
+          ));
       return;
     }
-
-    final totalChunks = dbFile.totalChunks ?? validChunks.length;
     _downloadedChunkPaths[actualFileId] = {};
     _downloadProgress[actualFileId] = {};
 

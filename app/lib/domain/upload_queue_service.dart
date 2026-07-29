@@ -128,6 +128,9 @@ class UploadQueueService {
   // (updateMessageSendSucceeded) hasn't arrived for all chunks yet.
   final Set<String> _pendingFinalization = {};
 
+  // Tracks file IDs where an upload chunk failed or was aborted to cancel remaining tasks
+  final Set<String> _abortedFileIds = {};
+
   // Tracks when each file's chunks were all sent (for timeout detection).
   final Map<String, DateTime> _allChunksSentAt = {};
 
@@ -255,10 +258,12 @@ class UploadQueueService {
               final fileRecord = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
               final totalChunks = fileRecord?.totalChunks ?? chunks.length;
 
-              if (totalChunks > 0 && chunks.length >= totalChunks) {
-                AppLogger.info('Recovery: All $totalChunks chunks confirmed in DB, finalizing file $fileId');
+              final confirmedChunks = chunks.where((c) => c.messageId != null && c.messageId! > 0).toList();
+
+              if (totalChunks > 0 && chunks.length >= totalChunks && confirmedChunks.length >= totalChunks && !_abortedFileIds.contains(fileId)) {
+                AppLogger.info('Recovery: All $totalChunks chunks confirmed in DB with real message IDs, finalizing file $fileId');
                 // Register a synthetic entry so _finalizeUpload can find it
-                final lastChunk = chunks.last;
+                final lastChunk = confirmedChunks.last;
                 final syntheticKey = '${lastChunk.messageId}:${lastChunk.channelId}';
                 _uploadMessageMap[syntheticKey] = ActiveUploadInfo(
                   queueId: queueId,
@@ -271,7 +276,7 @@ class UploadQueueService {
                 );
                 await _finalizeUpload(syntheticKey, null);
               } else {
-                AppLogger.warning('Recovery: Only ${chunks.length}/$totalChunks chunks found for file $fileId, marking as failed');
+                AppLogger.warning('Recovery: Only ${confirmedChunks.length}/$totalChunks confirmed chunks found for file $fileId, marking as failed');
                 await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))
                     .write(const TransferQueueCompanion(
                   status: drift.Value('FAILED'),
@@ -280,6 +285,7 @@ class UploadQueueService {
                 _uploadProgress.remove(fileId);
                 _uploadFileIdMap.removeWhere((_, v) => v.queueId == queueId);
                 _uploadMessageMap.removeWhere((_, v) => v.queueId == queueId);
+                _abortedFileIds.add(fileId);
 
                 // Clean up orphaned DB records
                 try {
@@ -423,6 +429,16 @@ class UploadQueueService {
             _uploadProgress.remove(info.fileId);
             _pendingFinalization.remove(info.fileId);
             _allChunksSentAt.remove(info.fileId);
+            _abortedFileIds.add(info.fileId);
+
+            // Clean up orphaned DB records (file + chunks) so incomplete uploads don't persist
+            try {
+              await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(info.fileId))).go();
+              await (_db.delete(_db.files)..where((f) => f.id.equals(info.fileId))).go();
+              AppLogger.info('Cleaned up orphaned DB records for updateMessageSendFailed fileId=${info.fileId}');
+            } catch (cleanupErr) {
+              AppLogger.warning('Failed to clean up orphaned records on send failure: $cleanupErr');
+            }
           }
         }
       } else if (type == 'updateFile') {
@@ -778,10 +794,16 @@ class UploadQueueService {
     }
 
     _uploadProgress[fileId] = {};
+    _abortedFileIds.remove(fileId);
 
     final List<Future<void>> uploadFutures = [];
 
     for (var i = 0; i < totalChunks; i++) {
+      if (_abortedFileIds.contains(fileId)) {
+        AppLogger.warning('Aborting chunk dispatch for file $fileId — upload was aborted');
+        break;
+      }
+
       final path = encryptedChunkPaths[i];
 
       final ch = storageChannels.isNotEmpty ? storageChannels[i % storageChannels.length] : null;
@@ -840,7 +862,32 @@ class UploadQueueService {
       uploadFutures.add(future);
     }
 
-    await Future.wait(uploadFutures);
+    try {
+      await Future.wait(uploadFutures);
+    } catch (e) {
+      AppLogger.error('One or more chunk uploads failed for file $fileId', e);
+      _abortedFileIds.add(fileId);
+    }
+
+    if (_abortedFileIds.contains(fileId)) {
+      AppLogger.warning('Upload process failed or aborted for file $fileId — ensuring cleanup.');
+      await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
+        .write(const TransferQueueCompanion(
+          status: drift.Value('FAILED'),
+          errorMessage: drift.Value('Upload failed due to missing or failed chunk uploads.'),
+        ));
+      _uploadMessageMap.removeWhere((_, v) => v.queueId == item.id);
+      _uploadFileIdMap.removeWhere((_, v) => v.queueId == item.id);
+      _uploadProgress.remove(fileId);
+      _pendingFinalization.remove(fileId);
+      _allChunksSentAt.remove(fileId);
+
+      try {
+        await (_db.delete(_db.chunks)..where((c) => c.fileId.equals(fileId))).go();
+        await (_db.delete(_db.files)..where((f) => f.id.equals(fileId))).go();
+      } catch (_) {}
+      return;
+    }
 
     // All chunks have been sent to Telegram. Track this for the confirmation
     // recovery watcher in case updateMessageSendSucceeded never arrives.
@@ -860,8 +907,15 @@ class UploadQueueService {
   }) async {
     AppLogger.info('_uploadChunkWithTracking: chunk=$chunkIndex/$totalChunks fileId=$fileId captionPresent=${caption != null} captionLen=${caption?.length ?? 0}');
 
+    if (_abortedFileIds.contains(fileId)) {
+      throw Exception('Upload aborted for file $fileId');
+    }
+
     const maxRetries = 3;
     for (var attempt = 0; attempt < maxRetries; attempt++) {
+      if (_abortedFileIds.contains(fileId)) {
+        throw Exception('Upload aborted for file $fileId');
+      }
       try {
         final response = await _orchestrator.handoffToTelegram(
           client, channelId, [chunkPath], caption: caption,
@@ -929,6 +983,7 @@ class UploadQueueService {
           AppLogger.info('Retrying chunk $chunkIndex in ${backoff.inSeconds}s...');
           await Future.delayed(backoff);
         } else {
+          _abortedFileIds.add(fileId);
           await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))
             .write(TransferQueueCompanion(
               status: const drift.Value('FAILED'),
@@ -950,6 +1005,8 @@ class UploadQueueService {
           } catch (cleanupErr) {
             AppLogger.warning('Failed to clean up orphaned records: $cleanupErr');
           }
+
+          throw Exception('Chunk $chunkIndex upload failed after $maxRetries attempts: $e');
         }
       }
     }
@@ -962,8 +1019,13 @@ class UploadQueueService {
     final fileId = uploadInfo.fileId;
     final totalChunks = uploadInfo.totalChunks;
 
+    if (_abortedFileIds.contains(fileId)) {
+      AppLogger.warning('Ignoring _finalizeUpload for aborted fileId=$fileId');
+      return;
+    }
+
     final item = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(queueId))).getSingleOrNull();
-    if (item == null) return;
+    if (item == null || item.status == 'FAILED') return;
 
     final metaParts = item.errorMessage?.split('|');
     if (metaParts == null || metaParts.length < 2) return;
@@ -973,9 +1035,11 @@ class UploadQueueService {
     final encryptionNonceBase64 = metaParts.length >= 4 ? metaParts[3] : '';
     final encryptionAlgoStr = metaParts.length >= 5 ? metaParts[4] : 'AES-256-GCM';
 
-    // Check if all chunks for this upload are complete
+    // Check if all chunks for this upload are complete AND have confirmed real message IDs (messageId > 0)
     final completedChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
-    if (completedChunks.length >= totalChunks) {
+    final confirmedChunks = completedChunks.where((c) => c.messageId != null && c.messageId! > 0).toList();
+
+    if (completedChunks.length >= totalChunks && confirmedChunks.length >= totalChunks) {
       final masterKey = _ref.read(masterKeyProvider);
       var wrappedDekString = dekBytesString;
 

@@ -290,71 +290,108 @@ class StreamingServer {
     }
   }
 
+  // Cache of fileId -> active download completer to deduplicate concurrent TDLib requests
+  final Map<int, Completer<String>> _downloadLocks = {};
+
   /// Downloads a specific offset and limit range via TDLib, polling until downloaded.
-  /// Uses the same reliable approach as _downloadFullChunk in decrypted_image_viewer.
+  /// Uses a per-fileId Completer lock so concurrent Range requests wait for the single download.
   Future<Uint8List> _downloadAndReadRange(TelegramService telegram, int fileId, int offset, int limit) async {
-    // Check if we already have a local path cached
-    if (!_localFilePathCache.containsKey(fileId)) {
-      // Download the entire file synchronously
-      final res = await telegram.sendRequest({
-        "@type": "downloadFile",
-        "file_id": fileId,
-        "priority": 32,
-        "synchronous": true,
-      });
-      final file = res['file'] as Map<String, dynamic>? ?? res;
-      final local = file['local'] as Map<String, dynamic>?;
-      if (local == null) {
-        throw Exception("No local info in TDLib download response for file $fileId");
-      }
+    String? localPath = _localFilePathCache[fileId];
 
-      final localPath = local['path'] as String?;
-      if (localPath == null || localPath.isEmpty) {
-        throw Exception("Empty local path for file $fileId");
-      }
-
-      if (local['is_downloading_completed'] == true) {
-        _cacheLocalFilePath(fileId, localPath);
+    if (localPath == null) {
+      // Check if another request is currently downloading this fileId
+      if (_downloadLocks.containsKey(fileId)) {
+        localPath = await _downloadLocks[fileId]!.future;
       } else {
-        // Poll with getFile until download completes
-        for (var i = 0; i < 240; i++) {
-          await Future.delayed(const Duration(milliseconds: 500));
-          final getFileRes = await telegram.sendRequest({
-            "@type": "getFile",
+        final completer = Completer<String>();
+        _downloadLocks[fileId] = completer;
+
+        try {
+          // Download the entire file synchronously
+          final res = await telegram.sendRequest({
+            "@type": "downloadFile",
             "file_id": fileId,
+            "priority": 32,
+            "synchronous": true,
           });
-          final getFileLocal = getFileRes['local'] as Map<String, dynamic>?;
-          if (getFileLocal != null && getFileLocal['is_downloading_completed'] == true) {
-            final path = getFileLocal['path'] as String?;
-            if (path != null && path.isNotEmpty) {
-              _cacheLocalFilePath(fileId, path);
-              break;
+          final file = res['file'] as Map<String, dynamic>? ?? res;
+          final local = file['local'] as Map<String, dynamic>?;
+          if (local == null) {
+            throw Exception("No local info in TDLib download response for file $fileId");
+          }
+
+          final path = local['path'] as String?;
+          if (path == null || path.isEmpty) {
+            throw Exception("Empty local path for file $fileId");
+          }
+
+          if (local['is_downloading_completed'] == true) {
+            _cacheLocalFilePath(fileId, path);
+            localPath = path;
+            completer.complete(path);
+          } else {
+            // Poll with getFile until download completes
+            String? completedPath;
+            for (var i = 0; i < 240; i++) {
+              await Future.delayed(const Duration(milliseconds: 500));
+              final getFileRes = await telegram.sendRequest({
+                "@type": "getFile",
+                "file_id": fileId,
+              });
+              final getFileLocal = getFileRes['local'] as Map<String, dynamic>?;
+              if (getFileLocal != null && getFileLocal['is_downloading_completed'] == true) {
+                final p = getFileLocal['path'] as String?;
+                if (p != null && p.isNotEmpty) {
+                  completedPath = p;
+                  _cacheLocalFilePath(fileId, p);
+                  break;
+                }
+              }
+              if (getFileRes['@type'] == 'error') {
+                throw Exception("TDLib error downloading file $fileId: ${getFileRes['message']}");
+              }
             }
+
+            if (completedPath == null) {
+              throw Exception("Timeout waiting for TDLib download of file $fileId");
+            }
+            localPath = completedPath;
+            completer.complete(completedPath);
           }
-          if (getFileRes['@type'] == 'error') {
-            throw Exception("TDLib error downloading file $fileId: ${getFileRes['message']}");
+        } catch (e) {
+          if (!completer.isCompleted) {
+            completer.completeError(e);
           }
+          rethrow;
+        } finally {
+          _downloadLocks.remove(fileId);
         }
       }
     }
 
-    final cachedPath = _localFilePathCache[fileId];
-    if (cachedPath == null) {
+    if (localPath == null || localPath.isEmpty) {
       throw Exception("Timeout waiting for TDLib download range at offset $offset");
     }
 
-    final fileOnDisk = File(cachedPath);
+    final fileOnDisk = File(localPath);
     if (!await fileOnDisk.exists()) {
       _localFilePathCache.remove(fileId);
-      throw Exception("Downloaded file not found at $cachedPath");
+      throw Exception("Downloaded file not found at $localPath");
     }
 
+    // Read requested bytes with retries in case file flushing is in progress
     final raf = await fileOnDisk.open();
     try {
-      await raf.setPosition(offset);
-      final bytes = await raf.read(limit);
+      List<int> bytes = [];
+      for (var attempt = 0; attempt < 5; attempt++) {
+        await raf.setPosition(offset);
+        bytes = await raf.read(limit);
+        if (bytes.isNotEmpty) break;
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+
       if (bytes.isEmpty) {
-        throw Exception("Read 0 bytes at offset $offset from $cachedPath");
+        throw Exception("Read 0 bytes at offset $offset from $localPath");
       }
       return Uint8List.fromList(bytes);
     } finally {
