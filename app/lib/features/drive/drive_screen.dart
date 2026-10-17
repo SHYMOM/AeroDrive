@@ -21,6 +21,7 @@ import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
+import '../../domain/channel_load_balancer.dart';
 import '../../domain/folder_scanner.dart';
 import '../../domain/recovery/recovery_scanner.dart';
 import '../../domain/sync/config_sync_service.dart';
@@ -36,6 +37,7 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
+import 'widgets/channel_setup_wizard_dialog.dart';
 import '../../widgets/sync_debug_overlay.dart';
 
 class DriveScreen extends ConsumerStatefulWidget {
@@ -181,6 +183,18 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     final hasLocalConfig = localChannels != null && localChannels.isNotEmpty && localChannels != '[]';
     AppLogger.info('DriveScreen: localConfig=$localChannels, hasLocalConfig=$hasLocalConfig');
 
+    if (!hasLocalConfig && status != ConfigStatus.found_unrestored) {
+      AppLogger.info('DriveScreen: No storage channels found on account. Launching ChannelSetupWizardDialog.');
+      if (status == ConfigStatus.missing) {
+        await configService.syncConfigToChannel();
+      }
+      if (mounted) {
+        ref.read(configCheckedProvider.notifier).state = true;
+        _showChannelSetupPrompt(context);
+      }
+      return;
+    }
+
     if (status == ConfigStatus.missing) {
       if (hasLocalConfig) {
         AppLogger.info('DriveScreen: status is missing, hasLocalConfig is true. Showing recreated prompt.');
@@ -193,14 +207,6 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
             await configService.syncConfigToChannel();
           },
         );
-      } else {
-        AppLogger.info('DriveScreen: status is missing, hasLocalConfig is false. Syncing config to channel and showing setup prompt.');
-        // No local config and no remote config, this is a fresh setup.
-        // Create the config channel first so it's always ready.
-        await configService.syncConfigToChannel();
-        if (mounted) {
-          _showChannelSetupPrompt(context);
-        }
       }
     } else if (status == ConfigStatus.missing_message) {
       if (hasLocalConfig) {
@@ -366,31 +372,17 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
   }
 
   void _showChannelSetupPrompt(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        title: Text('Welcome to AeroDrive!', style: TextStyle(color: AppColors.onSurface)),
-        content: Text(
-          'To start uploading and syncing your files securely, you need to connect at least one Telegram storage channel.',
-          style: TextStyle(color: AppColors.onSurface),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.push('/settings/channels');
-            },
-            child: const Text('Connect Storage Channels'),
-          ),
-        ],
-      ),
+    ChannelSetupWizardDialog.show(
+      context,
+      onSetupCompleted: () {
+        ref.read(configSyncServiceProvider).syncTelegramFolder();
+        ref.invalidate(folderContentsProvider);
+      },
     );
   }
 
   bool _checkSecurityAndChannel(BuildContext context, String? activeChannel, List<int>? masterKey) {
-    if (activeChannel == null) {
+    if (activeChannel == null || activeChannel.isEmpty) {
       _showNoChannelDialog(context);
       return false;
     }
@@ -1203,7 +1195,15 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   title: Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
-                    final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+                    final settingsRepo = ref.read(settingsRepositoryProvider);
+                    var activeChannel = await settingsRepo.getSetting('active_channel_id');
+                    if (activeChannel == null || activeChannel.isEmpty) {
+                      final channels = await ChannelLoadBalancer.getStorageChannels(settingsRepo);
+                      if (channels.isNotEmpty) {
+                        activeChannel = channels.first['id'].toString();
+                        await settingsRepo.setSetting('active_channel_id', activeChannel);
+                      }
+                    }
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
@@ -1220,18 +1220,34 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   title: Text('Upload Files', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
-                    final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+                    final settingsRepo = ref.read(settingsRepositoryProvider);
+                    var activeChannel = await settingsRepo.getSetting('active_channel_id');
+                    if (activeChannel == null || activeChannel.isEmpty) {
+                      final channels = await ChannelLoadBalancer.getStorageChannels(settingsRepo);
+                      if (channels.isNotEmpty) {
+                        activeChannel = channels.first['id'].toString();
+                        await settingsRepo.setSetting('active_channel_id', activeChannel);
+                      }
+                    }
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
                     try {
-                      final paths = await pickFilesForUpload();
+                      final paths = await pickFilesForUpload(allowMultiple: true);
                       if (paths.isNotEmpty) {
                         final scanner = ref.read(folderScannerProvider);
                         for (final path in paths) {
                           await scanner.scanAndQueueDirectory(path, currentFolderId);
                         }
                         ref.invalidate(folderContentsProvider);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('${paths.length} file${paths.length > 1 ? "s" : ""} queued for upload.'),
+                              backgroundColor: AppColors.primary,
+                            ),
+                          );
+                        }
                       }
                     } catch (e, s) {
                       AppLogger.error('DriveScreen: Failed to select or queue files for upload', e, s);
@@ -1254,7 +1270,15 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                   title: Text('Upload Folder', style: TextStyle(color: AppColors.onSurface)),
                   onTap: () async {
                     Navigator.pop(context);
-                    final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+                    final settingsRepo = ref.read(settingsRepositoryProvider);
+                    var activeChannel = await settingsRepo.getSetting('active_channel_id');
+                    if (activeChannel == null || activeChannel.isEmpty) {
+                      final channels = await ChannelLoadBalancer.getStorageChannels(settingsRepo);
+                      if (channels.isNotEmpty) {
+                        activeChannel = channels.first['id'].toString();
+                        await settingsRepo.setSetting('active_channel_id', activeChannel);
+                      }
+                    }
                     final masterKey = ref.read(masterKeyProvider);
                     if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
                     
@@ -1489,15 +1513,26 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
   void _showNoChannelDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
         title: Text('No Storage Channel', style: TextStyle(color: AppColors.onSurface)),
-        content: Text('Please select a Telegram channel in Settings before uploading.', style: TextStyle(color: AppColors.onSurfaceVariant)),
+        content: Text(
+          'Please set up your AeroDrive storage channels to start uploading and storing files.',
+          style: TextStyle(color: AppColors.onSurfaceVariant),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: AppColors.primary)),
-          )
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showChannelSetupPrompt(context);
+            },
+            icon: const Icon(Icons.auto_awesome, size: 16),
+            label: const Text('Set Up Channels'),
+          ),
         ],
       ),
     );

@@ -26,6 +26,7 @@ app/android/app/release/
 *.keystore
 *.apk
 *.aab
+*.hprof
 
 # --- iOS / macOS ---
 app/ios/Pods/

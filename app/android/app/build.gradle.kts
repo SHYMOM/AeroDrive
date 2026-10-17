@@ -44,8 +44,22 @@ android {
     }
 
     packaging {
+        resources {
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "/META-INF/LICENSE*",
+                "/META-INF/NOTICE*"
+            )
+        }
         jniLibs {
             useLegacyPackaging = true
+            pickFirsts += setOf(
+                "**/libc++_shared.so",
+                "**/libsqlite3.so",
+                "**/libtdjson.so",
+                "**/libmpv.so"
+            )
         }
     }
 }

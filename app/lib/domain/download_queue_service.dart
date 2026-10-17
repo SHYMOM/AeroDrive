@@ -70,6 +70,7 @@ class DownloadQueueService {
   final Map<String, Map<int, String>> _downloadedChunkPaths = {};
   final Map<String, Map<int, int>> _downloadProgress = {};
   final Map<String, int> _fileTotalBytes = {};
+  final Set<String> _finalizingFileIds = {};
   
   static const Duration _chunkTimeout = Duration(minutes: 10);
 
@@ -158,7 +159,7 @@ class DownloadQueueService {
               if (completedMap.length == activeInfo.totalChunks) {
                 try {
                   final sortedPaths = List<String>.generate(activeInfo.totalChunks, (index) => completedMap[index]!);
-                  await _finalizeDownload(activeInfo.queueId, activeInfo.fileId, sortedPaths);
+                  await _safeFinalizeDownload(activeInfo.queueId, activeInfo.fileId, sortedPaths);
                 } catch (e) {
                   AppLogger.error('Failed to finalize download for ${activeInfo.fileId}', e);
                   await _markQueueFailed(activeInfo.queueId, 'Finalization failed: $e');
@@ -221,8 +222,11 @@ class DownloadQueueService {
     // Count only chunks with confirmed positive messageId and valid channelId
     final validChunks = dbChunks.where((c) => c.messageId != null && c.messageId! > 0 && c.channelId != null).toList();
     final totalChunks = dbFile.totalChunks ?? dbChunks.length;
+    final validChunkIndices = validChunks.map((c) => c.chunkIndex).whereType<int>().toSet();
+    final allIndicesPresent = totalChunks > 0 &&
+        List.generate(totalChunks, (i) => i).every((idx) => validChunkIndices.contains(idx));
 
-    if (validChunks.length < totalChunks) {
+    if (validChunks.length < totalChunks || !allIndicesPresent) {
       final missingCount = totalChunks - validChunks.length;
       AppLogger.error('DownloadQueue: File $actualFileId is incomplete ($missingCount/$totalChunks chunks missing or unconfirmed)');
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
@@ -251,7 +255,10 @@ class DownloadQueueService {
       if (settingsStr != null) {
         try {
           final List<dynamic> channels = jsonDecode(settingsStr);
-          final channelInfo = channels.cast<Map<String,dynamic>>().firstWhere((c) => c['id'] == dbChunk.channelId, orElse: () => {});
+          final channelInfo = channels.cast<Map<String,dynamic>>().firstWhere(
+            (c) => c['id']?.toString() == dbChunk.channelId?.toString(),
+            orElse: () => {},
+          );
           targetAccountId = channelInfo['accountId'] ?? 'primary';
         } catch (e) {
           AppLogger.error('DownloadQueue: failed to parse storage channels', e);
@@ -270,7 +277,24 @@ class DownloadQueueService {
       }
 
       try {
-        final message = await telegramClient.getMessage(dbChunk.channelId!, dbChunk.messageId!);
+        Map<String, dynamic>? message;
+        try {
+          message = await telegramClient.getMessage(dbChunk.channelId!, dbChunk.messageId!);
+        } catch (e) {
+          AppLogger.warning('DownloadQueue: getMessage failed for chunk ${dbChunk.chunkIndex} (msg ${dbChunk.messageId}), trying getMessages with openChat: $e');
+          try {
+            await telegramClient.openChat(dbChunk.channelId!);
+            final res = await telegramClient.getMessages(dbChunk.channelId!, [dbChunk.messageId!]);
+            final messages = res['messages'] as List<dynamic>?;
+            if (messages != null && messages.isNotEmpty && messages.first != null) {
+              message = messages.first as Map<String, dynamic>;
+            } else {
+              throw Exception('Message ${dbChunk.messageId} not found on Telegram server');
+            }
+          } catch (e2) {
+            throw Exception('Chunk message fetch failed: getMessage ($e), getMessages ($e2)');
+          }
+        }
 
         final content = message['content'];
         if (content != null && content['@type'] == 'messageDocument') {
@@ -292,16 +316,21 @@ class DownloadQueueService {
             // 5. Trigger background download
             await telegramClient.downloadFile(remoteFileId);
 
-            // 6. Poll for completion (handles both progress and missing updateFile events)
+            // 6. Poll for completion with progress-aware stall timeout (avoids failing large chunks >500MB)
             String? localPath;
-            for (var attempt = 0; attempt < 30; attempt++) {
+            int lastDownloadedSize = 0;
+            int stalledSeconds = 0;
+
+            while (true) {
               await Future.delayed(const Duration(seconds: 1));
+
               // If event listener already removed this from activeDownloads, skip
               if (!_activeDownloads.containsKey(remoteFileId)) {
                 // Check if chunk path was stored by the event listener
                 localPath = _downloadedChunkPaths[actualFileId]?[dbChunk.chunkIndex ?? 0];
                 break;
               }
+
               try {
                 final fileInfo = await telegramClient.sendRequest({'@type': 'getFile', 'file_id': remoteFileId});
                 final local = fileInfo['local'] as Map<String, dynamic>?;
@@ -323,9 +352,21 @@ class DownloadQueueService {
                     localPath = local['path'] as String?;
                     break;
                   }
+
+                  if (downloadedSize > lastDownloadedSize) {
+                    lastDownloadedSize = downloadedSize;
+                    stalledSeconds = 0;
+                  } else {
+                    stalledSeconds++;
+                    if (stalledSeconds > 90) {
+                      AppLogger.error('Download chunk ${dbChunk.chunkIndex} stalled for 90s without progress.');
+                      break;
+                    }
+                  }
                 }
               } catch (_) {
-                // getFile may fail transiently, keep polling
+                stalledSeconds++;
+                if (stalledSeconds > 90) break;
               }
             }
 
@@ -338,7 +379,7 @@ class DownloadQueueService {
               if (completedMap.length == totalChunks) {
                 try {
                   final sortedPaths = List<String>.generate(totalChunks, (index) => completedMap[index]!);
-                  await _finalizeDownload(item.id, actualFileId, sortedPaths);
+                  await _safeFinalizeDownload(item.id, actualFileId, sortedPaths);
                 } catch (e) {
                   AppLogger.error('Failed to finalize download for $actualFileId', e);
                   await _markQueueFailed(item.id, 'Finalization failed: $e');
@@ -348,7 +389,7 @@ class DownloadQueueService {
                 _fileTotalBytes.remove(actualFileId);
               }
             } else {
-              AppLogger.error('Download chunk ${dbChunk.chunkIndex} failed to download after 30s');
+              AppLogger.error('Download chunk ${dbChunk.chunkIndex} failed or stalled without completing.');
               await _markQueueFailed(item.id, 'Chunk ${dbChunk.chunkIndex} download timed out');
             }
           } else {
@@ -365,6 +406,19 @@ class DownloadQueueService {
     }
   }
 
+  Future<void> _safeFinalizeDownload(String queueId, String fileId, List<String> localEncryptedPaths) async {
+    if (_finalizingFileIds.contains(fileId)) {
+      AppLogger.info('Download finalization already in progress for file $fileId, skipping duplicate call.');
+      return;
+    }
+    _finalizingFileIds.add(fileId);
+    try {
+      await _finalizeDownload(queueId, fileId, localEncryptedPaths);
+    } finally {
+      _finalizingFileIds.remove(fileId);
+    }
+  }
+
   Future<void> _finalizeDownload(String queueId, String fileId, List<String> localEncryptedPaths) async {
     final item = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(queueId))).getSingleOrNull();
     if (item == null || item.fileId == null) {
@@ -372,7 +426,7 @@ class DownloadQueueService {
       return;
     }
 
-    final dbFile = await (_db.select(_db.files)..where((f) => f.id.equals(item.fileId!))).getSingleOrNull();
+    final dbFile = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
     if (dbFile == null) {
       await _markQueueFailed(queueId, 'File not found in database');
       return;
@@ -422,7 +476,7 @@ class DownloadQueueService {
       }
 
       final queueParts = item.fileId?.split('|');
-      final String? customOutputPath = (queueParts != null && queueParts.length > 1) ? queueParts[1] : null;
+      final String? customOutputPath = (queueParts != null && queueParts.length > 1 && queueParts[1] != 'null' && queueParts[1].isNotEmpty) ? queueParts[1] : null;
 
       final targetDir = await DownloadOrchestrator.ensureDownloadDirectory(dbFile.mimeType);
       final rawOutputPath = customOutputPath ?? '${targetDir.path}${Platform.pathSeparator}${dbFile.name}';
@@ -435,6 +489,17 @@ class DownloadQueueService {
         outputPath: outputPath,
         ctrIv: ctrIv,
       );
+
+      // Clean up temporary encrypted chunk files from disk
+      for (final p in localEncryptedPaths) {
+        try {
+          final f = File(p);
+          if (await f.exists()) {
+            await f.delete();
+            AppLogger.info('Cleaned up downloaded chunk temp file: $p');
+          }
+        } catch (_) {}
+      }
 
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))
           .write(TransferQueueCompanion(

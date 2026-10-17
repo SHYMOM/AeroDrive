@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
@@ -7,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../core/logger.dart';
 import '../../core/providers.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../data/db/database.dart';
 import 'telegram_service.dart';
 
@@ -83,6 +85,10 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
           primary.phoneNumber = acc.phoneNumber;
           continue;
         }
+        // Skip ghost/unauthenticated accounts with empty phone numbers
+        if (acc.phoneNumber == null || acc.phoneNumber!.isEmpty) {
+          continue;
+        }
         if (state.any((c) => c.accountId == acc.id)) continue;
 
         final client = await _initSecondaryClient(acc.id);
@@ -119,6 +125,10 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
   }
 
   Future<void> _saveAccountToDb(TelegramService client) async {
+    // Only persist accounts with a valid phone number or authenticated session
+    if (client.phoneNumber == null || client.phoneNumber!.isEmpty) {
+      return;
+    }
     try {
       final db = ref.read(databaseProvider);
       await db.into(db.accounts).insertOnConflictUpdate(
@@ -134,7 +144,7 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     }
   }
 
-  TelegramService addClient(String accountId, {bool isHeadless = true, bool save = true}) {
+  TelegramService addClient(String accountId, {bool isHeadless = true, bool save = false}) {
     for (final c in state) {
       if (c.accountId == accountId) return c;
     }
@@ -146,7 +156,9 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     };
 
     state = [...state, client];
-    if (save) _saveAccountToDb(client);
+    if (save && client.phoneNumber != null && client.phoneNumber!.isNotEmpty) {
+      _saveAccountToDb(client);
+    }
     return client;
   }
 
@@ -181,6 +193,28 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
       await (db.delete(db.accounts)..where((a) => a.id.equals(accountId))).go();
     } catch (e) {
       AppLogger.error('Failed to remove account from DB', e);
+    }
+
+    // Reassign any storage channels using this account back to primary
+    try {
+      final settings = ref.read(settingsRepositoryProvider);
+      final savedChannelsJson = await settings.getSetting('storage_channels_list');
+      if (savedChannelsJson != null && savedChannelsJson.isNotEmpty) {
+        final List<dynamic> channels = jsonDecode(savedChannelsJson);
+        bool modified = false;
+        for (final ch in channels) {
+          if (ch is Map<String, dynamic> && ch['accountId'] == accountId) {
+            ch['accountId'] = 'primary';
+            modified = true;
+          }
+        }
+        if (modified) {
+          await settings.setSetting('storage_channels_list', jsonEncode(channels));
+          AppLogger.info('Reassigned storage channels for removed account $accountId to primary');
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to update storage channels list on account removal: $e');
     }
 
     // Brief delay to ensure OS file system releases all file handles

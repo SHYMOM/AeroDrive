@@ -261,9 +261,17 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         idleCycles = 0;
         try {
           final json = jsonDecode(rawStr);
-          final clientId = json['@client_id'];
+          final rawClientId = json['@client_id'];
+          final int? clientId = rawClientId is int
+              ? rawClientId
+              : (rawClientId is num
+                  ? rawClientId.toInt()
+                  : (rawClientId is String ? int.tryParse(rawClientId) : null));
+
           if (clientId != null && _instances.containsKey(clientId)) {
             _instances[clientId]!._processEvent(json);
+          } else if (clientId == null && _instances.length == 1) {
+            _instances.values.first._processEvent(json);
           }
         } catch (e) {
           AppLogger.error('Failed to parse TDLib JSON', e);
@@ -525,6 +533,15 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     });
   }
 
+  /// Sets the title of a chat or channel.
+  Future<void> setChatTitle(int chatId, String title) async {
+    await sendRequest({
+      '@type': 'setChatTitle',
+      'chat_id': chatId,
+      'title': title,
+    });
+  }
+
   /// Reads the description of a supergroup or channel.
   Future<String?> getChannelDescription(int chatId) async {
     try {
@@ -696,6 +713,32 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       "chat_id": chatId,
       "message_id": messageId,
     });
+
+  Future<Map<String, dynamic>> getMessages(int chatId, List<int> messageIds) async => sendRequest({
+      "@type": "getMessages",
+      "chat_id": chatId,
+      "message_ids": messageIds,
+    });
+
+  Future<void> openChat(int chatId) async {
+    try {
+      await sendRequest({
+        "@type": "openChat",
+        "chat_id": chatId,
+      });
+    } catch (e) {
+      AppLogger.warning('openChat failed for chatId $chatId: $e');
+    }
+  }
+
+  Future<void> closeChat(int chatId) async {
+    try {
+      await sendRequest({
+        "@type": "closeChat",
+        "chat_id": chatId,
+      });
+    } catch (_) {}
+  }
 
   Future<void> downloadFile(int fileId) async {
     await sendRequest({

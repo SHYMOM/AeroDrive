@@ -6,11 +6,15 @@
   "scripts": {
     "postinstall": "node -e \"console.log('TDLib binaries installed. Use dl_tdlib.py or scripts/build_tdlib.sh for platform-specific builds.')\""
   },
-  "keywords": ["tdlib", "telegram", "aerodrive"],
+  "keywords": [
+    "tdlib",
+    "telegram",
+    "aerodrive"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "prebuilt-tdlib": "^0.1008065.0"
+    "prebuilt-tdlib": "^0.1008066.0"
   }
 }

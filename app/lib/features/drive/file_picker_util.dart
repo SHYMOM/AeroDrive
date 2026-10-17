@@ -5,7 +5,7 @@ import '../../core/logger.dart';
 
 /// Picks files using file_picker (avoids ANR from file_selector's main-thread copy).
 /// For content:// URIs (Android 11+), the file is copied to temp on a native background thread.
-Future<List<String>> pickFilesForUpload({bool allowMultiple = false}) async {
+Future<List<String>> pickFilesForUpload({bool allowMultiple = true}) async {
   final result = await FilePicker.pickFiles(
     allowMultiple: allowMultiple,
     type: FileType.any,

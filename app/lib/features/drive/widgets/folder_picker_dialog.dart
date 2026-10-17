@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -13,6 +14,7 @@ import '../../../core/providers/repository_providers.dart';
 import '../../../core/providers/security_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
+import '../../../domain/channel_load_balancer.dart';
 import '../../../domain/recovery/manifest_encoder.dart';
 import '../../telegram/telegram_service.dart';
 
@@ -122,14 +124,15 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
 
     if (name == null || name.isEmpty) return;
 
-    final activeChannelStr = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+    final targetChannel = await ChannelLoadBalancer.selectStorageChannel(settings: settingsRepo);
     final masterKey = ref.read(masterKeyProvider);
 
-    if (activeChannelStr == null || masterKey == null) {
+    if (targetChannel == null || masterKey == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Vault is locked or active channel is not set. Cannot create folder.'),
+            content: Text('Vault is locked or storage channels are not set up. Cannot create folder.'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -149,8 +152,9 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
 
     // Trigger manifest upload in background (non-blocking)
     unawaited(() async {
+      File? tempFile;
       try {
-        final chatId = int.parse(activeChannelStr);
+        final chatId = targetChannel['id'] is String ? int.parse(targetChannel['id']) : targetChannel['id'] as int;
         final cipher = AesGcm.with256bits();
         final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
         final manifestCaption = await ManifestEncoder.encodeFolderManifest(
@@ -162,19 +166,28 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
         );
 
         final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/folder_$newFolderId.png');
+        tempFile = File('${tempDir.path}/folder_$newFolderId.png');
         final pngBytes = Uint8List.fromList([
           137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
         ]);
         await tempFile.writeAsBytes(pngBytes);
 
-        final telegram = ref.read(telegramServiceProvider.notifier);
-        await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+        final targetAccountId = targetChannel['accountId']?.toString();
+        final accounts = ref.read(telegramManagerProvider);
+        final telegram = (targetAccountId != null && targetAccountId.isNotEmpty)
+            ? accounts.firstWhere(
+                (c) => c.accountId == targetAccountId,
+                orElse: () => ref.read(telegramServiceProvider.notifier),
+              )
+            : ref.read(telegramServiceProvider.notifier);
 
-        if (await tempFile.exists()) {
+        await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+      } catch (_) {
+      } finally {
+        if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
-      } catch (_) {}
+      }
     }());
   }
 

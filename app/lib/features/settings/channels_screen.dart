@@ -13,6 +13,7 @@ import '../../domain/recovery/recovery_scanner.dart';
 import '../../domain/sync/config_sync_service.dart';
 import '../telegram/telegram_manager.dart';
 import '../telegram/telegram_service.dart';
+import '../drive/widgets/channel_setup_wizard_dialog.dart';
 
 class ChannelsScreen extends ConsumerStatefulWidget {
   const ChannelsScreen({super.key});
@@ -59,6 +60,21 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
     }
   }
   bool _isProcessingSetup = false;
+  String _currentStrategy = 'round_robin';
+
+  String _formatStrategy(String strategy) {
+    switch (strategy) {
+      case 'random':
+        return 'Random Distribution';
+      case 'fill_first':
+        return 'Fill First Channel';
+      case 'size_based':
+        return 'Size-Based Tiering';
+      case 'round_robin':
+      default:
+        return 'Round Robin';
+    }
+  }
 
   @override
   void initState() {
@@ -127,10 +143,13 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
       }
     }
     
+    final currentStrategy = await settings.getSetting('load_balancing_strategy') ?? 'round_robin';
+
     if (mounted) {
       setState(() {
         _activeChannelId = activeId;
         _storageChannels = loaded;
+        _currentStrategy = currentStrategy;
         _isLoading = false;
       });
     }
@@ -333,6 +352,18 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
+                ListTile(
+                  leading: const Icon(Icons.auto_awesome, color: Color(0xFFBB86FC)),
+                  title: const Text('Setup Wizard (4 Required Channels)', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  subtitle: const Text('Auto-create or configure Storage 1 & 2, Config, and Shared channels', style: TextStyle(fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    ChannelSetupWizardDialog.show(context, onSetupCompleted: () {
+                      _loadSettings();
+                    });
+                  },
+                ),
+                Divider(color: AppColors.outline),
                 ListTile(
                   leading: Icon(Icons.link, color: AppColors.primaryLight),
                   title: const Text('Link Existing Channel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
@@ -620,6 +651,14 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Load Balancing Strategy',
+            onPressed: () async {
+              await context.push('/settings/channels/load_balancing');
+              _loadSettings();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add Channel',
             onPressed: _showAddChannelOptions,
@@ -649,31 +688,99 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
                       ),
                     ),
                   ),
-                  if (_storageChannels.isEmpty) const SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.all(24),
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(height: 48),
-                                  Icon(Icons.dns_outlined, size: 64, color: Colors.white24),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'No channels added yet.',
-                                    style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold),
+                  if (_storageChannels.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                        child: InkWell(
+                          onTap: () async {
+                            await context.push('/settings/channels/load_balancing');
+                            _loadSettings();
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.shuffle, color: AppColors.primary, size: 20),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Multi-Channel Distribution',
+                                        style: TextStyle(
+                                          color: AppColors.onSurface,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Strategy: ${_formatStrategy(_currentStrategy)} — uploads are balanced across all ${_storageChannels.length} channels.',
+                                        style: TextStyle(
+                                          color: AppColors.onSurfaceVariant,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    'Tap the Add Channel button to link or create a channel.',
-                                    style: TextStyle(color: Colors.white30, fontSize: 12),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
+                                ),
+                                const Icon(Icons.chevron_right, color: Colors.white54, size: 20),
+                              ],
                             ),
                           ),
-                        ) else SliverList(
+                        ),
+                      ),
+                    ),
+                  if (_storageChannels.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 32),
+                              const Icon(Icons.dns_outlined, size: 64, color: Colors.white24),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'No Storage Channels Configured',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'AeroDrive requires 4 minimum channels: 2 storage channels, 1 config channel, and 1 shared channel.',
+                                style: TextStyle(color: Colors.white60, fontSize: 12),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              FilledButton.icon(
+                                onPressed: () {
+                                  ChannelSetupWizardDialog.show(context, onSetupCompleted: () {
+                                    _loadSettings();
+                                  });
+                                },
+                                icon: const Icon(Icons.auto_awesome),
+                                label: const Text('Run Infrastructure Setup Wizard'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: AppColors.onPrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverList(
 delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final chat = _storageChannels[index];
@@ -705,7 +812,7 @@ delegate: SliverChildBuilderDelegate(
                                   style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
                                 subtitle: Text(
-                                  'Bound Account: ${accounts.firstWhere((c) => c.accountId == boundAccount, orElse: () => accounts.first).displayName}\nStatus: Active (Multi-channel round-robin storage)',
+                                  'Bound Account: ${accounts.firstWhere((c) => c.accountId == boundAccount, orElse: () => accounts.first).displayName}\nStatus: Active (Multi-channel: ${_formatStrategy(_currentStrategy)})',
                                   style: const TextStyle(fontSize: 12, color: Colors.white70),
                                 ),
                                 trailing: Row(

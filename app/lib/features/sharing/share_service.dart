@@ -370,10 +370,27 @@ class ShareService {
         final chatId = int.parse(storedId);
         final check = await telegram.checkAdminStatus(chatId);
         if (check['is_admin'] == true) {
+          var invite = storedInvite;
+          if (invite == null || invite.isEmpty) {
+            try {
+              final inviteRes = await telegram.sendRequest({
+                "@type": "createChatInviteLink",
+                "chat_id": chatId,
+                "name": "AeroDrive Public Share",
+                "creates_join_request": false,
+              });
+              invite = inviteRes['invite_link'] as String?;
+              if (invite != null && invite.isNotEmpty) {
+                await settingsRepo.setSetting('public_share_channel_invite', invite);
+              }
+            } catch (e) {
+              AppLogger.warning('Failed to generate missing invite link: $e');
+            }
+          }
           return {
             'id': chatId,
             'username': storedUser,
-            'invite': storedInvite,
+            'invite': invite,
           };
         } else {
           AppLogger.warning('Stored public share channel $storedId is no longer admin-accessible. Re-creating...');
@@ -1381,7 +1398,19 @@ class ShareService {
       if (receiverMasterKey == null) throw Exception("Vault is locked. Cannot import.");
 
       final settingsRepo = _ref.read(settingsRepositoryProvider);
-      final activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+      var activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+      if (activeChannelStr == null || activeChannelStr.isEmpty) {
+        final storageListJson = await settingsRepo.getSetting('storage_channels_list');
+        if (storageListJson != null && storageListJson.isNotEmpty) {
+          try {
+            final List<dynamic> list = jsonDecode(storageListJson);
+            if (list.isNotEmpty && list.first['id'] != null) {
+              activeChannelStr = list.first['id'].toString();
+              await settingsRepo.setSetting('active_channel_id', activeChannelStr);
+            }
+          } catch (_) {}
+        }
+      }
       if (activeChannelStr == null || activeChannelStr.isEmpty) {
         throw Exception("No active storage channel configured. Cannot import file.");
       }
@@ -1437,7 +1466,19 @@ class ShareService {
     final receiverMasterKey = _ref.read(masterKeyProvider);
     if (receiverMasterKey == null) throw Exception("Vault is locked. Cannot import.");
 
-    final activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+    var activeChannelStr = await settingsRepo.getSetting('active_channel_id');
+    if (activeChannelStr == null || activeChannelStr.isEmpty) {
+      final storageListJson = await settingsRepo.getSetting('storage_channels_list');
+      if (storageListJson != null && storageListJson.isNotEmpty) {
+        try {
+          final List<dynamic> list = jsonDecode(storageListJson);
+          if (list.isNotEmpty && list.first['id'] != null) {
+            activeChannelStr = list.first['id'].toString();
+            await settingsRepo.setSetting('active_channel_id', activeChannelStr);
+          }
+        } catch (_) {}
+      }
+    }
     if (activeChannelStr == null || activeChannelStr.isEmpty) {
       throw Exception("No active storage channel configured. Cannot import file.");
     }

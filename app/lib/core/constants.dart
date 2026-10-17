@@ -59,7 +59,7 @@ abstract final class AppConstants {
 /// Channel infrastructure constants for auto-provisioning and discovery.
 abstract final class ChannelConstants {
   /// Number of storage channels created during first-time provisioning.
-  static const int defaultStorageChannelCount = 3;
+  static const int defaultStorageChannelCount = 2;
 
   /// Display name for the config/metadata channel.
   static const String configChannelName = 'AeroDrive Config';

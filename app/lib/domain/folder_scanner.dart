@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:archive/archive_io.dart' hide File;
@@ -13,7 +14,9 @@ import '../core/providers.dart';
 import '../core/providers/repository_providers.dart';
 import '../core/providers/security_providers.dart';
 import '../data/db/database.dart';
+import '../features/telegram/telegram_manager.dart';
 import '../features/telegram/telegram_service.dart';
+import 'channel_load_balancer.dart';
 import 'recovery/manifest_encoder.dart';
 
 /// Callback for ZIP progress: (filesProcessed, totalFiles, currentFilePath)
@@ -33,13 +36,16 @@ class FolderScanner {
 
   /// Uploads folder metadata manifest as a 1px transparent PNG to Telegram.
   Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId) async {
+    File? tempFile;
     try {
-      final telegram = _ref.read(telegramServiceProvider.notifier);
-      final activeChannelStr = await _ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
+      final settingsRepo = _ref.read(settingsRepositoryProvider);
+      final targetChannel = await ChannelLoadBalancer.selectStorageChannel(settings: settingsRepo);
+      if (targetChannel == null) return;
+      final chatId = targetChannel['id'] is String ? int.parse(targetChannel['id']) : targetChannel['id'] as int;
+
       final masterKeyBytes = _ref.read(masterKeyProvider);
 
-      if (activeChannelStr != null && masterKeyBytes != null) {
-        final chatId = int.parse(activeChannelStr);
+      if (masterKeyBytes != null) {
         final cipher = AesGcm.with256bits();
         final secretKey = await cipher.newSecretKeyFromBytes(masterKeyBytes);
 
@@ -51,17 +57,30 @@ class FolderScanner {
         );
 
         final tempDir = await getTemporaryDirectory();
-        final tempFile = File('${tempDir.path}/folder_$folderId.png');
+        tempFile = File('${tempDir.path}/folder_$folderId.png');
 
         final pngBytes = Uint8List.fromList([
           137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 108, 137, 0, 0, 0, 11, 73, 68, 65, 84, 120, 156, 99, 96, 0, 0, 0, 2, 0, 1, 226, 33, 188, 51, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
         ]);
         await tempFile.writeAsBytes(pngBytes);
+
+        final targetAccountId = targetChannel['accountId']?.toString();
+        final accounts = _ref.read(telegramManagerProvider);
+        final telegram = (targetAccountId != null && targetAccountId.isNotEmpty)
+            ? accounts.firstWhere(
+                (c) => c.accountId == targetAccountId,
+                orElse: () => _ref.read(telegramServiceProvider.notifier),
+              )
+            : _ref.read(telegramServiceProvider.notifier);
+
         await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
-        if (await tempFile.exists()) await tempFile.delete();
       }
     } catch (e) {
       debugPrint("FolderScanner: Failed to upload folder manifest: $e");
+    } finally {
+      if (tempFile != null && await tempFile.exists()) {
+        await tempFile.delete();
+      }
     }
   }
 

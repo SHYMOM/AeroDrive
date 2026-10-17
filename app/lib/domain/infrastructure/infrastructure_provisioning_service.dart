@@ -15,6 +15,8 @@ import '../../features/telegram/telegram_service.dart';
 import '../sync/config_sync_service.dart';
 import 'channel_description_codec.dart';
 
+typedef ProvisioningProgressCallback = void Function(String message, double progress);
+
 /// Result of the infrastructure provisioning operation.
 class InfrastructureResult {
   const InfrastructureResult({
@@ -34,7 +36,7 @@ class InfrastructureResult {
 
 /// Creates the initial AeroDrive channel infrastructure during first-time
 /// registration:
-///   - 3 Storage channels ("AeroDrive Storage 1/2/3")
+///   - 2 Storage channels ("AeroDrive Storage 1", "AeroDrive Storage 2")
 ///   - 1 Config channel ("AeroDrive Config")
 ///   - 1 Shared channel ("AeroDrive Shared")
 ///
@@ -56,6 +58,7 @@ class InfrastructureProvisioningService {
     required SecretKey masterKey,
     required String masterKeySalt,
     required List<TelegramService> allAccounts,
+    ProvisioningProgressCallback? onProgress,
   }) async {
     final settingsRepo = _ref.read(settingsRepositoryProvider);
 
@@ -79,6 +82,7 @@ class InfrastructureProvisioningService {
       masterKey: masterKey,
       masterKeySalt: masterKeySalt,
       allAccounts: allAccounts,
+      onProgress: onProgress,
     );
   }
 
@@ -91,16 +95,20 @@ class InfrastructureProvisioningService {
     required SecretKey masterKey,
     required String masterKeySalt,
     required List<TelegramService> allAccounts,
+    ProvisioningProgressCallback? onProgress,
   }) async {
     final settingsRepo = _ref.read(settingsRepositoryProvider);
     final List<int> storageChannelIds = [];
     int? configChannelId;
     int? sharedChannelId;
+    String? sharedInviteLink;
 
     try {
       // ── 1. Create ALL channels FIRST (without archiving) ──────────
       for (var i = 0; i < ChannelConstants.defaultStorageChannelCount; i++) {
         final title = '${ChannelConstants.storageChannelBaseName} ${i + 1}';
+        final progressFrac = 0.1 + (i * 0.18);
+        onProgress?.call('Creating $title...', progressFrac);
         AppLogger.info('Provisioning: Creating storage channel "$title"');
 
         final response = await telegramService.createNewChannel(
@@ -124,6 +132,7 @@ class InfrastructureProvisioningService {
         storageChannelIds.add(chatId);
 
         // Set channel photo
+        onProgress?.call('Setting icon for $title...', progressFrac + 0.05);
         await _setChannelPhoto(telegramService, chatId);
 
         // Set encrypted description
@@ -142,6 +151,7 @@ class InfrastructureProvisioningService {
       }
 
       // ── 2. Create Config Channel ───────────────────────────────────
+      onProgress?.call('Creating ${ChannelConstants.configChannelName}...', 0.5);
       AppLogger.info('Provisioning: Creating config channel "${ChannelConstants.configChannelName}"');
       {
         final response = await telegramService.createNewChannel(
@@ -176,6 +186,7 @@ class InfrastructureProvisioningService {
       }
 
       // ── 3. Create Shared Channel ──────────────────────────────────
+      onProgress?.call('Creating ${ChannelConstants.sharedChannelName}...', 0.65);
       AppLogger.info('Provisioning: Creating shared channel "${ChannelConstants.sharedChannelName}"');
       {
         final response = await telegramService.createNewChannel(
@@ -207,6 +218,24 @@ class InfrastructureProvisioningService {
           totalStorageChannels: ChannelConstants.defaultStorageChannelCount,
         );
         await _waitForChannelReady(telegramService, sharedChannelId);
+
+        // Generate public share invite link
+        onProgress?.call('Generating shared link invitation...', 0.72);
+        try {
+          final inviteRes = await telegramService.sendRequest({
+            "@type": "createChatInviteLink",
+            "chat_id": sharedChannelId,
+            "name": "AeroDrive Public Share",
+            "creates_join_request": false,
+          });
+          sharedInviteLink = inviteRes['invite_link'] as String?;
+          if (sharedInviteLink != null && sharedInviteLink.isNotEmpty) {
+            await settingsRepo.setSetting('public_share_channel_invite', sharedInviteLink);
+            AppLogger.info('Provisioning: Generated public share invite link: $sharedInviteLink');
+          }
+        } catch (e) {
+          AppLogger.warning('Provisioning: Failed to create invite link for shared channel: $e');
+        }
       }
 
       // ── 4. Create Telegram folder FIRST (before archiving) ────────
@@ -216,10 +245,12 @@ class InfrastructureProvisioningService {
         if (sharedChannelId != null) sharedChannelId,
       ];
 
+      onProgress?.call('Organizing channels into AeroDrive folder...', 0.80);
       AppLogger.info('Provisioning: Creating Telegram folder "AeroDrive"');
       await _createTelegramFolder(telegramService, allChannelIds);
 
       // ── 5. Promote all accounts as admins on all channels ────────
+      onProgress?.call('Configuring multi-account bandwidth pooling...', 0.85);
       final primaryAccount = telegramService;
       await _promoteAccountsToChannels(
         primaryAccount,
@@ -228,16 +259,19 @@ class InfrastructureProvisioningService {
       );
 
       // ── 6. Archive and mute all channels LAST ────────────────────
+      onProgress?.call('Securing and muting channels...', 0.90);
       for (final chatId in allChannelIds) {
         await _archiveAndMuteChannel(telegramService, chatId);
       }
 
       // ── 7. Save to settings ─────────────────────────────────────
+      onProgress?.call('Saving configuration...', 0.95);
       await _saveToSettings(
         settingsRepo,
         storageChannelIds,
         configChannelId,
         sharedChannelId,
+        sharedInviteLink: sharedInviteLink,
       );
 
       // ── 8. Sync initial config message to Config Channel ────────
@@ -247,6 +281,7 @@ class InfrastructureProvisioningService {
         AppLogger.warning('Provisioning: Failed to sync initial config to channel: $e');
       }
 
+      onProgress?.call('Setup complete!', 1.0);
       AppLogger.info(
         'Provisioning complete. '
         'Storage: $storageChannelIds, '
@@ -269,6 +304,175 @@ class InfrastructureProvisioningService {
         configChannelId: null,
         sharedChannelId: null,
         errorMessage: 'Unexpected error: $e',
+      );
+    }
+  }
+
+  /// Configures four existing Telegram channels chosen by the user into the
+  /// AeroDrive infrastructure:
+  /// - 2 storage channels (renamed to "AeroDrive Storage 1" and "AeroDrive Storage 2")
+  /// - 1 config channel (renamed to "AeroDrive Config")
+  /// - 1 shared channel (renamed to "AeroDrive Shared")
+  /// Sets descriptions, application icons, invite links, folder, and settings.
+  Future<InfrastructureResult> configureExistingChannelsAsInfrastructure({
+    required TelegramService telegramService,
+    required int storageChannel1Id,
+    required int storageChannel2Id,
+    required int configChannelId,
+    required int sharedChannelId,
+    required SecretKey masterKey,
+    required String masterKeySalt,
+    required List<TelegramService> allAccounts,
+    ProvisioningProgressCallback? onProgress,
+  }) async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final storageChannelIds = [storageChannel1Id, storageChannel2Id];
+
+    try {
+      // 1. Rename and configure Storage Channel 1
+      onProgress?.call('Configuring AeroDrive Storage 1...', 0.15);
+      final title1 = '${ChannelConstants.storageChannelBaseName} 1';
+      try {
+        await telegramService.setChatTitle(storageChannel1Id, title1);
+      } catch (e) {
+        AppLogger.warning('Failed to rename storage channel 1: $e');
+      }
+      await _setChannelPhoto(telegramService, storageChannel1Id);
+      await _setChannelDescription(
+        telegramService,
+        storageChannel1Id,
+        purpose: ChannelConstants.descriptionPurposeStorage,
+        masterKey: masterKey,
+        keySalt: masterKeySalt,
+        channelIndex: 0,
+        totalStorageChannels: storageChannelIds.length,
+      );
+
+      // 2. Rename and configure Storage Channel 2
+      onProgress?.call('Configuring AeroDrive Storage 2...', 0.35);
+      final title2 = '${ChannelConstants.storageChannelBaseName} 2';
+      try {
+        await telegramService.setChatTitle(storageChannel2Id, title2);
+      } catch (e) {
+        AppLogger.warning('Failed to rename storage channel 2: $e');
+      }
+      await _setChannelPhoto(telegramService, storageChannel2Id);
+      await _setChannelDescription(
+        telegramService,
+        storageChannel2Id,
+        purpose: ChannelConstants.descriptionPurposeStorage,
+        masterKey: masterKey,
+        keySalt: masterKeySalt,
+        channelIndex: 1,
+        totalStorageChannels: storageChannelIds.length,
+      );
+
+      // 3. Rename and configure Config Channel
+      onProgress?.call('Configuring AeroDrive Config...', 0.55);
+      try {
+        await telegramService.setChatTitle(configChannelId, ChannelConstants.configChannelName);
+      } catch (e) {
+        AppLogger.warning('Failed to rename config channel: $e');
+      }
+      await _setChannelPhoto(telegramService, configChannelId);
+      await _setChannelDescription(
+        telegramService,
+        configChannelId,
+        purpose: ChannelConstants.descriptionPurposeConfig,
+        masterKey: masterKey,
+        keySalt: masterKeySalt,
+        channelIndex: 0,
+        totalStorageChannels: storageChannelIds.length,
+      );
+
+      // 4. Rename and configure Shared Channel
+      onProgress?.call('Configuring AeroDrive Shared...', 0.70);
+      try {
+        await telegramService.setChatTitle(sharedChannelId, ChannelConstants.sharedChannelName);
+      } catch (e) {
+        AppLogger.warning('Failed to rename shared channel: $e');
+      }
+      await _setChannelPhoto(telegramService, sharedChannelId);
+      await _setChannelDescription(
+        telegramService,
+        sharedChannelId,
+        purpose: ChannelConstants.descriptionPurposeShared,
+        masterKey: masterKey,
+        keySalt: masterKeySalt,
+        channelIndex: 0,
+        totalStorageChannels: storageChannelIds.length,
+      );
+
+      // Generate public share invite link
+      String? sharedInviteLink;
+      try {
+        final inviteRes = await telegramService.sendRequest({
+          "@type": "createChatInviteLink",
+          "chat_id": sharedChannelId,
+          "name": "AeroDrive Public Share",
+          "creates_join_request": false,
+        });
+        sharedInviteLink = inviteRes['invite_link'] as String?;
+        if (sharedInviteLink != null && sharedInviteLink.isNotEmpty) {
+          await settingsRepo.setSetting('public_share_channel_invite', sharedInviteLink);
+        }
+      } catch (e) {
+        AppLogger.warning('Failed to create invite link for shared channel: $e');
+      }
+
+      final allChannelIds = [
+        ...storageChannelIds,
+        configChannelId,
+        sharedChannelId,
+      ];
+
+      // 5. Group into Telegram Folder
+      onProgress?.call('Grouping channels into AeroDrive folder...', 0.80);
+      await _createTelegramFolder(telegramService, allChannelIds);
+
+      // 6. Multi-account promotion
+      onProgress?.call('Configuring multi-account pooling...', 0.85);
+      await _promoteAccountsToChannels(telegramService, allAccounts, allChannelIds);
+
+      // 7. Archive and mute
+      onProgress?.call('Archiving and muting channels...', 0.90);
+      for (final chatId in allChannelIds) {
+        await _archiveAndMuteChannel(telegramService, chatId);
+      }
+
+      // 8. Save settings
+      onProgress?.call('Saving configuration...', 0.95);
+      await _saveToSettings(
+        settingsRepo,
+        storageChannelIds,
+        configChannelId,
+        sharedChannelId,
+        sharedInviteLink: sharedInviteLink,
+      );
+
+      // 9. Sync initial config
+      try {
+        await _ref.read(configSyncServiceProvider).syncConfigToChannel();
+      } catch (e) {
+        AppLogger.warning('Failed to sync config to channel: $e');
+      }
+
+      onProgress?.call('Setup complete!', 1.0);
+
+      return InfrastructureResult(
+        success: true,
+        storageChannelIds: storageChannelIds,
+        configChannelId: configChannelId,
+        sharedChannelId: sharedChannelId,
+      );
+    } catch (e, s) {
+      AppLogger.error('Failed to configure existing channels: $e', e, s);
+      return InfrastructureResult(
+        success: false,
+        storageChannelIds: [],
+        configChannelId: null,
+        sharedChannelId: null,
+        errorMessage: 'Error configuring channels: $e',
       );
     }
   }
@@ -476,8 +680,9 @@ class InfrastructureProvisioningService {
     SettingsRepository settingsRepo,
     List<int> storageChannelIds,
     int? configChannelId,
-    int? sharedChannelId,
-  ) async {
+    int? sharedChannelId, {
+    String? sharedInviteLink,
+  }) async {
     // Build storage_channels_list JSON
     final storageChannels = storageChannelIds
         .asMap()
@@ -506,6 +711,10 @@ class InfrastructureProvisioningService {
 
     if (sharedChannelId != null) {
       await settingsRepo.setSetting('public_share_channel_id', sharedChannelId.toString());
+    }
+
+    if (sharedInviteLink != null && sharedInviteLink.isNotEmpty) {
+      await settingsRepo.setSetting('public_share_channel_invite', sharedInviteLink);
     }
   }
 

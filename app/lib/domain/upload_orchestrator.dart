@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -43,6 +44,54 @@ class _SingleChunkPayload {
 
 class UploadOrchestrator {
   UploadOrchestrator();
+
+  /// Determines optimal chunk size in bytes based on file length.
+  /// - Files <= 20MB: single chunk (fileLength)
+  /// - Files <= 500MB: 20MB chunks
+  /// - Files <= 2GB: 25MB chunks
+  /// - Files > 2GB: 50MB chunks (keeps chunks <= 80 even for 4GB files, well under Telegram limits)
+  static int getOptimalChunkSize(int fileLength) {
+    const int mb = 1024 * 1024;
+    if (fileLength <= 20 * mb) {
+      return fileLength;
+    } else if (fileLength <= 500 * mb) {
+      return 20 * mb;
+    } else if (fileLength <= 2048 * mb) {
+      return 25 * mb;
+    } else {
+      return 50 * mb;
+    }
+  }
+
+  /// Computes full-file SHA-256 hash in a background isolate using 4MB streaming reads.
+  /// This prevents freezing the UI or main event loop during large file processing.
+  static Future<String> computeFileHash(File file) async {
+    return compute(_hashFileIsolate, file.path);
+  }
+
+  static Future<String> _hashFileIsolate(String filePath) async {
+    final algorithm = Sha256();
+    final sink = algorithm.newHashSink();
+    final openFile = await File(filePath).open();
+    try {
+      const int bufferSize = 4 * 1024 * 1024;
+      final length = await openFile.length();
+      var offset = 0;
+      while (offset < length) {
+        final toRead = (length - offset < bufferSize) ? length - offset : bufferSize;
+        final block = await openFile.read(toRead);
+        if (block.isEmpty) break;
+        sink.add(block);
+        offset += toRead;
+        await Future.delayed(Duration.zero);
+      }
+    } finally {
+      await openFile.close();
+    }
+    sink.close();
+    final hash = await sink.hash();
+    return hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
 
   Future<String> processSingleChunkForUpload({
     required File sourceFile,
