@@ -92,6 +92,7 @@ Future<Uint8List?> _extractImageThumbnailIsolate(_ThumbnailPayload payload) asyn
 class UploadQueueService {
 
   UploadQueueService(this._ref, this._db, this._settings, this._telegramManager, this._orchestrator) {
+    _resetInterruptedTransfers();
     _startPolling();
     _listenToTdlibEvents();
     _startConfirmationWatcher();
@@ -109,7 +110,8 @@ class UploadQueueService {
   // Bug 4 fix: replace single bool with a set of active queue IDs so we can
   // process multiple uploads concurrently instead of blocking on a global flag.
   final Set<String> _processingIds = {};
-  static const int _maxConcurrent = 4; // respects parallel_threads setting
+  static const int _maxConcurrent = 2; // respects parallel_threads setting, safe default for mobile
+  final Map<String, String> _fileAbortReasons = {};
 
   final _uuid = const Uuid();
 
@@ -322,7 +324,7 @@ class UploadQueueService {
 
       if (pendingItems.isEmpty) return;
 
-      // Dispatch each item concurrently (fire-and-forget, tracked by ID)
+      // Dispatch each item with a stagger to prevent simultaneous TDLib/isolate spikes
       for (final item in pendingItems) {
         if (_processingIds.contains(item.id)) continue;
         _processingIds.add(item.id);
@@ -331,8 +333,27 @@ class UploadQueueService {
         }).whenComplete(() {
           _processingIds.remove(item.id);
         });
+        // Stagger dispatch by 350ms to prevent flood/rate-limit and CPU spike
+        await Future.delayed(const Duration(milliseconds: 350));
       }
     });
+  }
+
+  Future<void> _resetInterruptedTransfers() async {
+    try {
+      final resetCount = await (_db.update(_db.transferQueue)
+        ..where((q) => q.type.equals('UPLOAD_FILE') & 
+            (q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+      ).write(const TransferQueueCompanion(
+        status: drift.Value('PENDING'),
+        errorMessage: drift.Value(null),
+      ));
+      if (resetCount > 0) {
+        AppLogger.info('UploadQueueService: Reset $resetCount interrupted upload(s) to PENDING');
+      }
+    } catch (e) {
+      AppLogger.error('Failed to reset interrupted uploads', e);
+    }
   }
 
   void _listenToTdlibEvents() {
@@ -402,6 +423,12 @@ class UploadQueueService {
           if (msgId == null || chatId == null) return;
 
           final oldMsgId = event['old_message_id'] as int?;
+          final errorCode = event['error_code'];
+          final errorMsg = event['error_message'];
+          final reason = (errorMsg != null && errorMsg.toString().isNotEmpty)
+              ? 'Telegram rejected upload: [$errorCode] $errorMsg'
+              : 'Telegram rejected the upload.';
+          AppLogger.error('TDLib updateMessageSendFailed: msgId=$msgId chatId=$chatId code=$errorCode msg=$errorMsg');
 
           String? matchKey;
           if (oldMsgId != null) {
@@ -419,17 +446,18 @@ class UploadQueueService {
 
           if (matchKey != null) {
             final info = _uploadMessageMap[matchKey]!;
+            _fileAbortReasons[info.fileId] = reason;
             await (_db.update(_db.transferQueue)
               ..where((q) => q.id.equals(info.queueId)))
-              .write(const TransferQueueCompanion(
-                status: drift.Value('FAILED'),
-                errorMessage: drift.Value('Telegram rejected the upload.'),
+              .write(TransferQueueCompanion(
+                status: const drift.Value('FAILED'),
+                errorMessage: drift.Value(reason),
               ));
 
             NotificationService.instance.showUploadFailed(
               NotificationService.instance.getSafeNotificationId(info.queueId),
               info.fileName,
-              'Telegram rejected the upload.',
+              reason,
             );
             _uploadMessageMap.remove(matchKey);
             _uploadFileIdMap.removeWhere((_, v) => v.queueId == info.queueId);
@@ -440,7 +468,7 @@ class UploadQueueService {
 
             final c = _chunkUploadedCompleters[info.fileId]?[info.chunkIndex];
             if (c != null && !c.isCompleted) {
-              c.completeError(Exception('Telegram rejected the upload.'));
+              c.completeError(Exception(reason));
             }
 
             // Clean up orphaned DB records (file + chunks) so incomplete uploads don't persist
@@ -864,15 +892,18 @@ class UploadQueueService {
     } catch (e) {
       AppLogger.error('One or more chunk uploads failed for file $fileId', e);
       _abortedFileIds.add(fileId);
+      _fileAbortReasons[fileId] ??= 'Chunk upload failed: $e';
     }
 
     if (_abortedFileIds.contains(fileId)) {
-      AppLogger.warning('Upload process failed or aborted for file $fileId — ensuring cleanup.');
+      final failReason = _fileAbortReasons[fileId] ?? 'Upload failed due to missing or failed chunk uploads.';
+      AppLogger.warning('Upload process failed or aborted for file $fileId ($failReason) — ensuring cleanup.');
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
-        .write(const TransferQueueCompanion(
-          status: drift.Value('FAILED'),
-          errorMessage: drift.Value('Upload failed due to missing or failed chunk uploads.'),
+        .write(TransferQueueCompanion(
+          status: const drift.Value('FAILED'),
+          errorMessage: drift.Value(failReason),
         ));
+      _fileAbortReasons.remove(fileId);
       _uploadMessageMap.removeWhere((_, v) => v.queueId == item.id);
       _uploadFileIdMap.removeWhere((_, v) => v.queueId == item.id);
       _uploadProgress.remove(fileId);
@@ -895,8 +926,27 @@ class UploadQueueService {
       return;
     }
 
-    // All chunks have been sent to Telegram. Track this for the confirmation
-    // recovery watcher in case updateMessageSendSucceeded never arrives.
+    // Post-wait check: If all inFlightFutures completed and file not yet COMPLETED in DB,
+    // trigger _finalizeUpload immediately instead of waiting for periodic timeout.
+    final currentQueueItem = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(item.id))).getSingleOrNull();
+    if (currentQueueItem != null && currentQueueItem.status != 'COMPLETED') {
+      AppLogger.info('Post-Future.wait: File $fileId not yet marked COMPLETED. Invoking finalization check.');
+      final syntheticKey = '$fileId:post_wait';
+      _uploadMessageMap[syntheticKey] = ActiveUploadInfo(
+        queueId: item.id,
+        fileId: fileId,
+        chunkIndex: totalChunks - 1,
+        totalChunks: totalChunks,
+        chatId: storageChannels[fileBaseIndex % storageChannels.length]['id'] is String
+            ? int.parse(storageChannels[fileBaseIndex % storageChannels.length]['id'])
+            : storageChannels[fileBaseIndex % storageChannels.length]['id'] as int,
+        messageId: 0,
+        fileName: fileName,
+      );
+      await _finalizeUpload(syntheticKey, null);
+    }
+
+    // Track this for the confirmation recovery watcher in case TDLib confirmations lag.
     _allChunksSentAt[fileId] = DateTime.now();
   }
 
@@ -924,88 +974,96 @@ class UploadQueueService {
         throw Exception('Upload aborted for file $fileId');
       }
       try {
+        final chunkFile = File(chunkPath);
+        int? chunkSize;
+        if (await chunkFile.exists()) {
+          chunkSize = await chunkFile.length();
+        }
+
+        // Clean up any old chunk record for this index before inserting
+        await (_db.delete(_db.chunks)
+          ..where((c) => c.fileId.equals(fileId))
+          ..where((c) => c.chunkIndex.equals(chunkIndex))
+        ).go();
+
+        // CRITICAL FIX: Pre-insert chunk in SQLite BEFORE calling handoffToTelegram.
+        // For small files (photos < 2MB), TDLib sends updateMessageSendSucceeded in milliseconds.
+        // Pre-inserting guarantees the chunk row exists in DB so updateMessageSendSucceeded
+        // can immediately find and update its messageId without dropping it.
+        await _db.into(_db.chunks).insert(
+          ChunksCompanion.insert(
+            id: _uuid.v4(),
+            fileId: drift.Value(fileId),
+            chunkIndex: drift.Value(chunkIndex),
+            channelId: drift.Value(channelId),
+            messageId: const drift.Value(null),
+            size: drift.Value(chunkSize),
+          )
+        );
+
         final response = await _orchestrator.handoffToTelegram(
           client, channelId, [chunkPath], caption: caption,
         );
 
-        if (response.isNotEmpty) {
-          final msg = response.first;
-          final messageId = msg['id'];
-          final chatId = msg['chat_id'];
-
-          final content = msg['content'];
-          int? tdlibFileId;
-          if (content != null) {
-            final document = content['document'];
-            if (document != null) {
-              final fileObj = document['document'];
-              if (fileObj != null) {
-                tdlibFileId = fileObj['id'] as int?;
-              }
-            }
-          }
-
-          final key = '$messageId:$chatId';
-          final info = ActiveUploadInfo(
-            queueId: queueId,
-            fileId: fileId,
-            chunkIndex: chunkIndex,
-            totalChunks: totalChunks,
-            chatId: chatId,
-            messageId: messageId,
-            fileName: fileName,
-          );
-
-          _uploadMessageMap[key] = info;
-
-          if (tdlibFileId != null) {
-            _uploadFileIdMap[tdlibFileId] = info;
-          }
-
-          final chunkFile = File(chunkPath);
-          int? chunkSize;
-          if (await chunkFile.exists()) {
-            chunkSize = await chunkFile.length();
-          }
-
-          // Clean up any old chunk record for this index before inserting
-          await (_db.delete(_db.chunks)
-            ..where((c) => c.fileId.equals(fileId))
-            ..where((c) => c.chunkIndex.equals(chunkIndex))
-          ).go();
-
-          // Insert chunk initially with messageId: null (unconfirmed).
-          // Real server messageId will be assigned upon updateMessageSendSucceeded.
-          await _db.into(_db.chunks).insert(
-            ChunksCompanion.insert(
-              id: _uuid.v4(),
-              fileId: drift.Value(fileId),
-              chunkIndex: drift.Value(chunkIndex),
-              channelId: drift.Value(channelId),
-              messageId: const drift.Value(null),
-              size: drift.Value(chunkSize),
-            )
-          );
-
-          AppLogger.info('Upload chunk $chunkIndex/$totalChunks sent (temp msg $messageId, awaiting server confirmation)');
-
-          // Await completion of network upload for this chunk before freeing window slot
-          if (chunkCompleter != null) {
-            await chunkCompleter.future.timeout(const Duration(minutes: 15));
-          }
-
-          // Immediately clean up this chunk's encrypted temporary file from disk
-          try {
-            if (await chunkFile.exists()) {
-              await chunkFile.delete();
-              AppLogger.info('Cleaned up uploaded chunk file: $chunkPath');
-            }
-          } catch (e) {
-            AppLogger.warning('Failed to delete chunk file $chunkPath: $e');
-          }
-
-          return; // Success - exit retry loop
+        if (response.isEmpty) {
+          throw Exception('Telegram returned empty response for chunk $chunkIndex');
         }
+
+        final msg = response.first;
+        if (msg['@type'] == 'error') {
+          throw Exception('Telegram error: [${msg['code']}] ${msg['message']}');
+        }
+
+        final messageId = msg['id'];
+        final chatId = msg['chat_id'];
+
+        final content = msg['content'];
+        int? tdlibFileId;
+        if (content != null) {
+          final document = content['document'];
+          if (document != null) {
+            final fileObj = document['document'];
+            if (fileObj != null) {
+              tdlibFileId = fileObj['id'] as int?;
+            }
+          }
+        }
+
+        final key = '$messageId:$chatId';
+        final info = ActiveUploadInfo(
+          queueId: queueId,
+          fileId: fileId,
+          chunkIndex: chunkIndex,
+          totalChunks: totalChunks,
+          chatId: chatId,
+          messageId: messageId,
+          fileName: fileName,
+        );
+
+        _uploadMessageMap[key] = info;
+
+        if (tdlibFileId != null) {
+          _uploadFileIdMap[tdlibFileId] = info;
+        }
+
+        AppLogger.info('Upload chunk $chunkIndex/$totalChunks sent (temp msg $messageId, awaiting server confirmation)');
+
+        // Await completion of network upload for this chunk before freeing window slot
+        if (chunkCompleter != null) {
+          await chunkCompleter.future.timeout(const Duration(minutes: 15));
+        }
+
+        // Immediately clean up this chunk's encrypted temporary file from disk
+        try {
+          if (await chunkFile.exists()) {
+            await chunkFile.delete();
+            AppLogger.info('Cleaned up uploaded chunk file: $chunkPath');
+          }
+        } catch (e) {
+          AppLogger.warning('Failed to delete chunk file $chunkPath: $e');
+        }
+
+        return; // Success - exit retry loop
       } catch (e, s) {
         AppLogger.error('Upload chunk $chunkIndex attempt ${attempt + 1}/$maxRetries failed', e, s);
 
@@ -1015,6 +1073,7 @@ class UploadQueueService {
           await Future.delayed(backoff);
         } else {
           _abortedFileIds.add(fileId);
+          _fileAbortReasons[fileId] = 'Chunk $chunkIndex upload failed: $e';
           await (_db.update(_db.transferQueue)..where((q) => q.id.equals(queueId)))
             .write(TransferQueueCompanion(
               status: const drift.Value('FAILED'),
@@ -1077,18 +1136,34 @@ class UploadQueueService {
 
     // Check if all chunks for this upload are complete AND have confirmed real message IDs (messageId > 0)
     final completedChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
-    final confirmedChunks = completedChunks.where((c) => c.messageId != null && c.messageId! > 0).toList();
-    final confirmedIndicesInDb = confirmedChunks.map((c) => c.chunkIndex).whereType<int>().toSet();
     final confirmedMemoryIndices = _confirmedChunksPerFile[fileId] ?? {};
+
+    // If memory has confirmation but DB doesn't have messageId yet, sync it
+    for (final chunk in completedChunks) {
+      if (chunk.messageId == null || chunk.messageId! <= 0) {
+        if (confirmedMemoryIndices.contains(chunk.chunkIndex)) {
+          final match = _uploadMessageMap.values
+              .where((m) => m.fileId == fileId && m.chunkIndex == chunk.chunkIndex && m.messageId > 0)
+              .firstOrNull;
+          if (match != null) {
+            await (_db.update(_db.chunks)..where((c) => c.id.equals(chunk.id)))
+                .write(ChunksCompanion(messageId: drift.Value(match.messageId)));
+          }
+        }
+      }
+    }
+
+    final freshChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
+    final confirmedChunks = freshChunks.where((c) => c.messageId != null && c.messageId! > 0).toList();
+    final confirmedIndicesInDb = confirmedChunks.map((c) => c.chunkIndex).whereType<int>().toSet();
 
     // Verify all chunk indices 0 .. totalChunks - 1 are confirmed
     final allIndicesConfirmed = totalChunks > 0 &&
         List.generate(totalChunks, (i) => i).every((idx) =>
             confirmedIndicesInDb.contains(idx) || confirmedMemoryIndices.contains(idx));
 
-    if (completedChunks.length >= totalChunks &&
-        confirmedChunks.length >= totalChunks &&
-        allIndicesConfirmed) {
+    if (freshChunks.length >= totalChunks &&
+        (confirmedChunks.length >= totalChunks || allIndicesConfirmed)) {
       final masterKey = _ref.read(masterKeyProvider);
       var wrappedDekString = dekBytesString;
 
@@ -1174,6 +1249,7 @@ class UploadQueueService {
       _pendingFinalization.remove(fileId);
       _allChunksSentAt.remove(fileId);
       _chunkUploadedCompleters.remove(fileId);
+      _fileAbortReasons.remove(fileId);
 
       try {
         final dir = _activeUploadDirs.remove(fileId);

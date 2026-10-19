@@ -162,6 +162,23 @@ void callbackDispatcher() {
               final fileSize = await entity.length();
               final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
 
+              // Check if file is already in the transfer queue (PENDING, PROCESSING, or ENCRYPTING)
+              final normalizedFilePath = entity.path.replaceAll('\\', '/');
+              final activeTransfers = await (db.select(db.transferQueue)
+                ..where((q) => q.type.equals('UPLOAD_FILE') &
+                    (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+              ).get();
+
+              final alreadyQueued = activeTransfers.any((task) {
+                final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
+                final queuedNormalized = queuedRaw.replaceAll('\\', '/');
+                return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
+              });
+
+              if (alreadyQueued) {
+                continue;
+              }
+
               // Resolve target folder hierarchy
               final resolvedFolderId = await _resolveBackupFolderIdInDispatcher(container, db, entity.path, path, destinationFolderId);
               final targetFolderIdPart = resolvedFolderId ?? '';
@@ -172,26 +189,19 @@ void callbackDispatcher() {
               ).get();
 
               if (existing.isEmpty) {
-                // Check if file is already in the transfer queue (PENDING or PROCESSING)
                 final targetFileId = '${entity.path}|$targetFolderIdPart';
-                final inQueue = await (db.select(db.transferQueue)
-                  ..where((q) => q.fileId.equals(targetFileId) & (q.status.equals('PENDING') | q.status.equals('PROCESSING')))
-                ).get();
-
-                if (inQueue.isEmpty) {
-                  await db.into(db.transferQueue).insert(
-                    TransferQueueCompanion.insert(
-                      id: uuid.v4(),
-                      type: const drift.Value('UPLOAD_FILE'),
-                      status: const drift.Value('PENDING'),
-                      priority: const drift.Value(1),
-                      totalBytes: drift.Value(fileSize),
-                      fileId: drift.Value(targetFileId),
-                      createdAt: drift.Value(DateTime.now()),
-                    ),
-                  );
-                  queuedCount++;
-                }
+                await db.into(db.transferQueue).insert(
+                  TransferQueueCompanion.insert(
+                    id: uuid.v4(),
+                    type: const drift.Value('UPLOAD_FILE'),
+                    status: const drift.Value('PENDING'),
+                    priority: const drift.Value(1),
+                    totalBytes: drift.Value(fileSize),
+                    fileId: drift.Value(targetFileId),
+                    createdAt: drift.Value(DateTime.now()),
+                  ),
+                );
+                queuedCount++;
               }
             }
           }

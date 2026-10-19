@@ -295,9 +295,37 @@ class ZeroDBRecoveryService {
 
       // 4. Prune database records not found in Telegram (handling deletions)
       final allFiles = await _db.select(_db.files).get();
+      final activeTasks = await (_db.select(_db.transferQueue)
+        ..where((q) => q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING'))
+      ).get();
+
+      final Set<String> activeFileIds = {};
+      final Set<String> activeFolderIds = {};
+
+      for (final task in activeTasks) {
+        final fid = task.fileId;
+        if (fid != null) {
+          if (fid.contains('|')) {
+            final parts = fid.split('|');
+            if (task.type == 'DOWNLOAD_FILE') {
+              activeFileIds.add(parts[0]);
+            } else {
+              if (parts.length > 1 && parts[1].isNotEmpty) {
+                activeFolderIds.add(parts[1]);
+              }
+            }
+          } else {
+            activeFileIds.add(fid);
+          }
+        }
+      }
+
+      final now = DateTime.now();
       final List<String> fileIdsToDelete = allFiles
+          .where((f) => !recoveredFileIds.contains(f.id) && 
+              !activeFileIds.contains(f.id) &&
+              (f.createdAt == null || now.difference(f.createdAt!).inHours >= 2))
           .map((f) => f.id)
-          .where((id) => !recoveredFileIds.contains(id))
           .toList();
 
       if (fileIdsToDelete.isNotEmpty) {
@@ -312,9 +340,30 @@ class ZeroDBRecoveryService {
       }
 
       final allFolders = await _db.select(_db.folders).get();
+      // Protect any folders that still contain files
+      final remainingFiles = allFiles.where((f) => !fileIdsToDelete.contains(f.id)).toList();
+      for (final f in remainingFiles) {
+        if (f.folderId != null && f.folderId!.isNotEmpty) {
+          activeFolderIds.add(f.folderId!);
+        }
+      }
+
+      // Also protect any ancestor folders of active folders
+      final folderMap = {for (var f in allFolders) f.id: f};
+      final Set<String> protectedFolderIds = Set.from(activeFolderIds);
+      for (final fId in activeFolderIds) {
+        var current = folderMap[fId];
+        while (current != null && current.parentId != null) {
+          protectedFolderIds.add(current.parentId!);
+          current = folderMap[current.parentId!];
+        }
+      }
+
       final List<String> folderIdsToDelete = allFolders
+          .where((f) => !recoveredFolderIds.contains(f.id) && 
+              !protectedFolderIds.contains(f.id) &&
+              (f.createdAt == null || now.difference(f.createdAt!).inHours >= 2))
           .map((f) => f.id)
-          .where((id) => !recoveredFolderIds.contains(id))
           .toList();
 
       if (folderIdsToDelete.isNotEmpty) {

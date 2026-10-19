@@ -1257,13 +1257,32 @@ class ShareService {
     try {
       // 4. Fetch the Share Manifest message from the Public Share Channel
       final primaryClient = readyClients.first;
-      final manifestMsg = await primaryClient.sendRequest({
-        "@type": "getMessage",
-        "chat_id": shareChannelId,
-        "message_id": manifestMessageId,
-      });
+      await primaryClient.openChat(shareChannelId);
 
-      if (manifestMsg['@type'] == 'error') {
+      Map<String, dynamic>? manifestMsg;
+      try {
+        final res = await primaryClient.getMessages(shareChannelId, [manifestMessageId]);
+        final messages = res['messages'] as List<dynamic>?;
+        if (messages != null && messages.isNotEmpty && messages.first != null) {
+          manifestMsg = messages.first as Map<String, dynamic>;
+        }
+      } catch (e) {
+        AppLogger.warning('ShareService: getMessages failed for manifest, attempting getMessage: $e');
+      }
+
+      if (manifestMsg == null) {
+        try {
+          manifestMsg = await primaryClient.sendRequest({
+            "@type": "getMessage",
+            "chat_id": shareChannelId,
+            "message_id": manifestMessageId,
+          });
+        } catch (e) {
+          AppLogger.error('ShareService: getMessage also failed: $e');
+        }
+      }
+
+      if (manifestMsg == null || manifestMsg['@type'] == 'error') {
         throw Exception("Failed to retrieve share manifest. The share link might have been revoked by the owner.");
       }
 
@@ -1334,29 +1353,36 @@ class ShareService {
         totalSize += (f['size'] as int? ?? 0);
       }
 
-      // Measure internet speed
+      // Measure internet speed (capped to max 3 seconds)
       double speedBytesPerSec = 1.5 * 1024 * 1024; // Default: 1.5 MB/s
       if (onConfirm != null) {
         try {
-          final stopwatch = Stopwatch()..start();
-          final client = HttpClient();
-          client.connectionTimeout = const Duration(seconds: 3);
-          final request = await client.getUrl(Uri.parse('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'));
-          final response = await request.close();
-          if (response.statusCode == 200) {
-            var bytesRead = 0;
-            await for (final chunk in response) {
-              bytesRead += chunk.length;
-              if (bytesRead >= 500 * 1024) break; // 500KB is enough
+          await Future.sync(() async {
+            final stopwatch = Stopwatch()..start();
+            final client = HttpClient();
+            client.connectionTimeout = const Duration(seconds: 2);
+            try {
+              final request = await client.getUrl(Uri.parse('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'))
+                  .timeout(const Duration(seconds: 2));
+              final response = await request.close().timeout(const Duration(seconds: 2));
+              if (response.statusCode == 200) {
+                var bytesRead = 0;
+                await for (final chunk in response) {
+                  bytesRead += chunk.length;
+                  if (bytesRead >= 250 * 1024) break; // 250KB is plenty for a quick sample
+                }
+                stopwatch.stop();
+                final durationMs = stopwatch.elapsedMilliseconds;
+                if (durationMs > 0) {
+                  speedBytesPerSec = (bytesRead / durationMs) * 1000;
+                }
+              }
+            } finally {
+              client.close(force: true);
             }
-            stopwatch.stop();
-            final durationMs = stopwatch.elapsedMilliseconds;
-            if (durationMs > 0) {
-              speedBytesPerSec = (bytesRead / durationMs) * 1000;
-            }
-          }
+          }).timeout(const Duration(seconds: 3));
         } catch (e) {
-          AppLogger.warning('ShareService: Speed test failed: $e');
+          AppLogger.warning('ShareService: Speed test skipped or timed out: $e');
         }
 
         final confirmed = await onConfirm(totalSize, speedBytesPerSec);
@@ -1840,14 +1866,31 @@ class ShareService {
   }
 
   Future<File> _downloadTelegramMessageDocumentWithClient(TelegramService client, int channelId, int messageId) async {
-    final message = await client.sendRequest({
-      "@type": "getMessage",
-      "chat_id": channelId,
-      "message_id": messageId,
-    });
+    Map<String, dynamic>? message;
+    try {
+      message = await client.sendRequest({
+        "@type": "getMessage",
+        "chat_id": channelId,
+        "message_id": messageId,
+      });
+      if (message['@type'] == 'error') message = null;
+    } catch (_) {}
 
-    if (message['@type'] == 'error') {
-      throw Exception("Failed to retrieve chunk message: ${message['message']}");
+    if (message == null) {
+      try {
+        await client.openChat(channelId);
+        final res = await client.getMessages(channelId, [messageId]);
+        final messages = res['messages'] as List<dynamic>?;
+        if (messages != null && messages.isNotEmpty && messages.first != null) {
+          message = messages.first as Map<String, dynamic>;
+        }
+      } catch (e) {
+        AppLogger.warning('ShareService: openChat/getMessages failed for chunk: $e');
+      }
+    }
+
+    if (message == null || message['@type'] == 'error') {
+      throw Exception("Failed to retrieve chunk message: ${message?['message'] ?? 'Message not found'}");
     }
 
     final content = message['content'];
@@ -1864,7 +1907,7 @@ class ShareService {
     await client.downloadFile(fileId);
 
     String? localPath;
-    for (var attempt = 0; attempt < 120; attempt++) {
+    for (var attempt = 0; attempt < 240; attempt++) {
       final fileInfo = await client.sendRequest({'@type': 'getFile', 'file_id': fileId});
       final local = fileInfo['local'] as Map<String, dynamic>?;
       if (local != null && local['is_downloading_completed'] == true && local['path'] != null && (local['path'] as String).isNotEmpty) {

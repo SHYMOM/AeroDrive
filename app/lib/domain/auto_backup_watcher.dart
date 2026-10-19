@@ -251,13 +251,33 @@ class AutoBackupWatcherService {
       if (!await file.exists()) return;
 
       final fileSize = await file.length();
+      final normalizedFilePath = filePath.replaceAll('\\', '/');
+
+      // 1. Comprehensive queue deduplication:
+      // Check if this local file is ALREADY in transferQueue (PENDING, PROCESSING, or ENCRYPTING)
+      final activeTransfers = await (db.select(db.transferQueue)
+        ..where((q) => q.type.equals('UPLOAD_FILE') & 
+            (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+      ).get();
+
+      final alreadyQueued = activeTransfers.any((task) {
+        final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
+        final queuedNormalized = queuedRaw.replaceAll('\\', '/');
+        return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
+      });
+
+      if (alreadyQueued) {
+        AppLogger.info('AutoBackupWatcher: File is already pending/processing in queue: $filePath');
+        return;
+      }
+
       final targetFolderId = (profile['destinationFolderId'] == null || profile['destinationFolderId'] == 'null' || profile['destinationFolderId'] == '__root__')
           ? null
           : profile['destinationFolderId'] as String?;
 
       final folderId = await _resolveBackupFolderId(filePath, profile['path'] as String, targetFolderId);
 
-      // Check if file already exists in target folder with same name and size
+      // 2. Check if file already exists in target folder with same name and size
       final fileName = filePath.contains('/') ? filePath.split('/').last : filePath.split('\\').last;
       final existing = await (db.select(db.files)
         ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & (folderId == null ? f.folderId.isNull() : f.folderId.equals(folderId)) & f.deletedAt.isNull())
@@ -267,16 +287,7 @@ class AutoBackupWatcherService {
         return;
       }
 
-      // Check if file is already in the transfer queue (PENDING or PROCESSING)
       final targetFileId = '$filePath|${folderId ?? ''}';
-      final inQueue = await (db.select(db.transferQueue)
-        ..where((q) => q.fileId.equals(targetFileId) & (q.status.equals('PENDING') | q.status.equals('PROCESSING')))
-      ).get();
-
-      if (inQueue.isNotEmpty) {
-        return;
-      }
-
       final queueId = _uuid.v4();
       await db.into(db.transferQueue).insert(
         TransferQueueCompanion.insert(
@@ -392,6 +403,22 @@ class AutoBackupWatcherService {
       if (mode == 'local_to_drive' || mode == 'both') {
         await for (final entity in localDir.list(recursive: true, followLinks: false)) {
           if (entity is File && _matchesFilter(entity.path, profile)) {
+            final normalizedFilePath = entity.path.replaceAll('\\', '/');
+            final activeTransfers = await (db.select(db.transferQueue)
+              ..where((q) => q.type.equals('UPLOAD_FILE') &
+                  (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+            ).get();
+
+            final alreadyQueued = activeTransfers.any((task) {
+              final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
+              final queuedNormalized = queuedRaw.replaceAll('\\', '/');
+              return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
+            });
+
+            if (alreadyQueued) {
+              continue;
+            }
+
             final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
             final resolvedFolderId = await _resolveBackupFolderId(entity.path, path, targetFolderId);
 
@@ -419,18 +446,26 @@ class AutoBackupWatcherService {
           final localFilePath = p.join(path, dbFile.name);
           final localFile = File(localFilePath);
           if (!await localFile.exists()) {
-            // Queue download with output path encoded
-            await db.into(db.transferQueue).insert(
-              TransferQueueCompanion.insert(
-                id: _uuid.v4(),
-                fileId: drift.Value('${dbFile.id}|$localFilePath'),
-                type: const drift.Value('DOWNLOAD_FILE'),
-                status: const drift.Value('PENDING'),
-                priority: const drift.Value(1),
-                createdAt: drift.Value(DateTime.now()),
-              )
-            );
-            AppLogger.info('AutoBackupWatcher: Queued file for download: ${dbFile.name}');
+            final targetDownloadId = '${dbFile.id}|$localFilePath';
+            final existingDownload = await (db.select(db.transferQueue)
+              ..where((q) => q.fileId.equals(targetDownloadId) & 
+                  (q.status.equals('PENDING') | q.status.equals('PROCESSING')))
+            ).get();
+
+            if (existingDownload.isEmpty) {
+              // Queue download with output path encoded
+              await db.into(db.transferQueue).insert(
+                TransferQueueCompanion.insert(
+                  id: _uuid.v4(),
+                  fileId: drift.Value(targetDownloadId),
+                  type: const drift.Value('DOWNLOAD_FILE'),
+                  status: const drift.Value('PENDING'),
+                  priority: const drift.Value(1),
+                  createdAt: drift.Value(DateTime.now()),
+                )
+              );
+              AppLogger.info('AutoBackupWatcher: Queued file for download: ${dbFile.name}');
+            }
           }
         }
       }

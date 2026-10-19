@@ -27,14 +27,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.listen(_telegramAuthStateProvider, (prev, next) {
       if (next == TelegramAuthState.ready) {
         _hasBeenAuthenticated = true;
-        state = AuthState.loading;
+        state = AuthState.authenticated;
 
-        // Ensure channels are provisioned/discovered BEFORE proceeding to main UI
-        _ensureInfrastructure().then((_) {
-          state = AuthState.authenticated;
-        }).catchError((e) {
+        // Discover/sync channels in background without blocking UI
+        _ensureInfrastructure().catchError((e) {
           AppLogger.error('AuthNotifier: Infrastructure setup failed', e);
-          state = AuthState.authenticated;
         });
       } else if (next == TelegramAuthState.waitPhoneNumber ||
                  next == TelegramAuthState.waitCode ||
@@ -53,13 +50,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final initialState = _ref.read(_telegramAuthStateProvider);
     if (initialState == TelegramAuthState.ready) {
       _hasBeenAuthenticated = true;
-      state = AuthState.loading;
+      state = AuthState.authenticated;
 
-      _ensureInfrastructure().then((_) {
-        state = AuthState.authenticated;
-      }).catchError((e) {
+      _ensureInfrastructure().catchError((e) {
         AppLogger.error('AuthNotifier: Initial infrastructure setup failed', e);
-        state = AuthState.authenticated;
       });
     } else if (initialState == TelegramAuthState.initial) {
       state = AuthState.loading;

@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../widgets/aerodrive_logo.dart';
+import 'auth_provider.dart';
 
 class InfrastructureSetupScreen extends ConsumerStatefulWidget {
   const InfrastructureSetupScreen({super.key});
@@ -38,12 +40,20 @@ class _InfrastructureSetupScreenState extends ConsumerState<InfrastructureSetupS
   @override
   void initState() {
     super.initState();
-    // Smoothly animate progress over ~25-35 seconds minimum
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (ref.read(authProvider) == AuthState.authenticated && mounted) {
+        context.go('/drive');
+      }
+    });
+
     _progressTimer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
       if (!mounted) return;
       setState(() {
-        if (_progress < 0.92) {
-          _progress += 0.01;
+        if (_progress < 1.0) {
+          _progress += 0.02;
+        } else {
+          timer.cancel();
+          context.go('/drive');
         }
       });
     });
@@ -57,6 +67,11 @@ class _InfrastructureSetupScreenState extends ConsumerState<InfrastructureSetupS
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider, (_, next) {
+      if (next == AuthState.authenticated && mounted) {
+        context.go('/drive');
+      }
+    });
     final percentage = (_progress * 100).toInt().clamp(0, 100);
 
     return Scaffold(

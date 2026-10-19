@@ -49,6 +49,7 @@ class DownloadQueueService {
   
   DownloadQueueService(this._ref, this._db, this._telegramManager, this._orchestrator) {
     NotificationService.instance.initialize();
+    _resetInterruptedTransfers();
     _startPolling();
     _listenToTdlibEvents();
     _startTimeoutChecker();
@@ -113,6 +114,22 @@ class DownloadQueueService {
           status: const drift.Value('FAILED'),
           errorMessage: drift.Value(message),
         ));
+  }
+
+  Future<void> _resetInterruptedTransfers() async {
+    try {
+      final resetCount = await (_db.update(_db.transferQueue)
+        ..where((q) => q.type.equals('DOWNLOAD_FILE') & q.status.equals('PROCESSING'))
+      ).write(const TransferQueueCompanion(
+        status: drift.Value('PENDING'),
+        errorMessage: drift.Value(null),
+      ));
+      if (resetCount > 0) {
+        AppLogger.info('DownloadQueueService: Reset $resetCount interrupted download(s) to PENDING');
+      }
+    } catch (e) {
+      AppLogger.error('Failed to reset interrupted downloads', e);
+    }
   }
 
   void _listenToTdlibEvents() {

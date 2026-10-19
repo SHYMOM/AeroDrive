@@ -16,6 +16,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../../../domain/channel_load_balancer.dart';
 import '../../../domain/recovery/manifest_encoder.dart';
+import '../../telegram/telegram_manager.dart';
 import '../../telegram/telegram_service.dart';
 
 class FolderPickerDialog extends ConsumerStatefulWidget {

@@ -107,16 +107,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isGoingToAuth = location == '/auth';
       final isGoingToSetup = location == '/setup';
 
-      if (isAuthLoading && !isGoingToSetup) {
-        return '/setup';
+      // If auth is still loading, do not redirect to /setup; stay on current/splash route
+      if (isAuthLoading) {
+        return null;
       }
 
-      // If not authenticated and not heading to auth/setup → redirect to auth
-      if (!isAuth && !isGoingToAuth && !isGoingToSetup && !isAuthLoading) {
+      // If not authenticated and not heading to auth → redirect to auth
+      if (!isAuth && !isGoingToAuth) {
         return '/auth';
       }
 
-      // If authenticated and on auth/setup → go to drive
+      // If authenticated and on auth or setup → go to drive
       if (isAuth && (isGoingToAuth || isGoingToSetup)) {
         return AppDestination.drive.path;
       }
