@@ -147,7 +147,7 @@
   "145": "file_tags_row.dart",
   "146": "MainActivity",
   "147": "aerodrive_logo.dart",
-  "148": "streamingServerProvider",
+  "148": "security_providers.dart",
   "149": "MaterialPageRoute",
   "150": "RegisterPlugins",
   "151": "_DigestSink",
@@ -157,5 +157,15 @@
   "155": "settings.gradle.kts",
   "156": "@your_bot_name",
   "157": "int?",
-  "158": "String?"
+  "158": "String?",
+  "159": "_DigestSink",
+  "160": "streamingServerProvider",
+  "161": "MaterialPageRoute",
+  "162": "queue_repository.dart",
+  "163": "build",
+  "164": "_ThumbnailOrCoverState",
+  "165": "thumbnail_service.dart",
+  "166": "dart:typed_data",
+  "167": "StateNotifier",
+  "168": "_DigestSink"
 }

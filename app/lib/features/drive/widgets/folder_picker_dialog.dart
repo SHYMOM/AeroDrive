@@ -253,9 +253,30 @@ class _FolderPickerDialogState extends ConsumerState<FolderPickerDialog> {
                             }
                             
                             return ListTile(
-                              leading: Icon(Icons.folder, color: color),
-                              title: Text(folder.name, style: TextStyle(color: AppColors.onSurface, fontSize: 14)),
-                              trailing: Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant.withOpacity(0.5)),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      color.withValues(alpha: 0.28),
+                                      color.withValues(alpha: 0.10),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: color.withValues(alpha: 0.38),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Icon(Icons.folder_rounded, color: color, size: 20),
+                              ),
+                              title: Text(folder.name, style: TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.w500)),
+                              trailing: Icon(Icons.chevron_right_rounded, color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), size: 20),
                               onTap: () {
                                 setState(() {
                                   _currentFolderId = folder.id;

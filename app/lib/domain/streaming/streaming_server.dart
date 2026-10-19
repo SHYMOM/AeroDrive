@@ -16,6 +16,7 @@ import '../../core/security/master_key_provider.dart';
 import '../../data/crypto/encryption_engine.dart';
 import '../../data/db/database.dart';
 import '../../features/telegram/telegram_service.dart';
+import '../upload_orchestrator.dart';
 
 class StreamingServer {
 
@@ -135,7 +136,15 @@ class StreamingServer {
       };
 
       // 5. Create streaming response body
-      final stream = _createDecryptionStream(chunks, start, end, dekBytes, ctrIv);
+      final stream = _createDecryptionStream(
+        chunks,
+        start,
+        end,
+        dekBytes,
+        ctrIv,
+        plainFileSize: plainFileSize,
+        totalChunks: fileData.totalChunks,
+      );
 
       return Response(
         206, // Partial Content
@@ -149,22 +158,47 @@ class StreamingServer {
   }
 
   Stream<List<int>> _createDecryptionStream(
-    List<ChunkData> chunks,
+    List<ChunkData> rawChunks,
     int startPlain,
     int endPlain,
     List<int> dekBytes,
-    List<int>? ctrIv,
-  ) async* {
+    List<int>? ctrIv, {
+    required int plainFileSize,
+    required int totalChunks,
+  }) async* {
     final telegram = ref.read(telegramServiceProvider.notifier);
 
     final isCtr = ctrIv != null;
 
+    // Deduplicate chunks by chunkIndex, preferring valid messageId > 0
+    final Map<int, ChunkData> uniqueChunksMap = {};
+    for (final chunk in rawChunks) {
+      final idx = chunk.chunkIndex ?? 0;
+      final existing = uniqueChunksMap[idx];
+      if (existing == null) {
+        uniqueChunksMap[idx] = chunk;
+      } else if ((existing.messageId == null || existing.messageId! <= 0) &&
+          (chunk.messageId != null && chunk.messageId! > 0)) {
+        uniqueChunksMap[idx] = chunk;
+      }
+    }
+    final chunks = uniqueChunksMap.values.toList()
+      ..sort((a, b) => (a.chunkIndex ?? 0).compareTo(b.chunkIndex ?? 0));
+
+    final int optimalChunkSize = plainFileSize > 0
+        ? UploadOrchestrator.getOptimalChunkSize(plainFileSize)
+        : 20 * 1024 * 1024;
+
     // Calculate cumulative chunk boundaries
     var currentOffset = 0;
     final List<Map<String, dynamic>> chunkInfos = [];
-    for (final chunk in chunks) {
+    for (var i = 0; i < chunks.length; i++) {
+      final chunk = chunks[i];
+      final chunkIdx = chunk.chunkIndex ?? i;
       int plainSize;
-      if (chunk.size != null) {
+      final isLastChunk = (i == chunks.length - 1) || (totalChunks > 0 && chunkIdx == totalChunks - 1);
+
+      if (chunk.size != null && (chunks.length == 1 || chunk.size! < plainFileSize)) {
         if (isCtr) {
           plainSize = chunk.size!;
         } else {
@@ -177,7 +211,12 @@ class StreamingServer {
           plainSize = (fullBlocks * plainBlockSize) + remainderPlain;
         }
       } else {
-        plainSize = 20 * 1024 * 1024;
+        // Fallback / Corrupt DB size recovery: compute from optimal chunk size and file boundaries
+        if (isLastChunk && plainFileSize > 0) {
+          plainSize = max(0, plainFileSize - currentOffset);
+        } else {
+          plainSize = optimalChunkSize;
+        }
       }
 
       chunkInfos.add({
@@ -247,7 +286,11 @@ class StreamingServer {
         final int offsetInBlock = chunkStart - cipherStart;
         final int sliceLength = chunkEnd - chunkStart + 1;
 
-        yield decryptedBlock.sublist(offsetInBlock, offsetInBlock + sliceLength);
+        final safeStart = min(max(0, offsetInBlock), decryptedBlock.length);
+        final safeEnd = min(safeStart + sliceLength, decryptedBlock.length);
+        if (safeStart < safeEnd) {
+          yield decryptedBlock.sublist(safeStart, safeEnd);
+        }
       } else {
         // Fallback AES-GCM block decryption:
         // Since GCM has 12-byte nonces and 16-byte MACs prepended to each 4MB block on disk,
@@ -282,7 +325,11 @@ class StreamingServer {
           final int remainingRequested = chunkEnd - currentChunkOffset + 1;
           final int lenToTake = min(decryptedData.length - offsetInBlock, remainingRequested);
 
-          yield decryptedData.sublist(offsetInBlock, offsetInBlock + lenToTake);
+          final safeStart = min(max(0, offsetInBlock), decryptedData.length);
+          final safeEnd = min(safeStart + lenToTake, decryptedData.length);
+          if (safeStart < safeEnd) {
+            yield decryptedData.sublist(safeStart, safeEnd);
+          }
 
           currentChunkOffset += lenToTake;
         }

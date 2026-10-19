@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
@@ -109,15 +109,61 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Transfers', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold)),
+        title: Row(
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => context.go('/drive'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.folder_outlined, size: 16, color: AppColors.secondary),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Drive',
+                      style: TextStyle(
+                        color: AppColors.secondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.outline),
+            const SizedBox(width: 4),
+            Text(
+              'Transfers',
+              style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
-          onPressed: () => context.go('/drive'),
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          tooltip: 'Back to Drive',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/drive');
+            }
+          },
         ),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.folder_outlined, size: 16),
+            label: const Text('My Drive'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.primaryLight,
+            ),
+            onPressed: () => context.go('/drive'),
+          ),
           IconButton(
             icon: Icon(Icons.delete_sweep_outlined, color: AppColors.onSurfaceVariant),
             tooltip: 'Clear History',
@@ -305,6 +351,18 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
               color: AppColors.onSurfaceVariant,
               fontSize: 13,
             ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            icon: const Icon(Icons.cloud_outlined, size: 18),
+            label: const Text('Return to My Drive'),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () => context.go('/drive'),
           ),
         ],
       ),

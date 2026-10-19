@@ -11,8 +11,10 @@ import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../data/db/database.dart';
 import '../../domain/streaming/streaming_server.dart';
+import '../../domain/sync/config_sync_service.dart';
 import '../sharing/share_dialog.dart';
 import 'fullscreen_video_screen.dart';
+import 'providers/drive_providers.dart';
 
 class MediaPlayerScreen extends ConsumerStatefulWidget {
 
@@ -248,6 +250,9 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
       if (player != null) player!.pause();
       final fileRepo = ref.read(fileRepositoryProvider);
       await fileRepo.softDelete(widget.file.id);
+      ref.read(configSyncServiceProvider).syncConfigToChannel();
+      ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+      ref.invalidate(folderContentsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Video moved to trash')));
         Navigator.pop(context); // Go back after deleting

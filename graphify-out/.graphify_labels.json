@@ -227,7 +227,9 @@
   "225": "_DigestSink",
   "226": "[1.8.21] - 2023-11-26",
   "227": "[1.8.21.2] - 2024-05-27",
+  "228": "autoBackupWatcherProvider",
   "229": "[1.8.59] - 2025-12-29",
+  "230": "../telegram/telegram_service.dart",
   "231": "[1.8.61.1] - 2026-03-01",
   "232": "[1.8.62] - 2026-03-06",
   "233": "[1.8.63] - 2026-04-04",
@@ -277,5 +279,8 @@
   "277": "Local AI Face Clustering",
   "278": "Zero-DB Recovery (README)",
   "279": "tdlib.native (TDLib binaries for multiple platforms)",
-  "280": "TDLib Telegram Database Library"
+  "280": "TDLib Telegram Database Library",
+  "281": "StateNotifier",
+  "282": "_ThumbnailOrCoverState",
+  "283": "TelegramService"
 }

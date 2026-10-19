@@ -15,6 +15,7 @@ import '../../gallery/thumbnail_service.dart';
 import '../../preview/preview_router.dart';
 import '../../sharing/share_dialog.dart';
 import '../../tags/tag_dialog.dart';
+import '../../../domain/sync/config_sync_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
@@ -436,6 +437,7 @@ class FileGridItem extends ConsumerWidget {
     if (confirmed == true) {
       final fileRepo = ref.read(fileRepositoryProvider);
       await fileRepo.softDelete(file.id);
+      ref.read(configSyncServiceProvider).syncConfigToChannel();
       ref.read(dbRebuildVersionProvider.notifier).state++;
     }
   }

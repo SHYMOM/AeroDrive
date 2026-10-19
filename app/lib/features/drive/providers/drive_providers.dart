@@ -306,12 +306,15 @@ final folderItemsCountProvider = FutureProvider.family<int, String>((ref, folder
   return files.length + subfolders.length;
 });
 
-/// Calculates total storage used based on Chunk size sum
+/// Calculates total storage used based on non-deleted Files sum
 final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
   final db = ref.watch(databaseProvider);
   ref.watch(dbRebuildVersionProvider);
 
-  return db.customSelect('SELECT SUM(size) AS total FROM chunks;').watchSingle().map((row) => row.read<int>('total') ?? 0);
+  return db
+      .customSelect('SELECT SUM(size) AS total FROM files WHERE deleted_at IS NULL;')
+      .watchSingle()
+      .map((row) => row.read<int>('total') ?? 0);
 });
 
 /// Reads the saved file icon style setting ('Minimal', 'Filled', 'Colored', 'Outlined').

@@ -13,6 +13,7 @@ import '../../core/providers/repository_providers.dart';
 import '../../data/db/database.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../smart_analyzer.dart';
+import '../sync/config_sync_service.dart';
 import '../thumbnail_cache_manager.dart';
 import 'manifest_encoder.dart';
 
@@ -382,6 +383,18 @@ class ZeroDBRecoveryService {
           AppLogger.error('Failed to sync metadata after recovery for $fileId', e);
         }
       }
+    }
+
+    // 6. Apply remote drive state (trashed items, deletions) from config channel
+    try {
+      final configService = _ref.read(configSyncServiceProvider);
+      final restoredConfig = await configService.restoreConfigFromChannel();
+      if (restoredConfig != null && restoredConfig.isNotEmpty) {
+        final Map<String, dynamic> configMap = jsonDecode(restoredConfig);
+        await configService.applyRemoteDriveState(configMap);
+      }
+    } catch (e) {
+      AppLogger.warning('ZeroDBRecovery: Failed to apply drive state after recovery: $e');
     }
 
     onProgress?.call(messagesScanned, itemsRecovered);

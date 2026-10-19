@@ -50,7 +50,7 @@ class AudiosScreen extends ConsumerWidget {
             itemCount: audios.length,
             itemBuilder: (context, index) {
               final file = audios[index];
-              return _AudioItem(file: file);
+              return _AudioItem(file: file, siblings: audios);
             },
           );
         },
@@ -63,8 +63,9 @@ class AudiosScreen extends ConsumerWidget {
 
 class _AudioItem extends ConsumerWidget {
 
-  const _AudioItem({required this.file});
+  const _AudioItem({required this.file, this.siblings});
   final FileData file;
+  final List<FileData>? siblings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) => PressAndHoldPreview(
@@ -94,7 +95,7 @@ class _AudioItem extends ConsumerWidget {
             file.size != null ? _formatFileSize(file.size!) : 'Unknown size',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
           ),
-          onTap: () => PreviewRouter.openPreview(context, file),
+          onTap: () => PreviewRouter.openPreview(context, file, siblings: siblings),
         ),
       );
 

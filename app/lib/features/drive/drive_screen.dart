@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 import 'package:cross_file/cross_file.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:desktop_drop/desktop_drop.dart';
@@ -17,6 +18,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/constants.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
+import '../../core/providers/infrastructure_providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -25,6 +27,7 @@ import '../../domain/channel_load_balancer.dart';
 import '../../domain/folder_scanner.dart';
 import '../../domain/recovery/recovery_scanner.dart';
 import '../../domain/sync/config_sync_service.dart';
+import '../../domain/sync/realtime_sync_service.dart';
 import '../sharing/share_service.dart';
 import '../telegram/telegram_service.dart';
 import '../transfers/transfers_screen.dart';
@@ -47,10 +50,13 @@ class DriveScreen extends ConsumerStatefulWidget {
   ConsumerState<DriveScreen> createState() => _DriveScreenState();
 }
 
-class _DriveScreenState extends ConsumerState<DriveScreen> {
+class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingObserver {
+  bool _isDragging = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(() async {
       final settings = ref.read(settingsRepositoryProvider);
       
@@ -86,6 +92,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       // Check for interrupted imports on startup
       _checkForInterruptedImports();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(realtimeSyncServiceProvider).catchUp();
+    }
   }
 
   Future<void> _showPromptDialog({
@@ -184,10 +203,42 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
     AppLogger.info('DriveScreen: localConfig=$localChannels, hasLocalConfig=$hasLocalConfig');
 
     if (!hasLocalConfig && status != ConfigStatus.found_unrestored) {
-      AppLogger.info('DriveScreen: No storage channels found on account. Launching ChannelSetupWizardDialog.');
-      if (status == ConfigStatus.missing) {
-        await configService.syncConfigToChannel();
+      // First, try discovering existing infrastructure before assuming no channels exist
+      final telegramService = ref.read(telegramServiceProvider.notifier);
+      final masterKeyBytes = ref.read(masterKeyProvider);
+      if (masterKeyBytes != null) {
+        final discoveryService = ref.read(channelDiscoveryServiceProvider);
+        final discoveryResult = await discoveryService.discoverInfrastructure(
+          telegramService: telegramService,
+          masterKey: SecretKey(masterKeyBytes),
+        );
+
+        if (discoveryResult.storageChannelIds.isNotEmpty || discoveryResult.configChannelId != null) {
+          AppLogger.info('DriveScreen: Discovered existing AeroDrive channels on Telegram! Restoring.');
+          await discoveryService.restoreFromDiscovery(discoveryResult);
+
+          // Check if remote config channel has full settings to restore
+          final jsonConfig = await configService.restoreConfigFromChannel();
+          if (jsonConfig != null) {
+            await _applyRestoredConfig(jsonConfig);
+          } else {
+            // Run disaster recovery with discovered channels
+            await ref.read(recoveryServiceProvider).runDisasterRecovery(
+              masterKey: SecretKey(masterKeyBytes),
+            );
+            ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+            ref.invalidate(folderContentsProvider);
+          }
+
+          if (mounted) {
+            ref.read(configCheckedProvider.notifier).state = true;
+            configService.syncTelegramFolder();
+          }
+          return;
+        }
       }
+
+      AppLogger.info('DriveScreen: No storage channels found on account. Launching ChannelSetupWizardDialog.');
       if (mounted) {
         ref.read(configCheckedProvider.notifier).state = true;
         _showChannelSetupPrompt(context);
@@ -247,114 +298,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
 
       final jsonConfig = await configService.restoreConfigFromChannel();
       if (jsonConfig != null) {
-        try {
-          final telegramService = ref.read(telegramServiceProvider.notifier);
-          if (jsonConfig.startsWith('{')) {
-            final Map<String, dynamic> configMap = jsonDecode(jsonConfig);
-            final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
-            final activeChannel = configMap['active_channel_id'] as String? ?? '';
-            final publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
-            final publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
-            final publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
-
-            // Verify channels exist before saving
-            final List<dynamic> decoded = jsonDecode(rawChannels);
-            final List<Map<String, dynamic>> verifiedChannels = [];
-            for (final ch in decoded) {
-              final id = ch['id'];
-              if (id != null) {
-                final int chatId = id is String ? int.parse(id) : id as int;
-                try {
-                  final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
-                  final adminCheck = await telegramService.checkAdminStatus(chatId);
-                  if (adminCheck['is_admin'] == true) {
-                    verifiedChannels.add({
-                      'id': chatId,
-                      'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
-                      'accountId': ch['accountId'] ?? 'primary',
-                    });
-                  }
-                } catch (e) {
-                  AppLogger.warning('Channel $chatId does not exist: $e');
-                }
-              }
-            }
-
-            if (verifiedChannels.isNotEmpty) {
-              await settingsRepo.setSetting('storage_channels_list', jsonEncode(verifiedChannels));
-              
-              // If active channel is verified, keep it, otherwise pick first verified
-              if (activeChannel.isNotEmpty && verifiedChannels.any((c) => c['id'].toString() == activeChannel)) {
-                await settingsRepo.setSetting('active_channel_id', activeChannel);
-              } else {
-                await settingsRepo.setSetting('active_channel_id', verifiedChannels.first['id'].toString());
-              }
-
-              if (publicShareChannelId.isNotEmpty) {
-                await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
-              }
-              if (publicShareChannelUsername.isNotEmpty) {
-                await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
-              }
-              if (publicShareChannelInvite.isNotEmpty) {
-                await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
-              }
-              final tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
-              await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
-
-              // Run recovery
-              final masterKey = ref.read(masterKeyProvider);
-              if (masterKey != null) {
-                await ref.read(recoveryServiceProvider).runDisasterRecovery(
-                  masterKey: SecretKey(masterKey),
-                );
-                ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
-                ref.invalidate(folderContentsProvider);
-              }
-            }
-          } else {
-            // Fallback for legacy simple channels format
-            final List<dynamic> decoded = jsonDecode(jsonConfig);
-            final List<Map<String, dynamic>> verifiedChannels = [];
-            for (final ch in decoded) {
-              final id = ch['id'];
-              if (id != null) {
-                final int chatId = id is String ? int.parse(id) : id as int;
-                try {
-                  final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
-                  final adminCheck = await telegramService.checkAdminStatus(chatId);
-                  if (adminCheck['is_admin'] == true) {
-                    verifiedChannels.add({
-                      'id': chatId,
-                      'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
-                      'accountId': ch['accountId'] ?? 'primary',
-                    });
-                  }
-                } catch (e) {
-                  AppLogger.warning('Channel $chatId does not exist: $e');
-                }
-              }
-            }
-
-            if (verifiedChannels.isNotEmpty) {
-              await settingsRepo.setSetting('storage_channels_list', jsonEncode(verifiedChannels));
-              final firstChannelId = verifiedChannels.first['id'].toString();
-              await settingsRepo.setSetting('active_channel_id', firstChannelId);
-
-              // Run recovery
-              final masterKey = ref.read(masterKeyProvider);
-              if (masterKey != null) {
-                await ref.read(recoveryServiceProvider).runDisasterRecovery(
-                  masterKey: SecretKey(masterKey),
-                );
-                ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
-                ref.invalidate(folderContentsProvider);
-              }
-            }
-          }
-        } catch (e) {
-          AppLogger.error('Failed to auto-restore config details: $e');
-        }
+        await _applyRestoredConfig(jsonConfig);
       }
 
       // Dismiss loading dialog
@@ -368,7 +312,108 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       ref.read(configCheckedProvider.notifier).state = true;
       // Also sync the Telegram folder structure to group all connected channels
       configService.syncTelegramFolder();
+      // Run catch-up sync to discover any items created or modified on other devices
+      ref.read(realtimeSyncServiceProvider).catchUp();
     }
+  }
+
+  Future<bool> _applyRestoredConfig(String jsonConfig) async {
+    try {
+      final telegramService = ref.read(telegramServiceProvider.notifier);
+      final settingsRepo = ref.read(settingsRepositoryProvider);
+      final List<Map<String, dynamic>> verifiedChannels = [];
+      String activeChannel = '';
+      String publicShareChannelId = '';
+      String publicShareChannelUsername = '';
+      String publicShareChannelInvite = '';
+      String tempJoined = '[]';
+
+      if (jsonConfig.startsWith('{')) {
+        final Map<String, dynamic> configMap = jsonDecode(jsonConfig);
+        final rawChannels = configMap['storage_channels_list'] as String? ?? '[]';
+        activeChannel = configMap['active_channel_id'] as String? ?? '';
+        publicShareChannelId = configMap['public_share_channel_id'] as String? ?? '';
+        publicShareChannelUsername = configMap['public_share_channel_username'] as String? ?? '';
+        publicShareChannelInvite = configMap['public_share_channel_invite'] as String? ?? '';
+        tempJoined = configMap['temp_joined_sharing_channels'] as String? ?? '[]';
+
+        final List<dynamic> decoded = jsonDecode(rawChannels);
+        for (final ch in decoded) {
+          final id = ch['id'];
+          if (id != null) {
+            final int chatId = id is String ? int.parse(id) : id as int;
+            try {
+              final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
+              final adminCheck = await telegramService.checkAdminStatus(chatId);
+              if (adminCheck['is_admin'] == true) {
+                verifiedChannels.add({
+                  'id': chatId,
+                  'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
+                  'accountId': ch['accountId'] ?? 'primary',
+                });
+              }
+            } catch (e) {
+              AppLogger.warning('Channel $chatId does not exist: $e');
+            }
+          }
+        }
+      } else {
+        final List<dynamic> decoded = jsonDecode(jsonConfig);
+        for (final ch in decoded) {
+          final id = ch['id'];
+          if (id != null) {
+            final int chatId = id is String ? int.parse(id) : id as int;
+            try {
+              final chat = await telegramService.sendRequest({"@type": "getChat", "chat_id": chatId});
+              final adminCheck = await telegramService.checkAdminStatus(chatId);
+              if (adminCheck['is_admin'] == true) {
+                verifiedChannels.add({
+                  'id': chatId,
+                  'title': chat['title'] ?? ch['title'] ?? 'Verified Channel',
+                  'accountId': ch['accountId'] ?? 'primary',
+                });
+              }
+            } catch (e) {
+              AppLogger.warning('Channel $chatId does not exist: $e');
+            }
+          }
+        }
+      }
+
+      if (verifiedChannels.isNotEmpty) {
+        await settingsRepo.setSetting('storage_channels_list', jsonEncode(verifiedChannels));
+        if (activeChannel.isNotEmpty && verifiedChannels.any((c) => c['id'].toString() == activeChannel)) {
+          await settingsRepo.setSetting('active_channel_id', activeChannel);
+        } else {
+          await settingsRepo.setSetting('active_channel_id', verifiedChannels.first['id'].toString());
+        }
+
+        if (publicShareChannelId.isNotEmpty) {
+          await settingsRepo.setSetting('public_share_channel_id', publicShareChannelId);
+        }
+        if (publicShareChannelUsername.isNotEmpty) {
+          await settingsRepo.setSetting('public_share_channel_username', publicShareChannelUsername);
+        }
+        if (publicShareChannelInvite.isNotEmpty) {
+          await settingsRepo.setSetting('public_share_channel_invite', publicShareChannelInvite);
+        }
+        await settingsRepo.setSetting('temp_joined_sharing_channels', tempJoined);
+
+        // Run recovery
+        final masterKey = ref.read(masterKeyProvider);
+        if (masterKey != null) {
+          await ref.read(recoveryServiceProvider).runDisasterRecovery(
+            masterKey: SecretKey(masterKey),
+          );
+          ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+          ref.invalidate(folderContentsProvider);
+        }
+        return true;
+      }
+    } catch (e) {
+      AppLogger.error('DriveScreen: Failed to apply restored config: $e');
+    }
+    return false;
   }
 
   void _showChannelSetupPrompt(BuildContext context) {
@@ -470,22 +515,65 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       backgroundColor: AppColors.background,
       appBar: _buildAppBar(context),
       body: DropTarget(
+        onDragEntered: (_) => setState(() => _isDragging = true),
+        onDragExited: (_) => setState(() => _isDragging = false),
         onDragDone: (detail) async {
-          final activeChannel = await ref.read(settingsRepositoryProvider).getSetting('active_channel_id');
-          final masterKey = ref.read(masterKeyProvider);
-          if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
-          
-          final scanner = ref.read(folderScannerProvider);
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Processing ${detail.files.length} dropped items...')));
+          setState(() => _isDragging = false);
+          if (detail.files.isEmpty) return;
+
+          final settingsRepo = ref.read(settingsRepositoryProvider);
+          var activeChannel = await settingsRepo.getSetting('active_channel_id');
+          if (activeChannel == null || activeChannel.isEmpty) {
+            final channels = await ChannelLoadBalancer.getStorageChannels(settingsRepo);
+            if (channels.isNotEmpty) {
+              activeChannel = channels.first['id'].toString();
+              await settingsRepo.setSetting('active_channel_id', activeChannel);
+            }
           }
+
+          final masterKey = ref.read(masterKeyProvider);
+          if (!mounted) return;
+          if (!_checkSecurityAndChannel(context, activeChannel, masterKey)) return;
+
+          final droppedCount = detail.files.length;
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('Queueing $droppedCount dropped item${droppedCount > 1 ? "s" : ""} for upload...'),
+                  ],
+                ),
+                backgroundColor: AppColors.primary,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          }
+
+          final scanner = ref.read(folderScannerProvider);
           for (final XFile xfile in detail.files) {
             await scanner.scanAndQueueDirectory(xfile.path, currentFolderId);
           }
           ref.invalidate(folderContentsProvider);
+
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$droppedCount item${droppedCount > 1 ? "s" : ""} queued for upload.'),
+                backgroundColor: AppColors.success,
+              ),
+            );
+          }
         },
-        onDragEntered: (_) {},
-        child: contentsAsync.when(
+        child: Stack(
+          children: [
+            contentsAsync.when(
           loading: () => Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: AppColors.onSurface))),
           data: (contents) {
@@ -499,12 +587,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
               backgroundColor: AppColors.surfaceElevated,
               onRefresh: () async {
                 if (!mounted) return;
-                final masterKey = ref.read(masterKeyProvider);
-                if (masterKey != null) {
-                  await ref.read(recoveryServiceProvider).runDisasterRecovery(
-                    masterKey: SecretKey(masterKey),
-                  );
-                }
+                await ref.read(realtimeSyncServiceProvider).catchUp(force: true);
                 if (mounted) {
                   ref.invalidate(folderContentsProvider);
                 }
@@ -587,12 +670,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 180,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 2.6,
-                        ),
+                        gridDelegate: isMobile
+                            ? const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 1.65,
+                              )
+                            : const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 220,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 1.65,
+                              ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FolderGridItem(folder: folders[index]),
                           childCount: folders.length,
@@ -620,12 +710,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       sliver: SliverGrid(
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 0.82,
-                        ),
+                        gridDelegate: isMobile
+                            ? const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 0.82,
+                              )
+                            : const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 220,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                                childAspectRatio: 0.82,
+                              ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FileGridItem(file: files[index], siblings: files),
                           childCount: files.length,
@@ -705,10 +802,14 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
                 SliverToBoxAdapter(child: SizedBox(height: 140)), // Padding for FAB
               ],
             ),
-          );
-          },
-        ),
+            );
+            },
+          ),
+          if (_isDragging)
+            _buildDropZoneOverlay(context, currentFolderId, breadcrumbsAsync),
+        ],
       ),
+    ),
       floatingActionButton: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30),
@@ -734,6 +835,114 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
       bottomNavigationBar: (isMobile && !isKeyboardVisible)
           ? const SizedBox(height: 80)
           : null,
+    );
+  }
+
+  Widget _buildDropZoneOverlay(
+    BuildContext context,
+    String? currentFolderId,
+    AsyncValue<List<FolderData>> breadcrumbsAsync,
+  ) {
+    String folderName = 'My Drive';
+    breadcrumbsAsync.whenData((crumbs) {
+      if (crumbs.isNotEmpty) {
+        folderName = crumbs.last.name;
+      }
+    });
+
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.65),
+        ),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Center(
+            child: Container(
+              margin: const EdgeInsets.all(32),
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.primary,
+                  width: 2.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 36,
+                    spreadRadius: 6,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppColors.primaryDark, AppColors.primaryLight],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.glowCyan,
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.cloud_upload_rounded,
+                      size: 38,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Drop files or folders to upload',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.folder_outlined, size: 16, color: AppColors.secondary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Uploading to: $folderName',
+                          style: TextStyle(
+                            color: AppColors.secondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1004,6 +1213,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> {
         await fileRepo.softDelete(id);
       }
     }
+    ref.read(configSyncServiceProvider).syncConfigToChannel();
     
     ref.read(isSelectionModeProvider.notifier).state = false;
     ref.read(selectedItemsProvider.notifier).state = {};

@@ -2,11 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../data/db/database.dart';
+import '../../domain/sync/config_sync_service.dart';
 import '../telegram/telegram_manager.dart';
 import '../telegram/telegram_service.dart';
 
@@ -34,6 +36,17 @@ class TrashScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trash'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Back to Drive',
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/drive');
+            }
+          },
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_forever),
@@ -159,6 +172,10 @@ class TrashScreen extends ConsumerWidget {
                 }
 
                 AppLogger.info('Trash emptied: $deletedCount Telegram messages permanently deleted');
+                await ref.read(configSyncServiceProvider).recordPermanentDeletion(
+                  fileIds: allFileIds,
+                  folderIds: folderIds.toList(),
+                );
                 ref.invalidate(trashedItemsProvider);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Trash emptied!')));
@@ -176,15 +193,25 @@ class TrashScreen extends ConsumerWidget {
           final files = contents['files'] as List<FileData>? ?? [];
 
           if (folders.isEmpty && files.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.delete_outline, size: 64, color: Colors.white24),
-                  SizedBox(height: 16),
-                  Text('Trash is empty', style: TextStyle(color: Colors.white54)),
-                  SizedBox(height: 8),
-                  Text('Items in trash will be permanently deleted after 30 days', style: TextStyle(color: Colors.white30, fontSize: 12)),
+                  const Icon(Icons.delete_outline, size: 64, color: Colors.white24),
+                  const SizedBox(height: 16),
+                  const Text('Trash is empty', style: TextStyle(color: Colors.white54)),
+                  const SizedBox(height: 8),
+                  const Text('Items in trash will be permanently deleted after 30 days', style: TextStyle(color: Colors.white30, fontSize: 12)),
+                  const SizedBox(height: 24),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/drive'),
+                    icon: const Icon(Icons.folder_outlined, size: 18),
+                    label: const Text('Back to My Drive'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.cyanAccent,
+                      side: BorderSide(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -215,6 +242,7 @@ class TrashScreen extends ConsumerWidget {
                         tooltip: 'Restore',
                         onPressed: () async {
                           await ref.read(folderRepositoryProvider).restoreFolder(folder.id);
+                          ref.read(configSyncServiceProvider).syncConfigToChannel();
                           ref.invalidate(trashedItemsProvider);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Folder Restored')));
@@ -245,6 +273,7 @@ class TrashScreen extends ConsumerWidget {
                         tooltip: 'Restore',
                         onPressed: () async {
                           await ref.read(fileRepositoryProvider).restoreFile(file.id);
+                          ref.read(configSyncServiceProvider).syncConfigToChannel();
                           ref.invalidate(trashedItemsProvider);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('File Restored')));
@@ -331,6 +360,7 @@ class TrashScreen extends ConsumerWidget {
     }
 
     ref.invalidate(trashedItemsProvider);
+    await ref.read(configSyncServiceProvider).recordPermanentDeletion(fileIds: [file.id]);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${file.name} permanently deleted')));
     }
@@ -376,6 +406,10 @@ class TrashScreen extends ConsumerWidget {
     });
 
     ref.invalidate(trashedItemsProvider);
+    await ref.read(configSyncServiceProvider).recordPermanentDeletion(
+      fileIds: allFiles.map((f) => f.id).toList(),
+      folderIds: allFolderIds,
+    );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Folder "${folder.name}" permanently deleted')));
     }

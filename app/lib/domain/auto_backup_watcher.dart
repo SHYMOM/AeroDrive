@@ -157,8 +157,15 @@ class AutoBackupWatcherService {
     // Normalize paths to ensure substring matching is correct
     final normalizedFilePath = filePath.replaceAll('\\', '/');
     final normalizedTrackedPath = trackedFolderPath.replaceAll('\\', '/');
+    final normTracked = normalizedTrackedPath.endsWith('/')
+        ? normalizedTrackedPath.substring(0, normalizedTrackedPath.length - 1)
+        : normalizedTrackedPath;
+
+    if (!normalizedFilePath.toLowerCase().startsWith(normTracked.toLowerCase())) {
+      return destinationFolderId;
+    }
     
-    final relativePath = normalizedFilePath.substring(normalizedTrackedPath.length);
+    final relativePath = normalizedFilePath.substring(normTracked.length);
     final parts = relativePath.split('/').where((p) => p.isNotEmpty).toList();
 
     if (destinationFolderId != null) {
@@ -169,7 +176,7 @@ class AutoBackupWatcherService {
             ..where((f) => f.name.equals(folderName) & 
                 (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
                 f.deletedAt.isNull())
-          ).getSingleOrNull();
+          ).get().then((list) => list.firstOrNull);
 
           if (folder == null) {
             final newId = _uuid.v4();
@@ -218,7 +225,7 @@ class AutoBackupWatcherService {
         ..where((f) => f.name.equals(folderName) & 
             (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
             f.deletedAt.isNull())
-      ).getSingleOrNull();
+      ).get().then((list) => list.firstOrNull);
 
       if (folder == null) {
         final newId = _uuid.v4();
@@ -254,20 +261,20 @@ class AutoBackupWatcherService {
       final normalizedFilePath = filePath.replaceAll('\\', '/');
 
       // 1. Comprehensive queue deduplication:
-      // Check if this local file is ALREADY in transferQueue (PENDING, PROCESSING, or ENCRYPTING)
-      final activeTransfers = await (db.select(db.transferQueue)
-        ..where((q) => q.type.equals('UPLOAD_FILE') & 
-            (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+      // Check if this local file is already in transferQueue (PENDING, PROCESSING, ENCRYPTING, or COMPLETED)
+      final existingTransfers = await (db.select(db.transferQueue)
+        ..where((q) => q.type.equals('UPLOAD_FILE'))
       ).get();
 
-      final alreadyQueued = activeTransfers.any((task) {
+      final alreadyInQueue = existingTransfers.any((task) {
+        if (task.status == 'FAILED') return false;
         final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
         final queuedNormalized = queuedRaw.replaceAll('\\', '/');
         return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
       });
 
-      if (alreadyQueued) {
-        AppLogger.info('AutoBackupWatcher: File is already pending/processing in queue: $filePath');
+      if (alreadyInQueue) {
+        AppLogger.info('AutoBackupWatcher: File is already in queue or completed: $filePath');
         return;
       }
 
@@ -277,13 +284,20 @@ class AutoBackupWatcherService {
 
       final folderId = await _resolveBackupFolderId(filePath, profile['path'] as String, targetFolderId);
 
-      // 2. Check if file already exists in target folder with same name and size
+      // 2. Check if file already exists in Drive with same name and size
       final fileName = filePath.contains('/') ? filePath.split('/').last : filePath.split('\\').last;
       final existing = await (db.select(db.files)
-        ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & (folderId == null ? f.folderId.isNull() : f.folderId.equals(folderId)) & f.deletedAt.isNull())
+        ..where((f) =>
+            f.name.equals(fileName) &
+            f.size.equals(fileSize) &
+            (folderId == null || folderId == 'null'
+                ? (f.folderId.isNull() | f.folderId.equals('null') | f.folderId.equals(''))
+                : (f.folderId.equals(folderId) | f.folderId.isNull() | f.folderId.equals('null'))) &
+            f.deletedAt.isNull())
       ).get();
 
       if (existing.isNotEmpty) {
+        AppLogger.info('AutoBackupWatcher: File already exists in Drive ($fileName, $fileSize bytes), skipping upload');
         return;
       }
 
@@ -404,18 +418,18 @@ class AutoBackupWatcherService {
         await for (final entity in localDir.list(recursive: true, followLinks: false)) {
           if (entity is File && _matchesFilter(entity.path, profile)) {
             final normalizedFilePath = entity.path.replaceAll('\\', '/');
-            final activeTransfers = await (db.select(db.transferQueue)
-              ..where((q) => q.type.equals('UPLOAD_FILE') &
-                  (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+            final existingTransfers = await (db.select(db.transferQueue)
+              ..where((q) => q.type.equals('UPLOAD_FILE'))
             ).get();
 
-            final alreadyQueued = activeTransfers.any((task) {
+            final alreadyInQueue = existingTransfers.any((task) {
+              if (task.status == 'FAILED') return false;
               final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
               final queuedNormalized = queuedRaw.replaceAll('\\', '/');
               return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
             });
 
-            if (alreadyQueued) {
+            if (alreadyInQueue) {
               continue;
             }
 
@@ -423,7 +437,13 @@ class AutoBackupWatcherService {
             final resolvedFolderId = await _resolveBackupFolderId(entity.path, path, targetFolderId);
 
             final existing = await (db.select(db.files)
-              ..where((f) => f.name.equals(fileName) & f.size.equals(entity.lengthSync()) & (resolvedFolderId == null ? f.folderId.isNull() : f.folderId.equals(resolvedFolderId)) & f.deletedAt.isNull())
+              ..where((f) =>
+                  f.name.equals(fileName) &
+                  f.size.equals(entity.lengthSync()) &
+                  (resolvedFolderId == null || resolvedFolderId == 'null'
+                      ? (f.folderId.isNull() | f.folderId.equals('null') | f.folderId.equals(''))
+                      : (f.folderId.equals(resolvedFolderId) | f.folderId.isNull() | f.folderId.equals('null'))) &
+                  f.deletedAt.isNull())
             ).get();
 
             if (existing.isEmpty) {

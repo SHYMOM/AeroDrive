@@ -21,6 +21,15 @@ class MainActivity : FlutterFragmentActivity() {
         private const val FILE_PICKER_CHANNEL = "com.aerodrive.aerodrive/file_picker"
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            AeroDriveBackupService.stop(this)
+        } catch (e: Exception) {
+            // Ignore
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 

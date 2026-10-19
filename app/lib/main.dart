@@ -162,20 +162,20 @@ void callbackDispatcher() {
               final fileSize = await entity.length();
               final fileName = entity.path.contains('/') ? entity.path.split('/').last : entity.path.split('\\').last;
 
-              // Check if file is already in the transfer queue (PENDING, PROCESSING, or ENCRYPTING)
+              // Check if file is already in the transfer queue
               final normalizedFilePath = entity.path.replaceAll('\\', '/');
-              final activeTransfers = await (db.select(db.transferQueue)
-                ..where((q) => q.type.equals('UPLOAD_FILE') &
-                    (q.status.equals('PENDING') | q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
+              final existingTransfers = await (db.select(db.transferQueue)
+                ..where((q) => q.type.equals('UPLOAD_FILE'))
               ).get();
 
-              final alreadyQueued = activeTransfers.any((task) {
+              final alreadyInQueue = existingTransfers.any((task) {
+                if (task.status == 'FAILED') return false;
                 final queuedRaw = task.fileId?.split('|').firstOrNull ?? '';
                 final queuedNormalized = queuedRaw.replaceAll('\\', '/');
                 return queuedNormalized.toLowerCase() == normalizedFilePath.toLowerCase();
               });
 
-              if (alreadyQueued) {
+              if (alreadyInQueue) {
                 continue;
               }
 
@@ -183,9 +183,15 @@ void callbackDispatcher() {
               final resolvedFolderId = await _resolveBackupFolderIdInDispatcher(container, db, entity.path, path, destinationFolderId);
               final targetFolderIdPart = resolvedFolderId ?? '';
 
-              // Check if file already exists in target folder with same name and size
+              // Check if file already exists in Drive with same name and size
               final existing = await (db.select(db.files)
-                ..where((f) => f.name.equals(fileName) & f.size.equals(fileSize) & (resolvedFolderId == null ? f.folderId.isNull() : f.folderId.equals(resolvedFolderId)) & f.deletedAt.isNull())
+                ..where((f) =>
+                    f.name.equals(fileName) &
+                    f.size.equals(fileSize) &
+                    (resolvedFolderId == null || resolvedFolderId == 'null'
+                        ? (f.folderId.isNull() | f.folderId.equals('null') | f.folderId.equals(''))
+                        : (f.folderId.equals(resolvedFolderId) | f.folderId.isNull() | f.folderId.equals('null'))) &
+                    f.deletedAt.isNull())
               ).get();
 
               if (existing.isEmpty) {
@@ -269,8 +275,15 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
   const uuid = Uuid();
   final normalizedFilePath = filePath.replaceAll('\\', '/');
   final normalizedTrackedPath = trackedFolderPath.replaceAll('\\', '/');
+  final normTracked = normalizedTrackedPath.endsWith('/')
+      ? normalizedTrackedPath.substring(0, normalizedTrackedPath.length - 1)
+      : normalizedTrackedPath;
+
+  if (!normalizedFilePath.toLowerCase().startsWith(normTracked.toLowerCase())) {
+    return destinationFolderId;
+  }
   
-  final relativePath = normalizedFilePath.substring(normalizedTrackedPath.length);
+  final relativePath = normalizedFilePath.substring(normTracked.length);
   final parts = relativePath.split('/').where((p) => p.isNotEmpty).toList();
 
   if (destinationFolderId != null) {
@@ -281,7 +294,7 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
           ..where((f) => f.name.equals(folderName) & 
               (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
               f.deletedAt.isNull())
-        ).getSingleOrNull();
+        ).get().then((list) => list.firstOrNull);
 
         if (folder == null) {
           final newId = uuid.v4();
@@ -333,7 +346,7 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
       ..where((f) => f.name.equals(folderName) & 
           (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
           f.deletedAt.isNull())
-    ).getSingleOrNull();
+    ).get().then((list) => list.firstOrNull);
 
     if (folder == null) {
       final newId = uuid.v4();
@@ -371,7 +384,15 @@ void main() async {
 
   // Register main isolate port to indicate that the UI is active
   final receivePort = ReceivePort();
+  IsolateNameServer.removePortNameMapping('aerodrive_main_isolate');
   IsolateNameServer.registerPortWithName(receivePort.sendPort, 'aerodrive_main_isolate');
+
+  // Stop any background foreground service if running
+  if (!kIsWeb && Platform.isAndroid) {
+    try {
+      await BackgroundServiceManager.stopService();
+    } catch (_) {}
+  }
 
   // Signal any running background headless service to yield the port lock
   try {
@@ -776,6 +797,14 @@ bool _backgroundIsSyncing = false;
 ProviderContainer? _backgroundContainer;
 
 void _tryAcquireBackgroundLock() async {
+  // If main UI isolate is active, do not run background sync
+  if (IsolateNameServer.lookupPortByName('aerodrive_main_isolate') != null) {
+    debugPrint('[AeroDrive Background] UI isolate is active. Yielding background engine.');
+    await _stopBackgroundSync();
+    Future.delayed(const Duration(seconds: 15), _tryAcquireBackgroundLock);
+    return;
+  }
+
   try {
     final socket = await RawServerSocket.bind('127.0.0.1', 46828);
     _backgroundLockSocket = socket;
@@ -785,7 +814,7 @@ void _tryAcquireBackgroundLock() async {
     socket.listen((client) async {
       debugPrint('[AeroDrive Background] UI app requested lock. Yielding...');
       await client.close();
-      _stopBackgroundSync();
+      await _stopBackgroundSync();
     });
 
     _startBackgroundSync();
@@ -806,7 +835,7 @@ void _startBackgroundSync() {
   _backgroundContainer!.read(realtimeSyncServiceProvider).startListening();
 }
 
-void _stopBackgroundSync() async {
+Future<void> _stopBackgroundSync() async {
   if (!_backgroundIsSyncing) return;
   _backgroundIsSyncing = false;
 
@@ -814,7 +843,18 @@ void _stopBackgroundSync() async {
     if (_backgroundContainer != null) {
       _backgroundContainer!.read(autoBackupWatcherProvider).stop();
       _backgroundContainer!.read(realtimeSyncServiceProvider).stopListening();
-      // Dispose the container to release and close TDLib clients!
+
+      // Close all Telegram clients and await their complete shutdown before disposing
+      try {
+        final tgManager = _backgroundContainer!.read(telegramManagerProvider);
+        for (final client in tgManager) {
+          await client.closeClient();
+        }
+      } catch (e) {
+        debugPrint('[AeroDrive Background] Error closing Telegram clients: $e');
+      }
+
+      // Dispose the container to release remaining resources
       _backgroundContainer!.dispose();
       _backgroundContainer = null;
     }
@@ -842,7 +882,12 @@ void backgroundMain() async {
       await dotenv.load(fileName: '.env');
     } catch (_) {}
 
-    debugPrint('[AeroDrive] Headless background engine started. Acquiring lock...');
+    debugPrint('[AeroDrive] Headless background engine started. Checking UI isolate state...');
+    if (IsolateNameServer.lookupPortByName('aerodrive_main_isolate') != null) {
+      debugPrint('[AeroDrive Background] UI isolate is active. Not starting background engine.');
+      return;
+    }
+
     _tryAcquireBackgroundLock();
   }, (error, stack) {
     debugPrint('[AeroDrive] Headless background engine fatal error: $error\n$stack');

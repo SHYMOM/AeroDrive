@@ -72,25 +72,48 @@ class ChannelDiscoveryService {
           continue;
         }
 
-        if (description == null || description.isEmpty) continue;
+        // Try to decrypt the description if present
+        Map<String, dynamic>? decoded;
+        if (description != null && description.isNotEmpty) {
+          decoded = await ChannelDescriptionCodec.decode(
+            description: description,
+            masterKey: masterKey,
+          );
+        }
 
-        // Try to decrypt the description
-        final decoded = await ChannelDescriptionCodec.decode(
-          description: description,
-          masterKey: masterKey,
-        );
+        String? purpose;
+        if (decoded != null) {
+          purpose = decoded['p'] as String?;
+        } else {
+          // Resilient fallback by title and description markers
+          final title = (channel['title'] as String? ?? '').trim();
+          final desc = description ?? '';
+          if (title == ChannelConstants.configChannelName ||
+              title == 'AeroDrive Config (Do Not Delete)' ||
+              desc.contains(ChannelConstants.configChannelMarker)) {
+            purpose = ChannelConstants.descriptionPurposeConfig;
+          } else if (title == ChannelConstants.sharedChannelName ||
+              title == 'AeroDrive Public Shares' ||
+              desc.contains('[AERODRIVE_PUBLIC_SHARES_v1]')) {
+            purpose = ChannelConstants.descriptionPurposeShared;
+          } else if (RegExp(r'^AeroDrive Storage(\s+\d+)?$', caseSensitive: false).hasMatch(title) ||
+              desc.contains('AeroDrive Storage')) {
+            purpose = ChannelConstants.descriptionPurposeStorage;
+          }
+        }
 
-        if (decoded == null) {
+        if (purpose == null) {
           // Not an AeroDrive infra channel — skip
           continue;
         }
 
         totalFound++;
-        final purpose = decoded['p'] as String?;
 
         switch (purpose) {
           case ChannelConstants.descriptionPurposeStorage:
-            storageChannelIds.add(chatId);
+            if (!storageChannelIds.contains(chatId)) {
+              storageChannelIds.add(chatId);
+            }
             AppLogger.info('Discovery: Found storage channel $chatId');
             break;
           case ChannelConstants.descriptionPurposeConfig:

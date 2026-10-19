@@ -12,6 +12,7 @@ import '../../core/providers.dart';
 import '../../data/db/database.dart';
 import '../drive/media_player_screen.dart';
 import 'archive_viewer.dart';
+import 'audio_player_screen.dart';
 import 'file_decryption_util.dart';
 import 'image_gallery_screen.dart';
 import 'media_gallery_screen.dart';
@@ -84,9 +85,9 @@ class PreviewRouter {
           builder: (_) => ImageGalleryScreen(files: imageSiblings, initialIndex: startIndex),
         ));
       }
-    } else if (mime.startsWith('audio/')) {
+    } else if (mime.startsWith('audio/') || const ['mp3', 'wav', 'm4a', 'flac', 'aac', 'ogg', 'wma', 'opus'].contains(ext)) {
       Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
-        builder: (_) => MediaPlayerScreen(file: file),
+        builder: (_) => AudioPlayerScreen(file: file, siblings: siblings),
       ));
     } else if (mime.contains('zip') ||
         mime.contains('rar') ||

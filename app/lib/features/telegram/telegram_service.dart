@@ -85,6 +85,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   static bool _tdlibInitialized = false;
   static final Completer<void> _tdlibInitCompleter = Completer<void>();
   static final Map<int, TelegramService> _instances = {};
+  static final Map<String, int> _activeAccountClientIds = {};
+  static Map<int, TelegramService> get activeInstances => Map.unmodifiable(_instances);
+  int _lockRetryCount = 0;
   
   int _apiId = 0;
   String _apiHash = '';
@@ -193,10 +196,26 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         }
       }
 
+      // Clean up any pre-existing client for this accountId in the current process
+      final existingClientId = _activeAccountClientIds[accountId];
+      if (existingClientId != null && existingClientId != 0) {
+        AppLogger.warning('Found existing TDLib client $existingClientId for $accountId. Cleaning it up before creating new client.');
+        try {
+          TdPlugin.instance.tdSend(existingClientId, jsonEncode({"@type": "close"}));
+          TdPlugin.instance.tdSend(existingClientId, jsonEncode({"@type": "destroy"}));
+        } catch (e) {
+          AppLogger.error('Error closing pre-existing client $existingClientId', e);
+        }
+        _instances.remove(existingClientId);
+        // Allow brief moment for native file locks to be released
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+
       try {
         _updateDebugStep('Creating TDLib client instance (tdCreate)');
         _clientId = TdPlugin.instance.tdCreate();
         _instances[_clientId] = this;
+        _activeAccountClientIds[accountId] = _clientId;
         AppLogger.info('TDLib client created for $accountId (clientId: $_clientId)');
       } catch (e, s) {
         AppLogger.error('tdCreate failed for $accountId', e, s);
@@ -316,25 +335,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       _updateDebugStep('Auth State Update: $authState');
       
       if (authState == 'authorizationStateWaitTdlibParameters') {
-        _updateDebugStep('Sending TDLib parameters (setTdlibParameters)');
-        TdPlugin.instance.tdSend(_clientId, jsonEncode({
-          "@type": "setTdlibParameters",
-          "use_test_dc": false,
-          "database_directory": _dbPath,
-          "files_directory": _dbPath,
-          "use_file_database": true,
-          "use_chat_info_database": !isHeadless,
-          "use_message_database": !isHeadless,
-          "use_secret_chats": false,
-          "api_id": _apiId,
-          "api_hash": _apiHash,
-          "system_language_code": "en",
-          "device_model": "AeroDrive Desktop",
-          "system_version": "1.0",
-          "application_version": "1.0",
-          "enable_storage_optimizer": true,
-          "ignore_file_names": isHeadless,
-        }));
+        _sendTdlibParameters();
       } else if (authState == 'authorizationStateWaitEncryptionKey') {
         _updateDebugStep('Sending database encryption key (checkDatabaseEncryptionKey)');
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
@@ -354,6 +355,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         hasRecoveryEmail = authStateData?['has_recovery_email_address'] == true;
         state = TelegramAuthState.waitPassword;
       } else if (authState == 'authorizationStateReady') {
+        _lockRetryCount = 0;
         _updateDebugStep('TDLib Ready. Fetching current user details (getMe)');
         _fetchMe().whenComplete(() {
           _updateDebugStep('User details loaded. AeroDrive Ready.');
@@ -371,6 +373,26 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       final errorMsg = json['message'] as String? ?? 'Unknown TDLib error';
       AppLogger.error('TDLib Error ($accountId): $errorMsg');
       _updateDebugError(errorMsg);
+
+      // Handle "Can't lock file ... because it is already in use by current program"
+      if (errorMsg.contains('already in use')) {
+        if (_lockRetryCount < 8) {
+          _lockRetryCount++;
+          _updateDebugStep('Database locked by previous session. Retrying in 1.5s (attempt $_lockRetryCount/8)...');
+          AppLogger.warning('TDLib database locked. Waiting for lock release and retrying setTdlibParameters for $accountId (attempt $_lockRetryCount/8)...');
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (_clientId != 0 && (state == TelegramAuthState.initial || state == TelegramAuthState.error)) {
+              _sendTdlibParameters();
+            }
+          });
+          return;
+        } else {
+          _updateDebugStep('Database lock persisted. Attempting recovery...');
+          AppLogger.error('TDLib database locked after 8 retries for $accountId. Attempting client recovery.');
+          _recoverFromLockedDatabase();
+          return;
+        }
+      }
     } else if (type == 'updateFile') {
       final file = json['file'];
       if (file != null && _photoFileId != null && file['id'] == _photoFileId) {
@@ -390,6 +412,43 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         }
       }
     }
+  }
+
+  void _sendTdlibParameters() {
+    _updateDebugStep('Sending TDLib parameters (setTdlibParameters)');
+    final String deviceModel;
+    if (kIsWeb) {
+      deviceModel = 'AeroDrive Web';
+    } else if (Platform.isAndroid) {
+      deviceModel = 'AeroDrive Android';
+    } else if (Platform.isIOS) {
+      deviceModel = 'AeroDrive iOS';
+    } else if (Platform.isWindows) {
+      deviceModel = 'AeroDrive Windows';
+    } else if (Platform.isMacOS) {
+      deviceModel = 'AeroDrive macOS';
+    } else {
+      deviceModel = 'AeroDrive Linux';
+    }
+
+    TdPlugin.instance.tdSend(_clientId, jsonEncode({
+      "@type": "setTdlibParameters",
+      "use_test_dc": false,
+      "database_directory": _dbPath,
+      "files_directory": _dbPath,
+      "use_file_database": true,
+      "use_chat_info_database": !isHeadless,
+      "use_message_database": !isHeadless,
+      "use_secret_chats": false,
+      "api_id": _apiId,
+      "api_hash": _apiHash,
+      "system_language_code": "en",
+      "device_model": deviceModel,
+      "system_version": "1.0",
+      "application_version": "1.0",
+      "enable_storage_optimizer": true,
+      "ignore_file_names": isHeadless,
+    }));
   }
 
   Future<void> setAuthenticationPhoneNumber(String phoneNumber) async {
@@ -423,11 +482,32 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   List<Map<String, dynamic>> chats = [];
 
-  Future<Map<String, dynamic>> loadChats() async => sendRequest({
-      "@type": "loadChats",
-      "chat_list": {"@type": "chatListMain"},
-      "limit": 500
-    });
+  Future<void> loadChatList(Map<String, dynamic> chatList, {int maxBatches = 5, int limit = 100}) async {
+    for (int i = 0; i < maxBatches; i++) {
+      try {
+        final res = await sendRequest({
+          "@type": "loadChats",
+          "chat_list": chatList,
+          "limit": limit,
+        });
+        if (res['@type'] == 'error') {
+          break; // Error or 404 (all chats loaded)
+        }
+      } catch (_) {
+        break;
+      }
+    }
+  }
+
+  Future<void> loadAllChats() async {
+    await loadChatList({"@type": "chatListMain"});
+    await loadChatList({"@type": "chatListArchive"});
+  }
+
+  Future<Map<String, dynamic>> loadChats() async {
+    await loadAllChats();
+    return {"@type": "ok"};
+  }
 
   Future<Map<String, dynamic>> createNewChannel(String title, String description) async => sendRequest({
       "@type": "createNewSupergroupChat",
@@ -752,68 +832,146 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
-    final inputContent = <String, dynamic>{
-      "@type": "inputMessageDocument",
-      "document": {
-        "@type": "inputFileLocal",
-        "path": localFilePath,
-      },
-      "disable_content_type_detection": true,
-    };
+    final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
-    if (caption != null) {
-      inputContent["caption"] = {
-        "@type": "formattedText",
-        "text": caption,
-        "entities": <dynamic>[],
+    Map<String, dynamic> buildWrappedPayload() {
+      final inputContent = <String, dynamic>{
+        "@type": "inputMessageDocument",
+        "document": {
+          "@type": "inputDocument",
+          "document": {
+            "@type": "inputFileLocal",
+            "path": normalizedPath,
+          },
+          "disable_content_type_detection": true,
+        },
+      };
+
+      if (caption != null) {
+        inputContent["caption"] = {
+          "@type": "formattedText",
+          "text": caption,
+          "entities": <dynamic>[],
+        };
+      }
+
+      return <String, dynamic>{
+        "@type": "sendMessage",
+        "chat_id": chatId,
+        "input_message_content": inputContent,
       };
     }
 
-    final payload = <String, dynamic>{
-      "@type": "sendMessage",
-      "chat_id": chatId,
-      "input_message_content": inputContent,
-    };
+    Map<String, dynamic> buildFlatPayload() {
+      final inputContent = <String, dynamic>{
+        "@type": "inputMessageDocument",
+        "document": {
+          "@type": "inputFileLocal",
+          "path": normalizedPath,
+        },
+        "disable_content_type_detection": true,
+      };
 
-    final payloadJson = jsonEncode(payload);
-    AppLogger.info('=== TDLib sendMessage PAYLOAD ===');
-    AppLogger.info('ChatId: $chatId');
-    AppLogger.info('LocalFile: $localFilePath');
-    AppLogger.info('HasCaption: ${caption != null}');
+      if (caption != null) {
+        inputContent["caption"] = {
+          "@type": "formattedText",
+          "text": caption,
+          "entities": <dynamic>[],
+        };
+      }
+
+      return <String, dynamic>{
+        "@type": "sendMessage",
+        "chat_id": chatId,
+        "input_message_content": inputContent,
+      };
+    }
+
+    final primaryPayload = buildWrappedPayload();
+    AppLogger.info('=== TDLib sendMessage (uploadDocument) ===');
+    AppLogger.info('ChatId: $chatId, File: $normalizedPath, HasCaption: ${caption != null}');
     if (caption != null) {
       AppLogger.info('Caption length: ${caption.length} chars');
     } else {
       AppLogger.warning('>>> CAPTION IS NULL - Manifest will be MISSING from Telegram message!');
     }
-    AppLogger.info('Full Payload JSON: $payloadJson');
 
-    return sendRequest(payload, timeout: const Duration(hours: 6));
+    var response = await sendRequest(primaryPayload, timeout: const Duration(hours: 6));
+    if (response['@type'] == 'error' &&
+        (response['message']?.toString().contains('InputFile is not specified') == true ||
+         response['message']?.toString().contains('FIELD_NAME_INVALID') == true ||
+         response['message']?.toString().contains('unsupported') == true)) {
+      AppLogger.warning('Wrapped uploadDocument failed (${response['message']}), falling back to flat payload');
+      final fallbackPayload = buildFlatPayload();
+      response = await sendRequest(fallbackPayload, timeout: const Duration(hours: 6));
+    }
+
+    return response;
   }
 
   Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
-    final inputContent = <String, dynamic>{
-      "@type": "inputMessagePhoto",
-      "photo": {
-        "@type": "inputFileLocal",
-        "path": localFilePath,
-      },
-    };
+    final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
-    if (caption != null) {
-      inputContent["caption"] = {
-        "@type": "formattedText",
-        "text": caption,
-        "entities": <dynamic>[],
+    Map<String, dynamic> buildWrappedPayload() {
+      final inputContent = <String, dynamic>{
+        "@type": "inputMessagePhoto",
+        "photo": {
+          "@type": "inputPhoto",
+          "photo": {
+            "@type": "inputFileLocal",
+            "path": normalizedPath,
+          },
+        },
+      };
+
+      if (caption != null) {
+        inputContent["caption"] = {
+          "@type": "formattedText",
+          "text": caption,
+          "entities": <dynamic>[],
+        };
+      }
+
+      return <String, dynamic>{
+        "@type": "sendMessage",
+        "chat_id": chatId,
+        "input_message_content": inputContent,
       };
     }
 
-    final payload = <String, dynamic>{
-      "@type": "sendMessage",
-      "chat_id": chatId,
-      "input_message_content": inputContent,
-    };
+    Map<String, dynamic> buildFlatPayload() {
+      final inputContent = <String, dynamic>{
+        "@type": "inputMessagePhoto",
+        "photo": {
+          "@type": "inputFileLocal",
+          "path": normalizedPath,
+        },
+      };
 
-    return sendRequest(payload);
+      if (caption != null) {
+        inputContent["caption"] = {
+          "@type": "formattedText",
+          "text": caption,
+          "entities": <dynamic>[],
+        };
+      }
+
+      return <String, dynamic>{
+        "@type": "sendMessage",
+        "chat_id": chatId,
+        "input_message_content": inputContent,
+      };
+    }
+
+    var response = await sendRequest(buildWrappedPayload());
+    if (response['@type'] == 'error' &&
+        (response['message']?.toString().contains('InputFile is not specified') == true ||
+         response['message']?.toString().contains('FIELD_NAME_INVALID') == true ||
+         response['message']?.toString().contains('unsupported') == true)) {
+      response = await sendRequest(buildFlatPayload());
+    }
+
+    return response;
   }
 
   Future<void> addProxy({
@@ -890,14 +1048,25 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   Future<void> closeClient() async {
     if (state == TelegramAuthState.closed) return;
-    TdPlugin.instance.tdSend(_clientId, jsonEncode({
-      "@type": "close"
-    }));
-    var attempts = 0;
-    while (state != TelegramAuthState.closed && attempts < 30) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      attempts++;
+    if (_clientId != 0) {
+      try {
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "close"
+        }));
+      } catch (_) {}
+      var attempts = 0;
+      while (state != TelegramAuthState.closed && attempts < 30) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        attempts++;
+      }
+      try {
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "destroy"
+        }));
+      } catch (_) {}
+      _activeAccountClientIds.remove(accountId);
     }
+    state = TelegramAuthState.closed;
   }
 
   Future<void> addAdminToChat(int chatId, int targetUserId) async {
@@ -957,7 +1126,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   Future<List<Map<String, dynamic>>> getAdminChannels() async {
     try {
-      await loadChats();
+      await loadAllChats();
     } catch (_) {
       // Ignored if already loading/loaded
     }
@@ -971,7 +1140,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         final mainResponse = await sendRequest({
           "@type": "getChats",
           "chat_list": {"@type": "chatListMain"},
-          "limit": 200,
+          "limit": 500,
         });
         if (mainResponse.containsKey('chat_ids')) {
           allChatIds.addAll(mainResponse['chat_ids']);
@@ -985,7 +1154,7 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         final archiveResponse = await sendRequest({
           "@type": "getChats",
           "chat_list": {"@type": "chatListArchive"},
-          "limit": 200,
+          "limit": 500,
         });
         if (archiveResponse.containsKey('chat_ids')) {
           allChatIds.addAll(archiveResponse['chat_ids']);
@@ -1030,6 +1199,26 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
   }
 
+  Future<void> _recoverFromLockedDatabase() async {
+    try {
+      if (_clientId != 0) {
+        try {
+          TdPlugin.instance.tdSend(_clientId, jsonEncode({"@type": "close"}));
+          TdPlugin.instance.tdSend(_clientId, jsonEncode({"@type": "destroy"}));
+        } catch (_) {}
+        _instances.remove(_clientId);
+        _activeAccountClientIds.remove(accountId);
+        _clientId = 0;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+      _lockRetryCount = 0;
+      _updateDebugStep('Reinitializing TDLib client after lock recovery...');
+      await _initClient();
+    } catch (e) {
+      AppLogger.error('Failed to recover from locked database: $e');
+    }
+  }
+
   /// Resets the entire Telegram authentication flow for this account.
   /// This is a major operation that removes all associated session data.
   /// Typically called when a user wants to log out completely or when
@@ -1043,11 +1232,12 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     }
 
     AppLogger.info('Resetting auth flow for account: $accountId');
-    closeClient();
+    await closeClient();
 
     // Remove instance from map
     if (_clientId != 0) {
       _instances.remove(_clientId);
+      _activeAccountClientIds.remove(accountId);
       _clientId = 0;
     }
 
@@ -1063,6 +1253,8 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     _photoFileId = null;
     chats.clear();
 
+    await Future.delayed(const Duration(milliseconds: 300));
+
     // Reinitialize client
     state = TelegramAuthState.initial;
     await _initClient();
@@ -1073,11 +1265,17 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   @override
   void dispose() {
     _instances.remove(_clientId);
+    _activeAccountClientIds.remove(accountId);
     _eventController.close();
     if (_clientId != 0) {
-      TdPlugin.instance.tdSend(_clientId, jsonEncode({
-        "@type": "close"
-      }));
+      try {
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "close"
+        }));
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "destroy"
+        }));
+      } catch (_) {}
     }
     super.dispose();
   }

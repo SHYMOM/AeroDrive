@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:tdlib/tdlib.dart';
+import '../../features/telegram/telegram_service.dart';
 
 class AppResetHelper {
   static Future<void> showResetConfirmation(BuildContext context) async {
@@ -50,10 +52,16 @@ class AppResetHelper {
       }
 
       try {
-        // Wait a brief moment
-        await Future.delayed(const Duration(milliseconds: 1000));
+        // 1. Close and destroy all active TDLib clients so files are released
+        for (final entry in TelegramService.activeInstances.entries) {
+          try {
+            TdPlugin.instance.tdSend(entry.key, jsonEncode({"@type": "close"}));
+            TdPlugin.instance.tdSend(entry.key, jsonEncode({"@type": "destroy"}));
+          } catch (_) {}
+        }
+        await Future.delayed(const Duration(milliseconds: 600));
 
-        // Delete the entire AeroDrive documents directory
+        // 2. Delete the entire AeroDrive documents directory
         final docDir = await getApplicationDocumentsDirectory();
         final aerodriveDir = Directory('${docDir.path}${Platform.pathSeparator}AeroDrive');
         if (await aerodriveDir.exists()) {
@@ -73,12 +81,8 @@ class AppResetHelper {
           await sqliteShm.delete();
         }
 
-        // Force terminate process to trigger clean restart
-        if (Platform.isAndroid || Platform.isIOS) {
-          await SystemNavigator.pop();
-        } else {
-          exit(0);
-        }
+        // 3. Force terminate process to release all native libraries and OS locks
+        exit(0);
       } catch (e) {
         debugPrint('Hard reset failed: $e');
         if (context.mounted) {

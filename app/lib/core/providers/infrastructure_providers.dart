@@ -71,7 +71,7 @@ final ensureInfrastructureProvider =
     masterKey: masterKey,
   );
 
-  if (discoveryResult.isComplete) {
+  if (discoveryResult.storageChannelIds.isNotEmpty || discoveryResult.configChannelId != null) {
     await discoveryService.restoreFromDiscovery(discoveryResult);
     return;
   }

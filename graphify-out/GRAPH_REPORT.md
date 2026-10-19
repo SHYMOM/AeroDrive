@@ -1,16 +1,16 @@
 # Graph Report - AeroDrive  (2026-10-19)
 
 ## Corpus Check
-- 225 files · ~166,621 words
+- 225 files · ~167,085 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3793 nodes · 6024 edges · 279 communities (207 shown, 72 thin omitted)
+- 3797 nodes · 6036 edges · 284 communities (210 shown, 74 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 43 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ae5c9a82`
+- Built from commit: `4c58032d`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -217,7 +217,9 @@
 - _DigestSink
 - [1.8.21] - 2023-11-26
 - [1.8.21.2] - 2024-05-27
+- autoBackupWatcherProvider
 - [1.8.59] - 2025-12-29
+- ../telegram/telegram_service.dart
 - [1.8.61.1] - 2026-03-01
 - [1.8.62] - 2026-03-06
 - [1.8.63] - 2026-04-04
@@ -268,17 +270,20 @@
 - Zero-DB Recovery (README)
 - tdlib.native (TDLib binaries for multiple platforms)
 - TDLib Telegram Database Library
+- StateNotifier
+- _ThumbnailOrCoverState
+- TelegramService
 
 ## God Nodes (most connected - your core abstractions)
-1. `databaseProvider` - 70 edges
-2. `settingsRepositoryProvider` - 70 edges
+1. `settingsRepositoryProvider` - 71 edges
+2. `databaseProvider` - 70 edges
 3. `Telegram` - 46 edges
 4. `telegramManagerProvider` - 37 edges
 5. `AsyncResult` - 36 edges
-6. `dbRebuildVersionProvider` - 30 edges
-7. `_DriveScreenState` - 27 edges
+6. `dbRebuildVersionProvider` - 31 edges
+7. `_DriveScreenState` - 28 edges
 8. `currentFolderIdProvider` - 23 edges
-9. `telegramServiceProvider` - 22 edges
+9. `telegramServiceProvider` - 23 edges
 10. `Win32Window` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
@@ -303,7 +308,7 @@
 - **Flutter Web Application Entry** — app_web_index, flutter_framework, flutter_web_bootstrap, aerodrive_project [EXTRACTED 1.00]
 - **TDLib Native Package Distribution** — tdlib_dl_extracted_changelog, tdlib_native_package, tdlib_library, fornever_project [EXTRACTED 1.00]
 
-## Communities (279 total, 72 thin omitted)
+## Communities (284 total, 74 thin omitted)
 
 ### Community 0 - "Database & Schema"
 Cohesion: 0.02
@@ -311,11 +316,11 @@ Nodes (94): accountId, adminArea, boxHeight, boxLeft, boxTop, boxWidth, burnAfte
 
 ### Community 1 - "Telegram Client Service"
 Cohesion: 0.03
-Nodes (76): accountId, addAdminToChat, addProxy, _apiHash, _apiId, authState, chats, checkAdminStatus (+68 more)
+Nodes (78): accountId, addAdminToChat, addProxy, _apiHash, _apiId, authState, chats, checkAdminStatus (+70 more)
 
 ### Community 2 - "Media UI Screens"
 Cohesion: 0.04
-Nodes (60): _AlbumItemData, allFiles, allMediaFilesProvider, allMediaFoldersProvider, allTags, build, _buildActiveFiltersHeader, _buildAlbumCard (+52 more)
+Nodes (46): _AlbumItemData, allFiles, allTags, build, _buildActiveFiltersHeader, _buildAlbumCard, _buildBody, _buildBottomSubNavBar (+38 more)
 
 ### Community 3 - "Windows Build Config"
 Cohesion: 0.06
@@ -351,15 +356,15 @@ Nodes (36): app_links, RegisterGeneratedPlugins(), AppDelegate, MainFlutterWindo
 
 ### Community 11 - "Core Providers & DB"
 Cohesion: 0.08
-Nodes (25): AccountsScreen, _AccountsScreenState, _buildCard, _buildCodeInput, _buildConnectedView, _buildErrorView, _buildLoadingView, _buildPhoneInput (+17 more)
+Nodes (26): AccountsScreen, _AccountsScreenState, _buildCard, _buildCodeInput, _buildConnectedView, _buildErrorView, _buildLoadingView, _buildPhoneInput (+18 more)
 
 ### Community 12 - "Audio UI Screen"
-Cohesion: 0.07
-Nodes (42): build, audioFiles, audiosProvider, AudiosScreen, build, db, file, _formatFileSize (+34 more)
+Cohesion: 0.09
+Nodes (26): audioFiles, audiosProvider, AudiosScreen, build, db, file, _formatFileSize, build (+18 more)
 
 ### Community 13 - "Android Notifications"
 Cohesion: 0.08
-Nodes (23): AndroidFlutterLocalNotificationsPlugin, actionStream, _actionStreamController, _formatBytes, getSafeNotificationId, initialize, _initialized, instance (+15 more)
+Nodes (24): AndroidFlutterLocalNotificationsPlugin, actionStream, _actionStreamController, _formatBytes, getSafeNotificationId, initialize, _initialized, instance (+16 more)
 
 ### Community 14 - "Drive UI Providers"
 Cohesion: 0.05
@@ -382,32 +387,32 @@ Cohesion: 0.07
 Nodes (29): AddBackupProfileDialog, _AddBackupProfileDialogState, _backupMode, build, _checkBatteryOptimizations, createState, _deleteBehavior, _destinationFolderId (+21 more)
 
 ### Community 19 - "preview_router.dart"
-Cohesion: 0.09
-Nodes (20): decryptStreamRange, _incrementIv, StreamingEncryptionEngine, _cipher, clearCache, _getCacheThumbsDirectory, readThumbnail, saveThumbnail (+12 more)
+Cohesion: 0.13
+Nodes (13): _downloadFile, _fetchThumbnailFromTelegram, _generateAndCacheThumbnail, getThumbnail, _ref, ThumbnailService, main, dart:convert (+5 more)
 
 ### Community 20 - "media_gallery_screen.dart"
-Cohesion: 0.17
-Nodes (12): build, createState, _currentIndex, dispose, files, ImageGalleryScreen, _ImageGalleryScreenState, initialIndex (+4 more)
+Cohesion: 0.09
+Nodes (24): build, createState, _currentIndex, dispose, files, ImageGalleryScreen, _ImageGalleryScreenState, initialIndex (+16 more)
 
 ### Community 21 - "main.dart"
 Cohesion: 0.05
-Nodes (38): @pragma, _appLinks, _backgroundContainer, _backgroundIsSyncing, _backgroundLockSocket, backgroundMain, callbackDispatcher, createState (+30 more)
+Nodes (39): @pragma, _appLinks, _backgroundContainer, _backgroundIsSyncing, _backgroundLockSocket, backgroundMain, callbackDispatcher, createState (+31 more)
 
 ### Community 22 - "universal_file_viewer.dart"
 Cohesion: 0.06
-Nodes (33): build, _buildCodeContent, _buildHighlightedLine, createState, _data, dispose, _error, ext (+25 more)
+Nodes (37): build, _buildCodeContent, _buildHighlightedLine, _CodeTextViewer, _CodeTextViewerState, createState, _data, dispose (+29 more)
 
 ### Community 23 - "AsyncResult"
 Cohesion: 0.09
 Nodes (15): Adds new contacts or edits existing contacts by their phone numbers.         htt, This is offline request, if there is no chat in your database it will not be fou, Returns a list of chats:          Returns:             {                 '@type', Returns history of a chat          Args:             chat_id             limit, Return a message via its message_id          Args:             chat_id, Delete a list of messages in a chat          Args:             chat_id, Get the full info of a supergroup          Args:             supergroup_id, Create a chat from a basic group          Args:             basic_group_id (+7 more)
 
 ### Community 24 - "premium_button.dart"
-Cohesion: 0.07
-Nodes (32): AeroDriveLogo, build, _controller, createState, dispose, enabled, fullWidth, gradient (+24 more)
+Cohesion: 0.08
+Nodes (25): build, _controller, createState, dispose, enabled, fullWidth, gradient, height (+17 more)
 
 ### Community 25 - "settingsRepositoryProvider"
-Cohesion: 0.11
-Nodes (17): _activeChannelId, build, _confirmAndAddChannel, createState, _currentStrategy, _formatStrategy, initState, _isLoading (+9 more)
+Cohesion: 0.07
+Nodes (29): _loadAdminChannels, build, _buildPasswordInput, _confirmDelete, initState, _activeChannelId, build, ChannelsScreen (+21 more)
 
 ### Community 26 - "auth_screen.dart"
 Cohesion: 0.06
@@ -415,27 +420,27 @@ Nodes (31): _buildAuthSection, _buildCard, _buildCodeEntry, _buildCurrentView, _
 
 ### Community 27 - "backup_dialogs.dart"
 Cohesion: 0.07
-Nodes (31): _backupData, BackupExportDialog, _BackupExportDialogState, BackupImportDialog, _BackupImportDialogState, BackupScheduleDialog, _BackupScheduleDialogState, build (+23 more)
+Nodes (32): _backupData, BackupExportDialog, _BackupExportDialogState, BackupImportDialog, _BackupImportDialogState, BackupScheduleDialog, _BackupScheduleDialogState, build (+24 more)
 
 ### Community 28 - "accounts_screen.dart"
 Cohesion: 0.08
-Nodes (25): _buildCard, _buildCodeInput, _buildConnectedView, _buildErrorView, _buildLoadingView, _buildPhoneInput, _buildViewForState, client (+17 more)
+Nodes (24): _buildCard, _buildCodeInput, _buildConnectedView, _buildErrorView, _buildLoadingView, _buildPhoneInput, _buildViewForState, client (+16 more)
 
 ### Community 29 - "currentFolderIdProvider"
-Cohesion: 0.14
-Nodes (28): isAppUnlockedProvider, build, _ResponsiveScaffoldState, folderScannerProvider, build, _buildPathOverview, _DriveScreenState, initState (+20 more)
+Cohesion: 0.15
+Nodes (24): build, _ResponsiveScaffoldState, _buildPathOverview, currentFolderIdProvider, folderItemsCountProvider, folderSizeProvider, isFavoriteOnlyProvider, navigationStackProvider (+16 more)
 
 ### Community 30 - "proxy_settings_screen.dart"
-Cohesion: 0.08
-Nodes (25): _createDecryptionStream, StreamingServer, AuthScreen, _AuthScreenState, TelegramSelfBackupDialog, _startScan, build, createState (+17 more)
+Cohesion: 0.14
+Nodes (14): build, createState, initState, _isEnabled, _isLoading, _loadSettings, _passCtrl, _portCtrl (+6 more)
 
 ### Community 31 - "drive_screen.dart"
-Cohesion: 0.05
-Nodes (39): _buildLayoutSelector, _buildSortCategoryItem, _buildSortCriteriaItem, _buildSortOrderItem, _checkForInterruptedImports, _checkSecurityAndChannel, _copyFile, _copyFolder (+31 more)
+Cohesion: 0.06
+Nodes (31): _buildLayoutSelector, _buildSortCategoryItem, _buildSortCriteriaItem, _buildSortOrderItem, _checkSecurityAndChannel, _copyFile, _copyFolder, createState (+23 more)
 
 ### Community 32 - "file_grid_item.dart"
-Cohesion: 0.11
-Nodes (18): _buildFilePlaceholder, _buildOptionsMenu, _buildTypeBadgeIcon, createState, didUpdateWidget, file, _FileThumbnail, _FileThumbnailState (+10 more)
+Cohesion: 0.08
+Nodes (27): _buildFilePlaceholder, _buildOptionsMenu, _buildTypeBadgeIcon, createState, didUpdateWidget, file, _FileThumbnail, _FileThumbnailState (+19 more)
 
 ### Community 33 - "ml_service.dart"
 Cohesion: 0.07
@@ -443,7 +448,7 @@ Nodes (28): _cropFaceIsolate, cropped, CropTaskArgs, decodedImage, enhanced, h, 
 
 ### Community 34 - "settings_screen.dart"
 Cohesion: 0.07
-Nodes (29): advanced_settings_dialogs.dart, _buildDynamicItem, _buildLogoutButton, _buildSearchBar, _buildSettingsGroup, _buildSwitchTile, _buildTile, createState (+21 more)
+Nodes (28): advanced_settings_dialogs.dart, _buildDynamicItem, _buildLogoutButton, _buildSearchBar, _buildSettingsGroup, _buildSwitchTile, _buildTile, createState (+20 more)
 
 ### Community 35 - "smart_analyzer.dart"
 Cohesion: 0.08
@@ -458,36 +463,36 @@ Cohesion: 0.07
 Nodes (27): _buildActionButton, controller, createState, didUpdateWidget, dispose, _duration, _error, file (+19 more)
 
 ### Community 38 - "multi_account_screen.dart"
-Cohesion: 0.12
-Nodes (15): _createZipArchive, _db, FolderScanner, _queueSingleFile, _ref, scanAndQueueDirectory, uploadFolderManifest, _uuid (+7 more)
+Cohesion: 0.13
+Nodes (14): _createZipArchive, _db, FolderScanner, _queueSingleFile, _ref, scanAndQueueDirectory, uploadFolderManifest, _uuid (+6 more)
 
 ### Community 39 - "my_application.cc"
 Cohesion: 0.09
 Nodes (22): fl_register_plugins(), main(), first_frame_cb(), my_application_activate(), my_application_class_init(), my_application_dispose(), my_application_init(), my_application_local_command_line() (+14 more)
 
 ### Community 40 - "integrity_verification_service.dart"
-Cohesion: 0.08
-Nodes (25): add, chunksChecked, chunksPassed, close, dekWrappingResult, details, _engine, fileId (+17 more)
+Cohesion: 0.07
+Nodes (28): add, chunksChecked, chunksPassed, close, dekWrappingResult, details, _DigestSink, _engine (+20 more)
 
 ### Community 41 - "security_settings_dialogs.dart"
-Cohesion: 0.09
-Nodes (29): _TelegramAccountCardState, _TelegramAccountCardState, AutoLockTimeoutDialog, _AutoLockTimeoutDialogState, build, createState, DuressPinDialog, _DuressPinDialogState (+21 more)
+Cohesion: 0.07
+Nodes (41): AuthScreen, _AuthScreenState, DriveScreen, MediaPlayerScreen, ChannelSetupWizardDialog, _GalleryItem, DecryptedImageViewer, _DecryptedImageViewerState (+33 more)
 
 ### Community 42 - "faces_screen.dart"
 Cohesion: 0.07
 Nodes (30): build, _buildClusterPhotosGrid, _buildClustersList, cacheDir, clusters, createState, cropFile, cropFiles (+22 more)
 
 ### Community 43 - "places_screen.dart"
-Cohesion: 0.09
-Nodes (25): build, _buildPlaceFilesGrid, _buildPlacesList, country, counts, createState, db, file (+17 more)
+Cohesion: 0.08
+Nodes (26): build, _buildPlaceFilesGrid, _buildPlacesList, country, counts, createState, db, file (+18 more)
 
 ### Community 44 - "search_screen.dart"
 Cohesion: 0.10
 Nodes (25): build, db, filterType, firstMatch, matchedFiles, matchedFolders, matches, parsed (+17 more)
 
 ### Community 45 - "folder_picker_dialog.dart"
-Cohesion: 0.05
-Nodes (38): build, createState, dispose, _error, file, folder, _hasPassword, _isLoading (+30 more)
+Cohesion: 0.08
+Nodes (24): _allFolders, build, _buildFolderTile, _buildRootTile, _buildTree, _collectDescendantIds, createState, currentFolderId (+16 more)
 
 ### Community 46 - "Telegram"
 Cohesion: 0.12
@@ -499,99 +504,99 @@ Nodes (12): AppError, AuthError, cause, CryptoError, FileOperationError, floodWa
 
 ### Community 48 - "splash_screen.dart"
 Cohesion: 0.18
-Nodes (10): build, createState, initState, paint, _progress, random, shouldRepaint, _statusText (+2 more)
+Nodes (11): build, createState, initState, paint, _progress, random, shouldRepaint, SplashScreen (+3 more)
 
 ### Community 49 - "fullscreen_video_screen.dart"
 Cohesion: 0.08
 Nodes (24): build, _changeSpeed, controller, createState, dispose, _duration, _error, file (+16 more)
 
 ### Community 50 - "theme_provider.dart"
-Cohesion: 0.09
-Nodes (22): app_colors.dart, accentColorValue, AeroThemeState, copyWith, fontScale, hashCode, highContrast, _loadTheme (+14 more)
+Cohesion: 0.10
+Nodes (20): app_colors.dart, accentColorValue, copyWith, fontScale, hashCode, highContrast, _loadTheme, localeString (+12 more)
 
 ### Community 51 - "press_and_hold_preview.dart"
-Cohesion: 0.09
-Nodes (22): build, child, createState, _decryptedBytes, _dismissPreview, dispose, file, _formatBytes (+14 more)
+Cohesion: 0.05
+Nodes (41): build, child, createState, _decryptedBytes, _dismissPreview, dispose, file, _formatBytes (+33 more)
 
 ### Community 52 - "transfer_settings_dialogs.dart"
-Cohesion: 0.11
-Nodes (23): MediaPlayerScreen, ChannelSetupWizardDialog, _GalleryItem, TelegramAccountCard, ChannelsScreen, TelegramAccountCard, AutoRetryCountDialog, _AutoRetryCountDialogState (+15 more)
+Cohesion: 0.15
+Nodes (16): AutoRetryCountDialog, _AutoRetryCountDialogState, BandwidthLimitDialog, _BandwidthLimitDialogState, build, createState, initState, _limit (+8 more)
 
 ### Community 53 - "auto_backup_watcher.dart"
 Cohesion: 0.09
 Nodes (21): AutoBackupWatcherService, dispose, _handleLocalDelete, _isRunning, _isWifiOrWifiNotRequired, _matchesFilter, _pollTimer, _queueFile (+13 more)
 
 ### Community 54 - "dropbox_backup_screen.dart"
-Cohesion: 0.10
-Nodes (21): backupServiceProvider, build, createState, DropboxBackupScreen, _DropboxBackupScreenState, _frequency, initState, _isBackingUp (+13 more)
+Cohesion: 0.12
+Nodes (18): build, createState, DropboxBackupScreen, _DropboxBackupScreenState, _frequency, initState, _isBackingUp, _isConnecting (+10 more)
 
 ### Community 55 - "telegramManagerProvider"
 Cohesion: 0.09
 Nodes (22): _adminChannels, build, _buildChannelDropdown, _buildChannelItem, _buildExistingSelectionView, _buildOverviewView, _buildProgressView, _buildRuleItem (+14 more)
 
 ### Community 56 - "integration_settings_dialogs.dart"
-Cohesion: 0.10
-Nodes (28): _CodeTextViewer, _CodeTextViewerState, _PdfViewer, _PdfViewerState, ApiKeyManagementDialog, _ApiKeyManagementDialogState, build, createState (+20 more)
+Cohesion: 0.09
+Nodes (33): AeroDriveLogo, _LoadingIndicator, _LoadingIndicatorState, PremiumButton, _PremiumButtonState, ApiKeyManagementDialog, _ApiKeyManagementDialogState, build (+25 more)
 
 ### Community 57 - "marquee_text.dart"
 Cohesion: 0.10
 Nodes (20): AlignmentGeometry, alignment, build, _checkScroll, createState, didUpdateWidget, dispose, initState (+12 more)
 
 ### Community 58 - "infrastructure_providers.dart"
-Cohesion: 0.22
-Nodes (8): _db, _enforceLruCacheLimit, _getCacheDirectory, getThumbnail, maxCacheSizeBytes, saveThumbnail, ThumbnailCacheService, static const int
+Cohesion: 0.12
+Nodes (15): EncryptionEngine, _db, _enforceLruCacheLimit, _getCacheDirectory, getThumbnail, maxCacheSizeBytes, saveThumbnail, ThumbnailCacheService (+7 more)
 
 ### Community 59 - "responsive_scaffold.dart"
-Cohesion: 0.10
-Nodes (20): _buildStorageCard, child, createState, _currentIndex, _formatBytes, _isRootRoute, onDestinationSelected, _onPopInvoked (+12 more)
+Cohesion: 0.08
+Nodes (24): _buildStorageCard, child, createState, _currentIndex, _formatBytes, _isRootRoute, onDestinationSelected, _onPopInvoked (+16 more)
 
 ### Community 60 - "infrastructure_provisioning_service.dart"
 Cohesion: 0.09
 Nodes (21): _archiveAndMuteChannel, configChannelId, configureExistingChannelsAsInfrastructure, _createTelegramFolder, ensureAccountPromotionsAndFolder, ensureInfrastructure, errorMessage, InfrastructureResult (+13 more)
 
 ### Community 61 - "testing_ended_screen.dart"
-Cohesion: 0.10
-Nodes (20): DogEarFilePainter, StarfieldPainter, build, createState, dispose, _exitApp, _GridPainter, icon (+12 more)
+Cohesion: 0.11
+Nodes (18): DogEarFilePainter, StarfieldPainter, build, createState, dispose, _exitApp, _GridPainter, icon (+10 more)
 
 ### Community 62 - "package:flutter/material.dart"
-Cohesion: 0.10
-Nodes (18): AppResetHelper, showResetConfirmation, BackgroundServiceManager, _channel, startService, stopService, BootService, _channel (+10 more)
+Cohesion: 0.08
+Nodes (26): AppResetHelper, showResetConfirmation, BackgroundServiceManager, _channel, startService, stopService, BootService, _channel (+18 more)
 
 ### Community 63 - "repository_providers.dart"
-Cohesion: 0.09
-Nodes (21): db, hasNavigatedPastSplashProvider, apiServiceProvider, chunkRepositoryProvider, downloadOrchestratorProvider, encryptionEngineProvider, service, uploadOrchestratorProvider (+13 more)
+Cohesion: 0.11
+Nodes (18): apiServiceProvider, chunkRepositoryProvider, downloadOrchestratorProvider, encryptionEngineProvider, service, uploadOrchestratorProvider, DownloadQueueService, UploadQueueService (+10 more)
 
 ### Community 64 - "StatelessWidget"
 Cohesion: 0.20
-Nodes (9): clearKey, _instance, isUnlocked, _key, MasterKeyProvider, setKey, bool get, static final MasterKeyProvider (+1 more)
+Nodes (9): clearKey, _instance, isUnlocked, _key, MasterKeyProvider, setKey, List, static final MasterKeyProvider (+1 more)
 
 ### Community 65 - "api_service.dart"
-Cohesion: 0.10
-Nodes (19): _authMiddleware, container, _corsMiddleware, _fileToJson, _folderToJson, _handleCreateFolder, _handleGetFile, _handleHealth (+11 more)
+Cohesion: 0.05
+Nodes (38): _cacheLocalFilePath, _cacheRemoteFileId, _createDecryptionStream, _downloadAndReadRange, _downloadLocks, _handleStream, _localFilePathCache, _maxCacheSize (+30 more)
 
 ### Community 66 - "debug_error_screen.dart"
 Cohesion: 0.11
-Nodes (19): build, _commentController, _copyToClipboard, createState, DebugErrorScreen, _DebugErrorScreenState, dispose, error (+11 more)
+Nodes (18): build, _commentController, _copyToClipboard, createState, DebugErrorScreen, _DebugErrorScreenState, dispose, error (+10 more)
 
 ### Community 67 - "smart_tags_screen.dart"
-Cohesion: 0.11
-Nodes (19): _buildExploreTab, exploreDataProvider, build, _buildFallbackGradient, _buildTagFilesView, _buildTagsGridView, createState, file (+11 more)
+Cohesion: 0.13
+Nodes (16): file, _buildFallbackGradient, _buildTagFilesView, _buildTagsGridView, createState, file, _isLoadingFiles, _loadTagFiles (+8 more)
 
 ### Community 68 - "decrypted_text_viewer.dart"
-Cohesion: 0.11
-Nodes (19): build, _buildContent, _codePattern, _codeSpan, _contentWidth, createState, _data, DecryptedTextViewer (+11 more)
+Cohesion: 0.12
+Nodes (17): build, build, _downloadAndOpen, fileId, _isPreviewable, _openGeneric, openPreview, _openUniversalViewer (+9 more)
 
 ### Community 69 - "health_check_screen.dart"
-Cohesion: 0.05
-Nodes (46): build, build, _downloadAndOpen, fileId, _isPreviewable, _openGeneric, openPreview, _openUniversalViewer (+38 more)
+Cohesion: 0.11
+Nodes (21): activeChannelIdProvider, activeChannelNameProvider, activeChannelStr, build, channel, channelId, _compromisedFiles, createState (+13 more)
 
 ### Community 70 - "webdav_settings_dialog.dart"
-Cohesion: 0.11
-Nodes (19): build, _buildCopyRow, _configService, createState, _creds, dispose, _error, initState (+11 more)
+Cohesion: 0.10
+Nodes (20): build, _buildCopyRow, _configService, createState, _creds, dispose, _error, initState (+12 more)
 
 ### Community 71 - "transfer_progress_bar.dart"
-Cohesion: 0.07
-Nodes (39): fileRepositoryProvider, _showDeleteConfirm, dbRebuildVersionProvider, _showDeleteConfirm, _buildInfoRow, _buildOptionsMenu, file, _formatBytes (+31 more)
+Cohesion: 0.10
+Nodes (34): databaseProvider, fileRepositoryProvider, _handleDeleteSelected, _showDeleteConfirm, dbRebuildVersionProvider, FileGridItem, _showCopyDialog, _showDeleteConfirm (+26 more)
 
 ### Community 72 - "Table"
 Cohesion: 0.13
@@ -599,23 +604,23 @@ Nodes (19): @DataClassName, Accounts, BackupHistory, Channels, Chunks, FaceClust
 
 ### Community 73 - "appearance_settings_screen.dart"
 Cohesion: 0.07
-Nodes (26): _DesktopLayout, _MobileLayout, _TabletLayout, AeroDriveLogo, build, size, PremiumSwitch, PremiumTextField (+18 more)
+Nodes (29): _DesktopLayout, _MobileLayout, _TabletLayout, PremiumSwitch, PremiumTextField, StorageBanner, StorageWidget, build (+21 more)
 
 ### Community 74 - "package:uuid/uuid.dart"
 Cohesion: 0.10
-Nodes (20): allAccounts, channelDiscoveryServiceProvider, configChannelId, discoveryResult, discoveryService, ensureInfrastructureProvider, InfrastructureStatus, infrastructureStatusProvider (+12 more)
+Nodes (20): allAccounts, configChannelId, discoveryResult, discoveryService, ensureInfrastructureProvider, InfrastructureStatus, infrastructureStatusProvider, keySalt (+12 more)
 
 ### Community 75 - "isSelectionModeProvider"
-Cohesion: 0.18
-Nodes (25): databaseProvider, _buildAppBar, _handleCopySelected, _handleDeleteSelected, _handleDownloadSelected, _handleMoveSelected, folderItemsCountProvider, folderSizeProvider (+17 more)
+Cohesion: 0.24
+Nodes (15): _buildAppBar, _handleCopySelected, _handleDownloadSelected, _handleMoveSelected, isSelectionModeProvider, selectedItemsProvider, build, _showGridContextMenu (+7 more)
 
 ### Community 76 - "shared_links_screen.dart"
 Cohesion: 0.07
 Nodes (27): build, _buildActions, _buildContent, _buildDetailRow, _buildTitle, _confirmCompleter, createState, _currentStep (+19 more)
 
 ### Community 77 - "transfers_screen.dart"
-Cohesion: 0.11
-Nodes (20): HexColor, transfersStreamProvider, build, createState, _formatSize, _getTransferName, UploadQueueScreen, _UploadQueueScreenState (+12 more)
+Cohesion: 0.15
+Nodes (13): HexColor, transfersStreamProvider, build, build, _buildIcon, _calculateAggregateProgress, _formatBytes, _formatSummary (+5 more)
 
 ### Community 78 - "BaseWorker"
 Cohesion: 0.13
@@ -627,31 +632,31 @@ Nodes (8): AeroDrive Project, app/analysis_options.yaml, app/scratch.txt, app/we
 
 ### Community 80 - "aerodrive_theme.dart"
 Cohesion: 0.11
-Nodes (18): AeroDriveTheme, AeroThemePreset, _buildTextTheme, _defaultAccent, _defaultSecondary, getDark, getLight, gradient (+10 more)
+Nodes (17): AeroDriveTheme, _buildTextTheme, _defaultAccent, _defaultSecondary, getDark, getLight, gradient, icon (+9 more)
 
 ### Community 81 - "upload_crash_debugger.dart"
-Cohesion: 0.06
-Nodes (31): _autoFlushTimer, _closeSink, _currentFileName, detectCrashedUpload, dispose, _ensureDir, _fileIoFailed, _finishedGracefully (+23 more)
+Cohesion: 0.04
+Nodes (45): _autoFlushTimer, _closeSink, _currentFileName, detectCrashedUpload, dispose, _ensureDir, _fileIoFailed, _finishedGracefully (+37 more)
 
 ### Community 82 - "encryption_engine.dart"
 Cohesion: 0.11
 Nodes (17): _argon2, _argon2LowEnd, _cipher, decryptBytes, decryptDiskToStream, deriveMasterKey, deriveMasterKeyFromPhrase, encryptSingleChunkToDisk (+9 more)
 
 ### Community 83 - "streaming_server.dart"
-Cohesion: 0.11
-Nodes (18): _cacheLocalFilePath, _cacheRemoteFileId, _downloadAndReadRange, _downloadLocks, _handleStream, _localFilePathCache, _maxCacheSize, port (+10 more)
+Cohesion: 0.14
+Nodes (14): build, createState, dispose, _error, file, folder, _hasPassword, _isLoading (+6 more)
 
 ### Community 84 - "realtime_sync_service.dart"
 Cohesion: 0.12
 Nodes (16): _configChatId, dispose, _getConfigChatId, _handleDeleteMessages, _handleMessageContent, _handleNewMessage, _initializeBackgroundSyncChats, _isListening (+8 more)
 
 ### Community 85 - "decrypted_image_viewer.dart"
-Cohesion: 0.11
-Nodes (18): build, createState, _decryptedFile, DecryptedImageViewer, _DecryptedImageViewerState, dispose, _downloadFullChunk, _error (+10 more)
+Cohesion: 0.12
+Nodes (16): build, createState, _decryptedFile, dispose, _downloadFullChunk, _error, file, initState (+8 more)
 
 ### Community 86 - "advanced_settings_dialogs.dart"
-Cohesion: 0.10
-Nodes (20): build, _clearCache, ClearCacheDialog, _ClearCacheDialogState, createState, DatabaseStatsDialog, _DatabaseStatsDialogState, _dbSize (+12 more)
+Cohesion: 0.11
+Nodes (19): build, _clearCache, ClearCacheDialog, _ClearCacheDialogState, createState, DatabaseStatsDialog, _DatabaseStatsDialogState, _dbSize (+11 more)
 
 ### Community 87 - "streaming_upload_pipeline.dart"
 Cohesion: 0.06
@@ -682,12 +687,12 @@ Cohesion: 0.12
 Nodes (15): _archiveAndMute, checkConfigStatus, _configChannelName, ConfigStatus, ConfigSyncService, _configWarningText, error, findConfigChannel (+7 more)
 
 ### Community 94 - "dart:io"
-Cohesion: 0.11
-Nodes (17): EncryptionEngine, main, main, engine, main, tempDir, main, dart:io (+9 more)
+Cohesion: 0.18
+Nodes (10): createState, _formatSize, _getTransferName, UploadQueueScreen, _UploadQueueScreenState, main, dart:math, package:aerodrive/domain/upload_orchestrator.dart (+2 more)
 
 ### Community 95 - "appearance_settings_screen.dart"
 Cohesion: 0.12
-Nodes (15): defaultVal, icon, isSelected, label, _ModeCard, onTap, options, preset (+7 more)
+Nodes (15): AeroThemePreset, defaultVal, icon, isSelected, label, _ModeCard, onTap, options (+7 more)
 
 ### Community 96 - "places_service.dart"
 Cohesion: 0.12
@@ -702,68 +707,68 @@ Cohesion: 0.12
 Nodes (15): _addLog, AppLogger, clearSavedCrashLog, error, getSavedCrashLog, hasSavedCrashLog, info, init (+7 more)
 
 ### Community 99 - "ConsumerWidget"
-Cohesion: 0.11
-Nodes (26): settingsUpdateProvider, _TransferBadge, _showBackgroundTasksBottomSheet, _FaceGridItem, _GalleryItemState, thumbnailServiceProvider, _AudioItem, _DocumentItem (+18 more)
+Cohesion: 0.22
+Nodes (15): _FaceGridItem, _GalleryItemState, thumbnailServiceProvider, _AudioItem, _DocumentItem, _ImageItem, _GalleryItemState, _loadThumbnail (+7 more)
 
 ### Community 100 - "face_recognition_service.dart"
 Cohesion: 0.14
 Nodes (14): avatarFileId, DbFaceService, FaceCluster, faceClustersProvider, FaceRecognitionService, faceRecognitionServiceProvider, faceService, getClusters (+6 more)
 
 ### Community 101 - "auth_provider.dart"
-Cohesion: 0.14
-Nodes (15): AuthNotifier, AuthState, _ensureInfrastructure, forceUnauthenticated, _hasBeenAuthenticated, _init, _ref, _telegramAuthStateProvider (+7 more)
+Cohesion: 0.18
+Nodes (11): AuthNotifier, AuthState, _ensureInfrastructure, forceUnauthenticated, _hasBeenAuthenticated, _init, _ref, _telegramAuthStateProvider (+3 more)
 
 ### Community 102 - "trash_screen.dart"
-Cohesion: 0.16
-Nodes (13): build, _buildAvatar, ProfileScreen, build, db, files, folders, _permanentlyDeleteFile (+5 more)
+Cohesion: 0.24
+Nodes (9): build, db, files, folders, _permanentlyDeleteFile, _permanentlyDeleteFolder, trashedItemsProvider, TrashScreen (+1 more)
 
 ### Community 103 - "folder_picker_dialog.dart"
-Cohesion: 0.14
-Nodes (13): getCredentials, _keyPassword, _keyPort, _keyUsername, password, port, regenerateCredentials, setPort (+5 more)
+Cohesion: 0.13
+Nodes (14): getCredentials, _keyPassword, _keyPort, _keyUsername, password, port, regenerateCredentials, setPort (+6 more)
 
 ### Community 104 - "backup_service.dart"
 Cohesion: 0.14
 Nodes (13): BackupService, _collectBackupData, dropboxBackup, ensurePublicFolders, exportBackup, _getDropboxToken, getOrCreateBackupDir, _ref (+5 more)
 
 ### Community 105 - "media_gallery_screen.dart"
-Cohesion: 0.18
-Nodes (11): build, createState, _currentIndex, dispose, files, initialIndex, initState, MediaGalleryScreen (+3 more)
+Cohesion: 0.14
+Nodes (12): decryptStreamRange, _incrementIv, StreamingEncryptionEngine, ChannelDescriptionCodec, _cipher, decode, encode, readPurpose (+4 more)
 
 ### Community 106 - "ConsumerState"
-Cohesion: 0.10
-Nodes (39): infrastructureProvisioningServiceProvider, folderRepositoryProvider, settingsRepositoryProvider, masterKeyProvider, autoBackupWatcherProvider, recoveryServiceProvider, configSyncServiceProvider, _runConfigAndSetupCheck (+31 more)
+Cohesion: 0.13
+Nodes (38): channelDiscoveryServiceProvider, infrastructureProvisioningServiceProvider, folderRepositoryProvider, settingsRepositoryProvider, isAppUnlockedProvider, masterKeyProvider, folderScannerProvider, recoveryServiceProvider (+30 more)
 
 ### Community 107 - "network_settings_dialogs.dart"
-Cohesion: 0.15
-Nodes (14): build, createState, db, file, _GalleryItem, GalleryScreenContent, initState, _isLoading (+6 more)
+Cohesion: 0.21
+Nodes (8): build, build, build, PreviewScreen, build, SharingScreen, ../core/theme/app_colors.dart, package:flutter/material.dart
 
 ### Community 108 - "upload_orchestrator.dart"
 Cohesion: 0.10
 Nodes (19): chunkLength, chunkLimit, computeFileHash, ctrIv, dekBytes, EncryptJobPayload, getOptimalChunkSize, handoffToTelegram (+11 more)
 
 ### Community 109 - "video_gallery_screen.dart"
-Cohesion: 0.18
-Nodes (11): build, createState, _currentIndex, dispose, files, initialIndex, initState, _pageController (+3 more)
+Cohesion: 0.20
+Nodes (10): build, createState, _currentIndex, dispose, files, initialIndex, initState, _pageController (+2 more)
 
 ### Community 110 - "folder_scanner.dart"
 Cohesion: 0.25
 Nodes (8): build, _confirmTerminateAllOtherSessions, _confirmTerminateSession, _formatLastActive, _getDeviceIcon, SessionScreen, activeSessionsProvider, package:intl/intl.dart
 
 ### Community 111 - "channel_discovery_service.dart"
-Cohesion: 0.08
-Nodes (24): ChannelDescriptionCodec, _cipher, decode, encode, readPurpose, ChannelDiscoveryService, configChannelId, discoverInfrastructure (+16 more)
+Cohesion: 0.10
+Nodes (18): ChannelDiscoveryService, configChannelId, discoverInfrastructure, DiscoveryResult, errorMessage, isComplete, _ref, restoreFromDiscovery (+10 more)
 
 ### Community 112 - "purge_job.dart"
 Cohesion: 0.12
 Nodes (16): prebuilt-tdlib, aerodrive, tdlib, telegram, author, dependencies, prebuilt-tdlib, description (+8 more)
 
 ### Community 113 - "core/providers/repository_providers.dart"
-Cohesion: 0.18
-Nodes (10): AIQueueService, aiQueueServiceProvider, _battery, _isProcessing, _ref, triggerQueue, Battery, core/providers/repository_providers.dart (+2 more)
+Cohesion: 0.09
+Nodes (22): build, fileId, FileTagsRow, AIQueueService, aiQueueServiceProvider, _battery, _isProcessing, _ref (+14 more)
 
 ### Community 114 - "telegram_manager.dart"
-Cohesion: 0.11
-Nodes (18): accounts, addClient, allAdminChannels, allEvents, allSessions, _eventController, getClient, _initSecondaryClient (+10 more)
+Cohesion: 0.12
+Nodes (16): accounts, addClient, allAdminChannels, allEvents, allSessions, _eventController, getClient, _initPrimaryAndRestore (+8 more)
 
 ### Community 115 - "archive_viewer.dart"
 Cohesion: 0.12
@@ -778,16 +783,16 @@ Cohesion: 0.15
 Nodes (12): Animation, AnimationController, AeroDriveLogoSize, build, _controller, createState, dimension, dispose (+4 more)
 
 ### Community 118 - "shared_links_screen.dart"
-Cohesion: 0.20
-Nodes (10): build, createState, _error, initState, _isLoading, SharedLinksScreen, _SharedLinksScreenState, _shares (+2 more)
+Cohesion: 0.12
+Nodes (18): _checkForInterruptedImports, _resumeImport, build, createState, _error, initState, _isLoading, _loadShares (+10 more)
 
 ### Community 119 - "download_orchestrator.dart"
-Cohesion: 0.15
-Nodes (12): ctrIv, DecryptJobPayload, dedupFilePath, dekBytes, DownloadOrchestrator, ensureDownloadDirectory, _notifyMediaScanner, outputFilePath (+4 more)
+Cohesion: 0.23
+Nodes (12): allMediaFilesProvider, allMediaFoldersProvider, _buildAlbumsTab, _buildOptionsMenu, _buildPhotosTab, _buildTimelineContent, mediaColumnCountProvider, MediaScreen (+4 more)
 
 ### Community 120 - "about_screen.dart"
-Cohesion: 0.15
-Nodes (12): AboutScreen, build, _buildAppHero, _buildCard, _buildDeveloperCard, _buildDivider, _buildLinkTile, _buildSignatureCredit (+4 more)
+Cohesion: 0.20
+Nodes (9): createFileEntry, _db, FileRepository, getFileByHash, getFilesInFolder, restoreFile, softDelete, trashFile (+1 more)
 
 ### Community 121 - "companion_server_dialogs.dart"
 Cohesion: 0.17
@@ -802,8 +807,8 @@ Cohesion: 0.20
 Nodes (9): FolderRepository, chunkRepo, db, fileRepo, folderRepo, main, package:aerodrive/data/repositories/chunk_repository.dart, package:aerodrive/data/repositories/file_repository.dart (+1 more)
 
 ### Community 124 - "file_decryption_util.dart"
-Cohesion: 0.20
-Nodes (9): bytes, _downloadChunk, file, loadDecryptedFile, localPath, res, streamDecryptedFileToDisk, ../../core/security/master_key_provider.dart (+1 more)
+Cohesion: 0.09
+Nodes (21): key, null, telegramService, userId, channel, paths, pickFilesForUpload, result (+13 more)
 
 ### Community 125 - "media_settings_dialogs.dart"
 Cohesion: 0.20
@@ -834,8 +839,8 @@ Cohesion: 0.20
 Nodes (9): duration, generateSmartThumbnail, _getDurationOnly, path, VideoThumbnailResult, VideoThumbnailService, videoThumbnailServiceProvider, Duration (+1 more)
 
 ### Community 132 - "package:flutter_riverpod/flutter_riverpod.dart"
-Cohesion: 0.20
-Nodes (8): TelegramInitDebugInfo, build, SyncDebugOverlay, main, ../core/utils/reset_helper.dart, ../features/telegram/telegram_service.dart, package:aerodrive/features/drive/widgets/channel_setup_wizard_dialog.dart, package:flutter_riverpod/flutter_riverpod.dart
+Cohesion: 0.22
+Nodes (9): build, Route /diagnostics, Route /settings/about, Route /settings/accounts, Route /settings/backup/dropbox, Route /settings/channels/health, Route /settings/profile, Route /settings/session (+1 more)
 
 ### Community 133 - "backup_folder_mapper.dart"
 Cohesion: 0.20
@@ -850,8 +855,8 @@ Cohesion: 0.27
 Nodes (3): _get_tdjson_lib_path(), Any, TDJson
 
 ### Community 136 - "network_settings_dialogs.dart"
-Cohesion: 0.25
-Nodes (8): build, ConnectionTimeoutDialog, _ConnectionTimeoutDialogState, createState, initState, _isLoading, _load, _timeoutController
+Cohesion: 0.15
+Nodes (14): settingsUpdateProvider, ResetSettingsDialog, _DropdownTile, _executeImport, build, ConnectionTimeoutDialog, _ConnectionTimeoutDialogState, createState (+6 more)
 
 ### Community 137 - "PROMPT"
 Cohesion: 0.13
@@ -862,8 +867,8 @@ Cohesion: 0.15
 Nodes (12): _buildMap, _captionSafetyLimit, decodeManifest, encodeFileManifest, encodeFolderManifest, encodeThumbnailManifest, _estimatedEncryptedSize, _estimateJsonLength (+4 more)
 
 ### Community 140 - "quick_access_row.dart"
-Cohesion: 0.25
-Nodes (7): categories, icon, iconColor, QuickAccessCategory, title, IconData, ../providers/drive_providers.dart
+Cohesion: 0.12
+Nodes (16): _TransferBadge, _showBackgroundTasksBottomSheet, categories, icon, iconColor, QuickAccessCategory, title, aggregateTransferProgressProvider (+8 more)
 
 ### Community 141 - "Router"
 Cohesion: 0.29
@@ -874,12 +879,12 @@ Cohesion: 0.39
 Nodes (7): main(), generateNewConfig(), generateRandomString(), LoadOrGenerate(), safeLastN(), NewRouter(), Config
 
 ### Community 144 - "security_providers.dart"
-Cohesion: 0.29
-Nodes (6): key, null, telegramService, userId, package:crypto/crypto.dart, ../security/master_key_provider.dart
+Cohesion: 0.25
+Nodes (7): migration, _openConnection, schemaVersion, int get, MigrationStrategy get, package:drift/drift.dart, tables.dart
 
 ### Community 145 - "_AeroDriveAppState"
-Cohesion: 0.29
-Nodes (10): downloadQueueServiceProvider, uploadQueueServiceProvider, routerProvider, themeProvider, realtimeSyncServiceProvider, AppearanceSettingsScreen, build, AeroDriveApp (+2 more)
+Cohesion: 0.21
+Nodes (13): downloadQueueServiceProvider, uploadQueueServiceProvider, routerProvider, themeProvider, backupServiceProvider, realtimeSyncServiceProvider, AppearanceSettingsScreen, build (+5 more)
 
 ### Community 146 - "phone_validator.dart"
 Cohesion: 0.29
@@ -902,8 +907,8 @@ Cohesion: 0.40
 Nodes (3): FlutterEngine, MainActivity, FlutterFragmentActivity
 
 ### Community 151 - "streamingServerProvider"
-Cohesion: 0.08
-Nodes (25): ChunkRepository, _db, getChunksForFile, insertChunk, updateChunkMessageId, _uuid, createFileEntry, _db (+17 more)
+Cohesion: 0.12
+Nodes (16): ChunkRepository, _db, getChunksForFile, insertChunk, updateChunkMessageId, _uuid, _db, enqueueUpload (+8 more)
 
 ### Community 153 - ".send_message"
 Cohesion: 0.40
@@ -922,12 +927,12 @@ Cohesion: 0.17
 Nodes (12): Execution Plan, [MODIFY] [pubspec.yaml](file:///e:/Projects/AeroDrive/app/pubspec.yaml), [NEW] [aerodrive_logo.dart](file:///e:/Projects/AeroDrive/app/lib/widgets/aerodrive_logo.dart), [NEW] [analysis_options.yaml](file:///e:/Projects/AeroDrive/app/analysis_options.yaml), [NEW] [.gitignore](file:///e:/Projects/AeroDrive/.gitignore), [NEW] [main.dart](file:///e:/Projects/AeroDrive/app/lib/main.dart), Step 0C — Dependencies & Configuration, Step 0G — Placeholder Feature Screens (+4 more)
 
 ### Community 158 - "purge_job.dart"
-Cohesion: 0.14
-Nodes (13): chunksToDelete, completeHardDelete, deleteTelegramMessages, ExpiredMessagesPayload, fileIdsToPurge, findExpiredItems, folderIdsToPurge, PurgeJob (+5 more)
+Cohesion: 0.15
+Nodes (12): chunksToDelete, completeHardDelete, deleteTelegramMessages, ExpiredMessagesPayload, fileIdsToPurge, findExpiredItems, folderIdsToPurge, PurgeJob (+4 more)
 
 ### Community 159 - "graphify.js"
-Cohesion: 0.18
-Nodes (11): _db, RecoveryScanner, _ref, runDisasterRecovery, telegram, _telegramService, ZeroDBRecoveryService, manifest_encoder.dart (+3 more)
+Cohesion: 0.13
+Nodes (14): db, hasNavigatedPastSplashProvider, _db, RecoveryScanner, _ref, runDisasterRecovery, telegram, _telegramService (+6 more)
 
 ### Community 195 - "Phase 0 — AeroDrive Scaffolding (Revised)"
 Cohesion: 0.20
@@ -942,8 +947,8 @@ Cohesion: 0.25
 Nodes (7): AeroDrive Architecture, Data Flow: Download, Data Flow: Upload, Directory Structure, Key Design Decisions, Overview, System Layers
 
 ### Community 198 - "video_screen.dart"
-Cohesion: 0.10
-Nodes (22): _addTag, build, createState, file, _fileTags, fromHex, initState, _isLoading (+14 more)
+Cohesion: 0.14
+Nodes (17): _addTag, build, createState, file, _fileTags, fromHex, initState, _isLoading (+9 more)
 
 ### Community 199 - "network_settings_dialogs.dart"
 Cohesion: 0.25
@@ -962,8 +967,8 @@ Cohesion: 0.29
 Nodes (7): [NEW] [docs/API.md](file:///e:/Projects/AeroDrive/docs/API.md), [NEW] [docs/ARCHITECTURE.md](file:///e:/Projects/AeroDrive/docs/ARCHITECTURE.md), [NEW] [docs/COMPLIANCE.md](file:///e:/Projects/AeroDrive/docs/COMPLIANCE.md), [NEW] [docs/SECURITY.md](file:///e:/Projects/AeroDrive/docs/SECURITY.md), [NEW] [LICENSE](file:///e:/Projects/AeroDrive/LICENSE), [NEW] [README.md](file:///e:/Projects/AeroDrive/README.md), Step 0M — Documentation
 
 ### Community 203 - "extensions.dart"
-Cohesion: 0.20
-Nodes (9): CaptionDecryptor, CaptionSerializer, _cipher, deserialize, _encryptAndEncode, serializeFile, serializeFolder, serializeThumbnail (+1 more)
+Cohesion: 0.10
+Nodes (19): CaptionDecryptor, CaptionSerializer, _cipher, deserialize, _encryptAndEncode, serializeFile, serializeFolder, serializeThumbnail (+11 more)
 
 ### Community 204 - "Step 0K — Go Companion Backend"
 Cohesion: 0.33
@@ -974,8 +979,8 @@ Cohesion: 0.33
 Nodes (5): ChannelLoadBalancer, getStorageChannels, selectFileBaseIndex, selectStorageChannel, data/repositories/settings_repository.dart
 
 ### Community 206 - "file_tags_row.dart"
-Cohesion: 0.40
-Nodes (5): build, fileId, FileTagsRow, fileTagsStreamProvider, ../../tags/tag_providers.dart
+Cohesion: 0.32
+Nodes (7): build, db, documentFiles, documentsProvider, DocumentsScreen, file, _formatFileSize
 
 ### Community 207 - "Step 0A — Environment Setup (Prerequisites)"
 Cohesion: 0.50
@@ -986,8 +991,8 @@ Cohesion: 0.50
 Nodes (4): [NEW] [scripts/build_tdlib.sh](file:///e:/Projects/AeroDrive/scripts/build_tdlib.sh), [NEW] [scripts/run_codegen.ps1](file:///e:/Projects/AeroDrive/scripts/run_codegen.ps1), [NEW] [scripts/run_codegen.sh](file:///e:/Projects/AeroDrive/scripts/run_codegen.sh), Step 0L — Scripts
 
 ### Community 209 - "opencode.json"
-Cohesion: 0.10
-Nodes (20): _, @DriftDatabase, AeroDriveDatabase, migration, _openConnection, schemaVersion, SettingsRepository, db (+12 more)
+Cohesion: 0.12
+Nodes (16): _, @DriftDatabase, AeroDriveDatabase, SettingsRepository, main, db, main, settings (+8 more)
 
 ### Community 210 - "[1.8.56.1] - 2025-11-16"
 Cohesion: 0.50
@@ -1026,28 +1031,40 @@ Cohesion: 0.40
 Nodes (5): streamingServerProvider, FullscreenVideoScreen, _FullscreenVideoScreenState, _initStream, _initStream
 
 ### Community 225 - "_DigestSink"
-Cohesion: 0.67
-Nodes (3): _DigestSink, _DigestSink, Sink
+Cohesion: 0.29
+Nodes (7): _buildExploreTab, exploreDataProvider, build, Route /media/memories, Route /media/people, Route /media/places, Route /media/smart-tags
+
+### Community 228 - "autoBackupWatcherProvider"
+Cohesion: 0.40
+Nodes (5): autoBackupWatcherProvider, ManageBackupFoldersScreen, _ManageBackupFoldersScreenState, _saveProfiles, initState
+
+### Community 230 - "../telegram/telegram_service.dart"
+Cohesion: 0.40
+Nodes (4): build, _buildAvatar, ProfileScreen, ../telegram/telegram_service.dart
+
+### Community 281 - "StateNotifier"
+Cohesion: 0.50
+Nodes (4): AeroThemeState, ThemeNotifier, DropboxService, StateNotifier
 
 ## Knowledge Gaps
-- **2269 isolated node(s):** `message`, `cause`, `floodWaitSeconds`, `toString`, `AppConstants` (+2264 more)
+- **2271 isolated node(s):** `message`, `cause`, `floodWaitSeconds`, `toString`, `AppConstants` (+2266 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **72 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **74 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `AsyncResult` connect `AsyncResult` to `AuthorizationState`, `.send_message`, `Telegram`, `streamingServerProvider`?**
-  _High betweenness centrality (0.033) - this node is a cross-community bridge._
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
 - **Why does `Telegram` connect `Telegram` to `AuthorizationState`, `TDJson`, `BaseWorker`, `AsyncResult`, `.send_message`?**
+  _High betweenness centrality (0.014) - this node is a cross-community bridge._
+- **Why does `settingsRepositoryProvider` connect `ConsumerState` to `decrypted_text_viewer.dart`, `media_player_screen.dart`, `autoBackupWatcherProvider`, `network_settings_dialogs.dart`, `network_settings_dialogs.dart`, `security_settings_dialogs.dart`, `backup_folder_mapper.dart`, `_AeroDriveAppState`, `auto_backup_settings_dialogs.dart`, `telegram_manager.dart`, `transfer_settings_dialogs.dart`, `dropbox_backup_screen.dart`, `settingsRepositoryProvider`, `backup_dialogs.dart`, `media_settings_dialogs.dart`, `proxy_settings_screen.dart`, `repository_providers.dart`?**
   _High betweenness centrality (0.006) - this node is a cross-community bridge._
-- **Why does `AeroDriveDatabase` connect `opencode.json` to `graphify.js`, `smart_analyzer.dart`, `multi_account_screen.dart`, `Upload Pipeline`, `dart:math`, `download_queue_service.dart`, `streamingServerProvider`, `infrastructure_providers.dart`, `package:cryptography/cryptography.dart`, `folder_repository.dart`, `repository_providers.dart`?**
-  _High betweenness centrality (0.004) - this node is a cross-community bridge._
 - **What connects `message`, `cause`, `floodWaitSeconds` to the rest of the system?**
-  _2269 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _2271 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Database & Schema` be split into smaller, more focused modules?**
   _Cohesion score 0.021052631578947368 - nodes in this community are weakly interconnected._
 - **Should `Telegram Client Service` be split into smaller, more focused modules?**
-  _Cohesion score 0.025974025974025976 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.02531645569620253 - nodes in this community are weakly interconnected._
 - **Should `Media UI Screens` be split into smaller, more focused modules?**
-  _Cohesion score 0.040437158469945354 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0425531914893617 - nodes in this community are weakly interconnected._

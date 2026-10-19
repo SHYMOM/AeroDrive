@@ -93,6 +93,7 @@ class UploadQueueService {
 
   UploadQueueService(this._ref, this._db, this._settings, this._telegramManager, this._orchestrator) {
     _resetInterruptedTransfers();
+    _sanitizeChunksDatabase();
     _startPolling();
     _listenToTdlibEvents();
     _startConfirmationWatcher();
@@ -346,13 +347,67 @@ class UploadQueueService {
             (q.status.equals('PROCESSING') | q.status.equals('ENCRYPTING')))
       ).write(const TransferQueueCompanion(
         status: drift.Value('PENDING'),
-        errorMessage: drift.Value(null),
       ));
       if (resetCount > 0) {
         AppLogger.info('UploadQueueService: Reset $resetCount interrupted upload(s) to PENDING');
       }
     } catch (e) {
       AppLogger.error('Failed to reset interrupted uploads', e);
+    }
+  }
+
+  /// Deduplicates any duplicate chunk entries and repairs chunk sizes in the SQLite database.
+  Future<void> _sanitizeChunksDatabase() async {
+    try {
+      final allChunks = await _db.select(_db.chunks).get();
+      final seen = <String, ChunkData>{};
+      final toDelete = <String>[];
+
+      for (final chunk in allChunks) {
+        final key = '${chunk.fileId}:${chunk.chunkIndex}';
+        if (seen.containsKey(key)) {
+          final existing = seen[key]!;
+          if ((existing.messageId == null || existing.messageId! <= 0) &&
+              (chunk.messageId != null && chunk.messageId! > 0)) {
+            toDelete.add(existing.id);
+            seen[key] = chunk;
+          } else {
+            toDelete.add(chunk.id);
+          }
+        } else {
+          seen[key] = chunk;
+        }
+      }
+
+      if (toDelete.isNotEmpty) {
+        await (_db.delete(_db.chunks)..where((c) => c.id.isIn(toDelete))).go();
+        AppLogger.info('Sanitized database: removed ${toDelete.length} duplicate chunk rows');
+      }
+
+      // Fix corrupt chunk size where chunk.size >= file.size on multi-chunk files
+      final multiChunkFiles = await (_db.select(_db.files)
+        ..where((f) => f.totalChunks.isBiggerThanValue(1))
+      ).get();
+
+      for (final file in multiChunkFiles) {
+        final fileSize = file.size ?? 0;
+        if (fileSize <= 0) continue;
+        final totalChunks = file.totalChunks;
+        final optimalSize = UploadOrchestrator.getOptimalChunkSize(fileSize);
+
+        final fileChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(file.id))).get();
+        for (final chunk in fileChunks) {
+          if (chunk.size != null && chunk.size! >= fileSize) {
+            final idx = chunk.chunkIndex ?? 0;
+            final isLast = idx == totalChunks - 1;
+            final trueSize = isLast ? (fileSize - idx * optimalSize) : optimalSize;
+            await (_db.update(_db.chunks)..where((c) => c.id.equals(chunk.id)))
+                .write(ChunksCompanion(size: drift.Value(trueSize)));
+          }
+        }
+      }
+    } catch (e) {
+      AppLogger.warning('Database chunk sanitization error: $e');
     }
   }
 
@@ -1128,7 +1183,8 @@ class UploadQueueService {
 
     final metaParts = item.errorMessage?.split('|');
     if (metaParts == null || metaParts.length < 2) return;
-    final folderId = metaParts[0];
+    final rawFolderId = metaParts[0];
+    final String? folderId = (rawFolderId.isEmpty || rawFolderId == 'null') ? null : rawFolderId;
     final dekBytesString = metaParts[1];
     final ctrIvBase64 = metaParts.length >= 3 ? metaParts[2] : '';
     final encryptionNonceBase64 = metaParts.length >= 4 ? metaParts[3] : '';
@@ -1162,8 +1218,9 @@ class UploadQueueService {
         List.generate(totalChunks, (i) => i).every((idx) =>
             confirmedIndicesInDb.contains(idx) || confirmedMemoryIndices.contains(idx));
 
-    if (freshChunks.length >= totalChunks &&
-        (confirmedChunks.length >= totalChunks || allIndicesConfirmed)) {
+    if (totalChunks > 0 &&
+        allIndicesConfirmed &&
+        (confirmedIndicesInDb.length >= totalChunks || confirmedMemoryIndices.length >= totalChunks)) {
       final masterKey = _ref.read(masterKeyProvider);
       var wrappedDekString = dekBytesString;
 

@@ -63,14 +63,6 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final isConfigChecked = ref.watch(configCheckedProvider);
-    if (!isConfigChecked) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: widget.child,
-      );
-    }
-
     final location = GoRouterState.of(context).uri.path;
     final isRoot = _isRootRoute(location);
 
