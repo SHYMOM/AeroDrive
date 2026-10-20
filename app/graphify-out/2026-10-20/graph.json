@@ -62,7 +62,7 @@
       "label": "start()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L36",
+      "source_location": "L39",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_start",
       "community": 81,
@@ -84,7 +84,7 @@
       "label": "stop()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L46",
+      "source_location": "L49",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_stop",
       "community": 81,
@@ -95,7 +95,7 @@
       "label": ".onBind()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L53",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onbind",
       "community": 81,
@@ -128,7 +128,7 @@
       "label": ".onCreate()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L55",
+      "source_location": "L65",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_oncreate",
       "community": 81,
@@ -139,7 +139,7 @@
       "label": ".onStartCommand()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L79",
+      "source_location": "L90",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onstartcommand",
       "community": 81,
@@ -161,7 +161,7 @@
       "label": ".onDestroy()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L85",
+      "source_location": "L96",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_ondestroy",
       "community": 81,
@@ -172,7 +172,7 @@
       "label": ".buildNotification()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L92",
+      "source_location": "L110",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_buildnotification",
       "community": 81,
@@ -194,7 +194,7 @@
       "label": ".createNotificationChannel()",
       "file_type": "code",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L103",
+      "source_location": "L121",
       "_origin": "ast",
       "id": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_createnotificationchannel",
       "community": 81,
@@ -582,8 +582,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const_string",
-      "community": 106,
-      "community_name": "purge_job.dart",
+      "community": 108,
+      "community_name": "webdav_config.dart",
       "norm_label": "static const string"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_io",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "dart:io"
     },
     {
@@ -1220,8 +1220,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_foundation_dart",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "package:flutter/foundation.dart"
     },
     {
@@ -1231,8 +1231,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_path_provider_path_provider_dart",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "package:path_provider/path_provider.dart"
     },
     {
@@ -1242,8 +1242,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "providers.dart"
     },
     {
@@ -1264,8 +1264,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_db",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "db"
     },
     {
@@ -1275,8 +1275,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "return",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "return"
     },
     {
@@ -1286,8 +1286,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_hasnavigatedpastsplashprovider",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "hasnavigatedpastsplashprovider"
     },
     {
@@ -1297,8 +1297,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_riverpod_flutter_riverpod_dart",
-      "community": 74,
-      "community_name": "package:flutter/material.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "package:flutter_riverpod/flutter_riverpod.dart"
     },
     {
@@ -1308,8 +1308,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "data_db_database_dart",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "../data/db/database.dart"
     },
     {
@@ -1319,8 +1319,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "infrastructure_providers.dart"
     },
     {
@@ -1330,8 +1330,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_infrastructurestatus",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "infrastructurestatus"
     },
     {
@@ -1352,8 +1352,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_ref",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "ref"
     },
     {
@@ -1363,8 +1363,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_channeldiscoveryserviceprovider",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "channeldiscoveryserviceprovider"
     },
     {
@@ -1374,8 +1374,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_infrastructurestatusprovider",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "infrastructurestatusprovider"
     },
     {
@@ -1385,8 +1385,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_settingsrepo",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "settingsrepo"
     },
     {
@@ -1396,8 +1396,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_storagechannels",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "storagechannels"
     },
     {
@@ -1407,8 +1407,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_configchannelid",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "configchannelid"
     },
     {
@@ -1418,8 +1418,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_ensureinfrastructureprovider",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "ensureinfrastructureprovider"
     },
     {
@@ -1429,8 +1429,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_status",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "status"
     },
     {
@@ -1440,8 +1440,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_discoveryservice",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "discoveryservice"
     },
     {
@@ -1451,8 +1451,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_provisioningservice",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "provisioningservice"
     },
     {
@@ -1462,8 +1462,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_telegrammanager",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "telegrammanager"
     },
     {
@@ -1473,8 +1473,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_telegramservice",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "telegramservice"
     },
     {
@@ -1484,8 +1484,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_allaccounts",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "allaccounts"
     },
     {
@@ -1495,8 +1495,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_discoveryresult",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "discoveryresult"
     },
     {
@@ -1506,8 +1506,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_keysalt",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "keysalt"
     },
     {
@@ -1517,8 +1517,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_infrastructure_providers_provisioninitialinfrastructure",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "provisioninitialinfrastructure"
     },
     {
@@ -1528,8 +1528,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_cryptography_cryptography_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "package:cryptography/cryptography.dart"
     },
     {
@@ -1539,8 +1539,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_infrastructure_channel_discovery_service_dart",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "../../domain/infrastructure/channel_discovery_service.dart"
     },
     {
@@ -1550,8 +1550,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_infrastructure_infrastructure_provisioning_service_dart",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "../../../domain/infrastructure/infrastructure_provisioning_service.dart"
     },
     {
@@ -1561,8 +1561,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_telegram_telegram_manager_dart",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 109,
+      "community_name": "folder_scanner.dart",
       "norm_label": "features/telegram/telegram_manager.dart"
     },
     {
@@ -1594,8 +1594,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_repository_providers_folderrepositoryprovider",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "folderrepositoryprovider"
     },
     {
@@ -1638,8 +1638,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_repository_providers_settingsupdateprovider",
-      "community": 52,
-      "community_name": "ConsumerWidget",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "settingsupdateprovider"
     },
     {
@@ -1770,8 +1770,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "data_repositories_settings_repository_dart",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "data/repositories/settings_repository.dart"
     },
     {
@@ -1902,8 +1902,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_providers_security_providers_isappunlockedprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "isappunlockedprovider"
     },
     {
@@ -1946,8 +1946,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_telegram_telegram_service_dart",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 97,
+      "community_name": "auth_provider.dart",
       "norm_label": "../features/telegram/telegram_service.dart"
     },
     {
@@ -2078,8 +2078,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_material_dart",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "package:flutter/material.dart"
     },
     {
@@ -2430,8 +2430,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_trash_trash_screen_dart",
-      "community": 9,
-      "community_name": "app_router.dart",
+      "community": 90,
+      "community_name": "config_sync_service.dart",
       "norm_label": "../../features/trash/trash_screen.dart"
     },
     {
@@ -2507,8 +2507,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_routing_responsive_scaffold_responsivescaffoldstate",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 51,
+      "community_name": "responsive_scaffold.dart",
       "norm_label": "_responsivescaffoldstate"
     },
     {
@@ -2518,8 +2518,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "consumerstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "consumerstate"
     },
     {
@@ -2595,8 +2595,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_routing_responsive_scaffold_transferbadge",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "_transferbadge"
     },
     {
@@ -2617,8 +2617,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widget",
-      "community": 51,
-      "community_name": "responsive_scaffold.dart",
+      "community": 43,
+      "community_name": "press_and_hold_preview.dart",
       "norm_label": "widget"
     },
     {
@@ -2771,8 +2771,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_services_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "package:flutter/services.dart"
     },
     {
@@ -2793,8 +2793,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_drive_providers_drive_providers_dart",
-      "community": 82,
-      "community_name": "realtime_sync_service.dart",
+      "community": 51,
+      "community_name": "responsive_scaffold.dart",
       "norm_label": "features/drive/providers/drive_providers.dart"
     },
     {
@@ -2859,8 +2859,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "color",
-      "community": 60,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 44,
+      "community_name": "Color",
       "norm_label": "color"
     },
     {
@@ -2958,8 +2958,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "bool_get",
-      "community": 136,
-      "community_name": "dart:convert",
+      "community": 105,
+      "community_name": "channel_discovery_service.dart",
       "norm_label": "bool get"
     },
     {
@@ -3112,8 +3112,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const_list",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "static const list"
     },
     {
@@ -3728,8 +3728,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_theme_theme_provider_aerothemestate",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 167,
+      "community_name": "StateNotifier",
       "norm_label": "aerothemestate"
     },
     {
@@ -3739,8 +3739,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_theme_theme_provider_themenotifier",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 167,
+      "community_name": "StateNotifier",
       "norm_label": "themenotifier"
     },
     {
@@ -3750,8 +3750,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "statenotifier",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 167,
+      "community_name": "StateNotifier",
       "norm_label": "statenotifier"
     },
     {
@@ -3849,8 +3849,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "int_get",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "int get"
     },
     {
@@ -3882,8 +3882,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_theme_theme_provider_themeprovider",
-      "community": 88,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
       "norm_label": "themeprovider"
     },
     {
@@ -4080,8 +4080,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_utils_reset_helper",
-      "community": 138,
-      "community_name": "package:cryptography/cryptography.dart",
+      "community": 97,
+      "community_name": "auth_provider.dart",
       "norm_label": "reset_helper.dart"
     },
     {
@@ -4091,8 +4091,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_utils_reset_helper_appresethelper",
-      "community": 138,
-      "community_name": "package:cryptography/cryptography.dart",
+      "community": 97,
+      "community_name": "auth_provider.dart",
       "norm_label": "appresethelper"
     },
     {
@@ -4102,8 +4102,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_core_utils_reset_helper_showresetconfirmation",
-      "community": 138,
-      "community_name": "package:cryptography/cryptography.dart",
+      "community": 97,
+      "community_name": "auth_provider.dart",
       "norm_label": "showresetconfirmation"
     },
     {
@@ -4113,8 +4113,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_tdlib_tdlib_dart",
-      "community": 138,
-      "community_name": "package:cryptography/cryptography.dart",
+      "community": 97,
+      "community_name": "auth_provider.dart",
       "norm_label": "package:tdlib/tdlib.dart"
     },
     {
@@ -4553,8 +4553,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "singletickerproviderstatemixin",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "singletickerproviderstatemixin"
     },
     {
@@ -4905,8 +4905,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_math",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "dart:math"
     },
     {
@@ -5114,7 +5114,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_typed_data",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "dart:typed_data"
     },
@@ -5136,7 +5136,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_crypto_streaming_encryption_engine",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "streaming_encryption_engine.dart"
     },
@@ -5147,7 +5147,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_crypto_streaming_encryption_engine_streamingencryptionengine",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "streamingencryptionengine"
     },
@@ -5158,7 +5158,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_crypto_streaming_encryption_engine_decryptstreamrange",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "decryptstreamrange"
     },
@@ -5169,7 +5169,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_crypto_streaming_encryption_engine_incrementiv",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "_incrementiv"
     },
@@ -5180,7 +5180,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_pointycastle_export_dart",
-      "community": 42,
+      "community": 166,
       "community_name": "dart:typed_data",
       "norm_label": "package:pointycastle/export.dart"
     },
@@ -5191,8 +5191,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_db_database",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "database.dart"
     },
     {
@@ -5202,8 +5202,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_db_database_aerodrivedatabase",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "aerodrivedatabase"
     },
     {
@@ -5213,8 +5213,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "_"
     },
     {
@@ -5224,8 +5224,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "annotation_driftdatabase",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "@driftdatabase"
     },
     {
@@ -5235,8 +5235,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_db_database_schemaversion",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "schemaversion"
     },
     {
@@ -5246,8 +5246,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_db_database_migration",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "migration"
     },
     {
@@ -5257,8 +5257,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "migrationstrategy_get",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "migrationstrategy get"
     },
     {
@@ -5268,8 +5268,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_db_database_openconnection",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "_openconnection"
     },
     {
@@ -5279,8 +5279,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_drift_drift_dart",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "package:drift/drift.dart"
     },
     {
@@ -5290,8 +5290,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_drift_native_dart",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "package:drift/native.dart"
     },
     {
@@ -5301,8 +5301,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_path_path_dart",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "package:path/path.dart"
     },
     {
@@ -5312,8 +5312,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "tables_dart",
-      "community": 71,
-      "community_name": "State",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "tables.dart"
     },
     {
@@ -6687,8 +6687,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "db_database_dart",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 129,
+      "community_name": "settings_repository.dart",
       "norm_label": "../db/database.dart"
     },
     {
@@ -6698,8 +6698,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "file_repository.dart"
     },
     {
@@ -6709,8 +6709,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_filerepository",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "filerepository"
     },
     {
@@ -6720,8 +6720,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_db",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "_db"
     },
     {
@@ -6731,8 +6731,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_uuid",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "_uuid"
     },
     {
@@ -6742,8 +6742,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_getfilebyhash",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "getfilebyhash"
     },
     {
@@ -6753,8 +6753,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_createfileentry",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "createfileentry"
     },
     {
@@ -6764,8 +6764,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_getfilesinfolder",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "getfilesinfolder"
     },
     {
@@ -6775,8 +6775,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_softdelete",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "softdelete"
     },
     {
@@ -6786,8 +6786,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_trashfile",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "trashfile"
     },
     {
@@ -6797,8 +6797,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_file_repository_restorefile",
-      "community": 162,
-      "community_name": "queue_repository.dart",
+      "community": 151,
+      "community_name": "_DigestSink",
       "norm_label": "restorefile"
     },
     {
@@ -7072,8 +7072,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_data_repositories_settings_repository_settingsrepository",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "settingsrepository"
     },
     {
@@ -7347,8 +7347,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_providers_dart",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "../core/providers.dart"
     },
     {
@@ -7446,8 +7446,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_auto_backup_watcher_autobackupwatcherprovider",
-      "community": 115,
-      "community_name": "_AeroDriveAppState",
+      "community": 16,
+      "community_name": "auto_backup_settings_dialogs.dart",
       "norm_label": "autobackupwatcherprovider"
     },
     {
@@ -7666,8 +7666,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_background_service_manager",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "background_service_manager.dart"
     },
     {
@@ -7677,8 +7677,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_background_service_manager_backgroundservicemanager",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "backgroundservicemanager"
     },
     {
@@ -7688,8 +7688,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_background_service_manager_channel",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "_channel"
     },
     {
@@ -7699,8 +7699,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "static const"
     },
     {
@@ -7710,8 +7710,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_background_service_manager_startservice",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "startservice"
     },
     {
@@ -7721,8 +7721,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_background_service_manager_stopservice",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "stopservice"
     },
     {
@@ -7765,8 +7765,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_backup_service_backupserviceprovider",
-      "community": 67,
-      "community_name": "dropbox_backup_screen.dart",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
       "norm_label": "backupserviceprovider"
     },
     {
@@ -7908,8 +7908,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_boot_service",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "boot_service.dart"
     },
     {
@@ -7919,8 +7919,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_boot_service_bootservice",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "bootservice"
     },
     {
@@ -7930,8 +7930,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_boot_service_channel",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "_channel"
     },
     {
@@ -7941,8 +7941,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_boot_service_isbootcompleted",
-      "community": 68,
-      "community_name": "file_list_item.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "isbootcompleted"
     },
     {
@@ -7952,8 +7952,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_channel_load_balancer",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "channel_load_balancer.dart"
     },
     {
@@ -7963,8 +7963,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_channel_load_balancer_channelloadbalancer",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "channelloadbalancer"
     },
     {
@@ -7974,8 +7974,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_channel_load_balancer_getstoragechannels",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "getstoragechannels"
     },
     {
@@ -7985,8 +7985,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_channel_load_balancer_selectfilebaseindex",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "selectfilebaseindex"
     },
     {
@@ -7996,8 +7996,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_channel_load_balancer_selectstoragechannel",
-      "community": 84,
-      "community_name": "dart:io",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "selectstoragechannel"
     },
     {
@@ -8403,8 +8403,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "streamsubscription",
-      "community": 14,
-      "community_name": "download_queue_service.dart",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
       "norm_label": "streamsubscription"
     },
     {
@@ -8700,8 +8700,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_folder_scanner_folderscannerprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "folderscannerprovider"
     },
     {
@@ -9063,8 +9063,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_infrastructure_infrastructure_provisioning_service_infrastructureprovisioningservice",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 57,
+      "community_name": "../data/db/database.dart",
       "norm_label": "infrastructureprovisioningservice"
     },
     {
@@ -9283,8 +9283,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "sync_config_sync_service_dart",
-      "community": 54,
-      "community_name": "infrastructure_provisioning_service.dart",
+      "community": 124,
+      "community_name": "recovery_scanner.dart",
       "norm_label": "../sync/config_sync_service.dart"
     },
     {
@@ -9338,8 +9338,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_integrity_integrity_verification_service_digestsink",
-      "community": 33,
-      "community_name": "integrity_verification_service.dart",
+      "community": 168,
+      "community_name": "_DigestSink",
       "norm_label": "_digestsink"
     },
     {
@@ -9349,8 +9349,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "sink",
-      "community": 33,
-      "community_name": "integrity_verification_service.dart",
+      "community": 168,
+      "community_name": "_DigestSink",
       "norm_label": "sink"
     },
     {
@@ -10680,7 +10680,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_image_image_dart",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "package:image/image.dart"
     },
@@ -10801,8 +10801,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_streaming_streaming_server_streamingserverprovider",
-      "community": 160,
-      "community_name": "streamingServerProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "streamingserverprovider"
     },
     {
@@ -11010,8 +11010,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_streaming_upload_pipeline_digestsink",
-      "community": 33,
-      "community_name": "integrity_verification_service.dart",
+      "community": 168,
+      "community_name": "_DigestSink",
       "norm_label": "_digestsink"
     },
     {
@@ -11395,8 +11395,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_sync_config_sync_service_configsyncserviceprovider",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "configsyncserviceprovider"
     },
     {
@@ -11409,6 +11409,28 @@
       "community": 90,
       "community_name": "config_sync_service.dart",
       "norm_label": "syncconfigtochannel"
+    },
+    {
+      "label": "recordPermanentDeletion",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_config_sync_service_recordpermanentdeletion",
+      "community": 90,
+      "community_name": "config_sync_service.dart",
+      "norm_label": "recordpermanentdeletion"
+    },
+    {
+      "label": "applyRemoteDriveState",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_config_sync_service_applyremotedrivestate",
+      "community": 90,
+      "community_name": "config_sync_service.dart",
+      "norm_label": "applyremotedrivestate"
     },
     {
       "label": "checkConfigStatus",
@@ -11554,6 +11576,39 @@
       "norm_label": "_islistening"
     },
     {
+      "label": "_isCatchingUp",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_iscatchingup",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "_iscatchingup"
+    },
+    {
+      "label": "_allEventsSub",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_alleventssub",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "_alleventssub"
+    },
+    {
+      "label": "_periodicCatchUpTimer",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_periodiccatchuptimer",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "_periodiccatchuptimer"
+    },
+    {
       "label": "_configChatId",
       "file_type": "code",
       "source_file": "lib/domain/sync/realtime_sync_service.dart",
@@ -11596,6 +11651,39 @@
       "community": 82,
       "community_name": "realtime_sync_service.dart",
       "norm_label": "dispose"
+    },
+    {
+      "label": "_getStorageChannelIds",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_getstoragechannelids",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "_getstoragechannelids"
+    },
+    {
+      "label": "catchUp",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_catchup",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "catchup"
+    },
+    {
+      "label": "processMessage",
+      "file_type": "code",
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_domain_sync_realtime_sync_service_processmessage",
+      "community": 82,
+      "community_name": "realtime_sync_service.dart",
+      "norm_label": "processmessage"
     },
     {
       "label": "_handleDeleteMessages",
@@ -11681,8 +11769,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "thumbnail_cache_manager.dart"
     },
     {
@@ -11692,8 +11780,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_thumbnailcachemanager",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "thumbnailcachemanager"
     },
     {
@@ -11703,8 +11791,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_cipher",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "_cipher"
     },
     {
@@ -11714,8 +11802,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_getcachethumbsdirectory",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "_getcachethumbsdirectory"
     },
     {
@@ -11725,8 +11813,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_savethumbnail",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "savethumbnail"
     },
     {
@@ -11736,8 +11824,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_readthumbnail",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "readthumbnail"
     },
     {
@@ -11747,8 +11835,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_domain_thumbnail_cache_manager_clearcache",
-      "community": 42,
-      "community_name": "dart:typed_data",
+      "community": 139,
+      "community_name": "thumbnail_cache_service.dart",
       "norm_label": "clearcache"
     },
     {
@@ -13897,15 +13985,15 @@
       "norm_label": "container"
     },
     {
-      "label": "ProviderContainer?",
+      "label": "ProviderContainer",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
       "_origin": "ast",
       "id": "providercontainer",
-      "community": 58,
-      "community_name": "api_service.dart",
-      "norm_label": "providercontainer?"
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "providercontainer"
     },
     {
       "label": "_server",
@@ -14244,8 +14332,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_auth_auth_screen_authscreenstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_authscreenstate"
     },
     {
@@ -14596,8 +14684,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_theme_app_colors_dart",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "../core/theme/app_colors.dart"
     },
     {
@@ -14651,8 +14739,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "telegram_telegram_service_dart",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "../telegram/telegram_service.dart"
     },
     {
@@ -14673,8 +14761,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "offset",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "offset"
     },
     {
@@ -14827,8 +14915,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_debug_debug_error_screen_debugerrorscreen",
-      "community": 87,
-      "community_name": "debug_error_screen.dart",
+      "community": 114,
+      "community_name": "app_error.dart",
       "norm_label": "debugerrorscreen"
     },
     {
@@ -14838,8 +14926,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_debug_debug_error_screen_debugerrorscreenstate",
-      "community": 87,
-      "community_name": "debug_error_screen.dart",
+      "community": 114,
+      "community_name": "app_error.dart",
       "norm_label": "_debugerrorscreenstate"
     },
     {
@@ -15014,8 +15102,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_utils_reset_helper_dart",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "../core/utils/reset_helper.dart"
     },
     {
@@ -15047,8 +15135,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_drivescreen",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "drivescreen"
     },
     {
@@ -15058,9 +15146,20 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_drivescreenstate",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "_drivescreenstate"
+    },
+    {
+      "label": "WidgetsBindingObserver",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "widgetsbindingobserver",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
+      "norm_label": "widgetsbindingobserver"
     },
     {
       "label": "_isDragging",
@@ -15091,9 +15190,31 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_initstate",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "initstate"
+    },
+    {
+      "label": "dispose",
+      "file_type": "code",
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_features_drive_drive_screen_dispose",
+      "community": 29,
+      "community_name": "drive_screen.dart",
+      "norm_label": "dispose"
+    },
+    {
+      "label": "didChangeAppLifecycleState",
+      "file_type": "code",
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "lib_features_drive_drive_screen_didchangeapplifecyclestate",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
+      "norm_label": "didchangeapplifecyclestate"
     },
     {
       "label": "_showPromptDialog",
@@ -15135,8 +15256,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_showchannelsetupprompt",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "_showchannelsetupprompt"
     },
     {
@@ -15157,8 +15278,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_build",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "build"
     },
     {
@@ -15234,8 +15355,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_handledeleteselected",
-      "community": 125,
-      "community_name": "isSelectionModeProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "_handledeleteselected"
     },
     {
@@ -15311,8 +15432,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_showsortbottomsheet",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "_showsortbottomsheet"
     },
     {
@@ -15421,8 +15542,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_drive_screen_showbackgroundtasksbottomsheet",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "_showbackgroundtasksbottomsheet"
     },
     {
@@ -15432,8 +15553,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "route_transfers",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "route /transfers"
     },
     {
@@ -15487,8 +15608,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_channel_load_balancer_dart",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "../../../domain/channel_load_balancer.dart"
     },
     {
@@ -15509,9 +15630,20 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_sync_config_sync_service_dart",
-      "community": 85,
-      "community_name": "channels_screen.dart",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "../../domain/sync/config_sync_service.dart"
+    },
+    {
+      "label": "domain/sync/realtime_sync_service.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "domain_sync_realtime_sync_service_dart",
+      "community": 29,
+      "community_name": "drive_screen.dart",
+      "norm_label": "domain/sync/realtime_sync_service.dart"
     },
     {
       "label": "../sharing/share_service.dart",
@@ -15553,8 +15685,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "providers_drive_providers_dart",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "../providers/drive_providers.dart"
     },
     {
@@ -15718,8 +15850,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_fullscreen_video_screen_fullscreenvideoscreen",
-      "community": 40,
-      "community_name": "fullscreen_video_screen.dart",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "fullscreenvideoscreen"
     },
     {
@@ -15729,8 +15861,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_fullscreen_video_screen_fullscreenvideoscreenstate",
-      "community": 40,
-      "community_name": "fullscreen_video_screen.dart",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_fullscreenvideoscreenstate"
     },
     {
@@ -15751,8 +15883,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "filedata",
-      "community": 92,
-      "community_name": "file_grid_item.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "filedata?"
     },
     {
@@ -15938,8 +16070,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_fullscreen_video_screen_initstream",
-      "community": 160,
-      "community_name": "streamingServerProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_initstream"
     },
     {
@@ -16037,8 +16169,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_media_player_screen_mediaplayerscreen",
-      "community": 28,
-      "community_name": "media_player_screen.dart",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "mediaplayerscreen"
     },
     {
@@ -16048,8 +16180,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_media_player_screen_mediaplayerscreenstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_mediaplayerscreenstate"
     },
     {
@@ -16268,8 +16400,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_media_player_screen_initstream",
-      "community": 160,
-      "community_name": "streamingServerProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_initstream"
     },
     {
@@ -16488,8 +16620,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_configcheckedprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "configcheckedprovider"
     },
     {
@@ -16510,8 +16642,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_breadcrumbsprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "breadcrumbsprovider"
     },
     {
@@ -16565,8 +16697,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_isgridviewprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "isgridviewprovider"
     },
     {
@@ -16631,8 +16763,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_drivesortoptionprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "drivesortoptionprovider"
     },
     {
@@ -16642,8 +16774,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_foldercontentsprovider",
-      "community": 57,
-      "community_name": "../data/db/database.dart",
+      "community": 32,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "foldercontentsprovider"
     },
     {
@@ -16752,8 +16884,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_foldersizeprovider",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "foldersizeprovider"
     },
     {
@@ -16906,8 +17038,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_providers_drive_providers_folderitemscountprovider",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folderitemscountprovider"
     },
     {
@@ -17093,8 +17225,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_channel_setup_wizard_dialog_channelsetupwizarddialog",
-      "community": 26,
-      "community_name": "ConsumerStatefulWidget",
+      "community": 141,
+      "community_name": "_buildExploreTab",
       "norm_label": "channelsetupwizarddialog"
     },
     {
@@ -17390,8 +17522,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "telegram_telegram_manager_dart",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "../telegram/telegram_manager.dart"
     },
     {
@@ -17401,8 +17533,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "create_folder_dialog.dart"
     },
     {
@@ -17412,8 +17544,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_createfolderdialog",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "createfolderdialog"
     },
     {
@@ -17434,8 +17566,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_namecontroller",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "_namecontroller"
     },
     {
@@ -17445,8 +17577,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_selectedcolorhex",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "_selectedcolorhex"
     },
     {
@@ -17456,8 +17588,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_createstate",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "createstate"
     },
     {
@@ -17467,8 +17599,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_dispose",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "dispose"
     },
     {
@@ -17478,8 +17610,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_create_folder_dialog_build",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "build"
     },
     {
@@ -17489,8 +17621,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_recovery_manifest_encoder_dart",
-      "community": 101,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 164,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "../../domain/recovery/manifest_encoder.dart"
     },
     {
@@ -17511,8 +17643,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_file_grid_item_filegriditem",
-      "community": 125,
-      "community_name": "isSelectionModeProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "filegriditem"
     },
     {
@@ -17764,8 +17896,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_intl_intl_dart",
-      "community": 92,
-      "community_name": "file_grid_item.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "package:intl/intl.dart"
     },
     {
@@ -17775,8 +17907,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "gallery_thumbnail_service_dart",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "../gallery/thumbnail_service.dart"
     },
     {
@@ -17819,8 +17951,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "folder_picker_dialog_dart",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 92,
+      "community_name": "file_grid_item.dart",
       "norm_label": "folder_picker_dialog.dart"
     },
     {
@@ -17918,8 +18050,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_file_list_item_togglefavorite",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 92,
+      "community_name": "file_grid_item.dart",
       "norm_label": "_togglefavorite"
     },
     {
@@ -17951,8 +18083,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_file_list_item_showmovedialog",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 92,
+      "community_name": "file_grid_item.dart",
       "norm_label": "_showmovedialog"
     },
     {
@@ -17962,8 +18094,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_file_list_item_showcopydialog",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 92,
+      "community_name": "file_grid_item.dart",
       "norm_label": "_showcopydialog"
     },
     {
@@ -18237,8 +18369,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder_grid_item.dart"
     },
     {
@@ -18248,8 +18380,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_foldergriditem",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "foldergriditem"
     },
     {
@@ -18259,8 +18391,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_foldergriditemstate",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_foldergriditemstate"
     },
     {
@@ -18270,8 +18402,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_folder",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder"
     },
     {
@@ -18292,8 +18424,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_ishovered",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_ishovered"
     },
     {
@@ -18303,8 +18435,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_tapposition",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_tapposition"
     },
     {
@@ -18314,8 +18446,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_createstate",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "createstate"
     },
     {
@@ -18325,8 +18457,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_getfoldercolor",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_getfoldercolor"
     },
     {
@@ -18336,8 +18468,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_build",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "build"
     },
     {
@@ -18347,8 +18479,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_buildoptionsmenu",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildoptionsmenu"
     },
     {
@@ -18369,8 +18501,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_showinfodialog",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_showinfodialog"
     },
     {
@@ -18380,8 +18512,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_buildinforow",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildinforow"
     },
     {
@@ -18413,8 +18545,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_formatfoldersize",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_formatfoldersize"
     },
     {
@@ -18424,8 +18556,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_formatfolderbadgesize",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_formatfolderbadgesize"
     },
     {
@@ -18446,8 +18578,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_showdeleteconfirm",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "_showdeleteconfirm"
     },
     {
@@ -18479,8 +18611,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_grid_item_copyfolderrecursive",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_copyfolderrecursive"
     },
     {
@@ -18523,8 +18655,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_list_item_folderlistitemstate",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_folderlistitemstate"
     },
     {
@@ -18578,8 +18710,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_list_item_build",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "build"
     },
     {
@@ -18655,8 +18787,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_list_item_showdeleteconfirm",
-      "community": 8,
-      "community_name": "databaseProvider",
+      "community": 145,
+      "community_name": "file_tags_row.dart",
       "norm_label": "_showdeleteconfirm"
     },
     {
@@ -18699,8 +18831,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_list_item_showinfodialog",
-      "community": 32,
-      "community_name": "currentFolderIdProvider",
+      "community": 125,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_showinfodialog"
     },
     {
@@ -18754,8 +18886,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_folder_picker_dialog_folderpickerdialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_folderpickerdialogstate"
     },
     {
@@ -18765,8 +18897,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "folderpickerdialog",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "folderpickerdialog"
     },
     {
@@ -19557,8 +19689,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_storage_banner",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "storage_banner.dart"
     },
     {
@@ -19579,8 +19711,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_storage_banner_build",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "build"
     },
     {
@@ -19590,8 +19722,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_storage_widget",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "storage_widget.dart"
     },
     {
@@ -19601,8 +19733,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_storage_widget_storagewidget",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "storagewidget"
     },
     {
@@ -19612,8 +19744,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_drive_widgets_storage_widget_build",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "build"
     },
     {
@@ -19645,8 +19777,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_faces_faces_screen_facesscreen",
-      "community": 151,
-      "community_name": "_DigestSink",
+      "community": 21,
+      "community_name": "faces_screen.dart",
       "norm_label": "facesscreen"
     },
     {
@@ -19656,8 +19788,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_faces_faces_screen_facesscreenstate",
-      "community": 151,
-      "community_name": "_DigestSink",
+      "community": 21,
+      "community_name": "faces_screen.dart",
       "norm_label": "_facesscreenstate"
     },
     {
@@ -19667,8 +19799,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "faceclustersprovider",
-      "community": 151,
-      "community_name": "_DigestSink",
+      "community": 21,
+      "community_name": "faces_screen.dart",
       "norm_label": "faceclustersprovider"
     },
     {
@@ -19920,8 +20052,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_faces_faces_screen_mergeselectedclusters",
-      "community": 151,
-      "community_name": "_DigestSink",
+      "community": 21,
+      "community_name": "faces_screen.dart",
       "norm_label": "_mergeselectedclusters"
     },
     {
@@ -19931,8 +20063,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_faces_faces_screen_build",
-      "community": 151,
-      "community_name": "_DigestSink",
+      "community": 21,
+      "community_name": "faces_screen.dart",
       "norm_label": "build"
     },
     {
@@ -20195,7 +20327,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "thumbnail_service.dart"
     },
@@ -20206,7 +20338,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_thumbnailservice",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "thumbnailservice"
     },
@@ -20217,7 +20349,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_ref",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "_ref"
     },
@@ -20239,7 +20371,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_getthumbnail",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "getthumbnail"
     },
@@ -20250,7 +20382,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_fetchthumbnailfromtelegram",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "_fetchthumbnailfromtelegram"
     },
@@ -20261,7 +20393,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_generateandcachethumbnail",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "_generateandcachethumbnail"
     },
@@ -20272,7 +20404,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_gallery_thumbnail_service_downloadfile",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "_downloadfile"
     },
@@ -20283,7 +20415,7 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_thumbnail_cache_manager_dart",
-      "community": 83,
+      "community": 165,
       "community_name": "thumbnail_service.dart",
       "norm_label": "../../domain/thumbnail_cache_manager.dart"
     },
@@ -20668,8 +20800,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_mediascreen",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "mediascreen"
     },
     {
@@ -20679,8 +20811,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_mediascreenstate",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_mediascreenstate"
     },
     {
@@ -20701,8 +20833,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_thumbnailorcover",
-      "community": 164,
-      "community_name": "_ThumbnailOrCoverState",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_thumbnailorcover"
     },
     {
@@ -20712,8 +20844,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_thumbnailorcoverstate",
-      "community": 164,
-      "community_name": "_ThumbnailOrCoverState",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_thumbnailorcoverstate"
     },
     {
@@ -20723,8 +20855,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_galleryitem",
-      "community": 2,
-      "community_name": "media_screen.dart",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "_galleryitem"
     },
     {
@@ -20745,8 +20877,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_mediasortprovider",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "mediasortprovider"
     },
     {
@@ -20756,8 +20888,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_mediacolumncountprovider",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "mediacolumncountprovider"
     },
     {
@@ -20767,8 +20899,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_allmediafilesprovider",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "allmediafilesprovider"
     },
     {
@@ -20789,8 +20921,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_allmediafoldersprovider",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "allmediafoldersprovider"
     },
     {
@@ -20822,8 +20954,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_exploredataprovider",
-      "community": 133,
-      "community_name": "master_key_provider.dart",
+      "community": 116,
+      "community_name": "smart_tags_screen.dart",
       "norm_label": "exploredataprovider"
     },
     {
@@ -21163,8 +21295,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_buildoptionsmenu",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_buildoptionsmenu"
     },
     {
@@ -21185,8 +21317,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_buildphotostab",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_buildphotostab"
     },
     {
@@ -21196,8 +21328,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_buildtimelinecontent",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_buildtimelinecontent"
     },
     {
@@ -21218,8 +21350,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_media_screen_buildalbumstab",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 2,
+      "community_name": "media_screen.dart",
       "norm_label": "_buildalbumstab"
     },
     {
@@ -21383,8 +21515,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_memories_screen",
-      "community": 92,
-      "community_name": "file_grid_item.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "memories_screen.dart"
     },
     {
@@ -21394,8 +21526,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_memories_screen_memoriesscreen",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "memoriesscreen"
     },
     {
@@ -21416,8 +21548,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_memories_screen_file",
-      "community": 92,
-      "community_name": "file_grid_item.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "file"
     },
     {
@@ -21427,8 +21559,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_memories_screen_build",
-      "community": 119,
-      "community_name": "core/logger.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "build"
     },
     {
@@ -21438,8 +21570,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "media_screen_dart",
-      "community": 92,
-      "community_name": "file_grid_item.dart",
+      "community": 133,
+      "community_name": "master_key_provider.dart",
       "norm_label": "media_screen.dart"
     },
     {
@@ -21581,8 +21713,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_smart_tags_screen_build",
-      "community": 133,
-      "community_name": "master_key_provider.dart",
+      "community": 116,
+      "community_name": "smart_tags_screen.dart",
       "norm_label": "build"
     },
     {
@@ -21625,8 +21757,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "video_screen.dart"
     },
     {
@@ -21636,8 +21768,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_videosscreen",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "videosscreen"
     },
     {
@@ -21658,8 +21790,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_file",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "file"
     },
     {
@@ -21669,8 +21801,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_siblings",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "siblings"
     },
     {
@@ -21680,8 +21812,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_videosprovider",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "videosprovider"
     },
     {
@@ -21691,8 +21823,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_db",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "db"
     },
     {
@@ -21702,8 +21834,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_videofiles",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "videofiles"
     },
     {
@@ -21713,8 +21845,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_build",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "build"
     },
     {
@@ -21724,8 +21856,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_media_video_screen_formatfilesize",
-      "community": 12,
-      "community_name": "FileData?",
+      "community": 147,
+      "community_name": "aerodrive_logo.dart",
       "norm_label": "_formatfilesize"
     },
     {
@@ -22846,8 +22978,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_audio_player_screen_audioplayerscreen",
-      "community": 37,
-      "community_name": "telegramManagerProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "audioplayerscreen"
     },
     {
@@ -22857,8 +22989,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_audio_player_screen_audioplayerscreenstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_audioplayerscreenstate"
     },
     {
@@ -23143,8 +23275,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_audio_player_screen_initstreamforcurrent",
-      "community": 160,
-      "community_name": "streamingServerProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_initstreamforcurrent"
     },
     {
@@ -23429,8 +23561,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_decrypted_image_viewer_decryptedimageviewer",
-      "community": 78,
-      "community_name": "decrypted_image_viewer.dart",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "decryptedimageviewer"
     },
     {
@@ -23440,8 +23572,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_decrypted_image_viewer_decryptedimageviewerstate",
-      "community": 78,
-      "community_name": "decrypted_image_viewer.dart",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_decryptedimageviewerstate"
     },
     {
@@ -24067,8 +24199,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "decrypted_image_viewer_dart",
-      "community": 135,
-      "community_name": "file_decryption_util.dart",
+      "community": 39,
+      "community_name": "media_gallery_screen.dart",
       "norm_label": "decrypted_image_viewer.dart"
     },
     {
@@ -24210,8 +24342,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "drive_media_player_screen_dart",
-      "community": 135,
-      "community_name": "file_decryption_util.dart",
+      "community": 112,
+      "community_name": "video_gallery_screen.dart",
       "norm_label": "../drive/media_player_screen.dart"
     },
     {
@@ -24408,8 +24540,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_preview_screen",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "preview_screen.dart"
     },
     {
@@ -24419,8 +24551,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_preview_screen_previewscreen",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 75,
+      "community_name": "StatelessWidget",
       "norm_label": "previewscreen"
     },
     {
@@ -24430,8 +24562,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_preview_screen_build",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "build"
     },
     {
@@ -24507,8 +24639,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_universal_file_viewer_codetextviewer",
-      "community": 114,
-      "community_name": "app_error.dart",
+      "community": 18,
+      "community_name": "universal_file_viewer.dart",
       "norm_label": "_codetextviewer"
     },
     {
@@ -24518,8 +24650,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_preview_universal_file_viewer_codetextviewerstate",
-      "community": 114,
-      "community_name": "app_error.dart",
+      "community": 18,
+      "community_name": "universal_file_viewer.dart",
       "norm_label": "_codetextviewerstate"
     },
     {
@@ -25464,8 +25596,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_accounts_screen_accountsscreen",
-      "community": 26,
-      "community_name": "ConsumerStatefulWidget",
+      "community": 24,
+      "community_name": "accounts_screen.dart",
       "norm_label": "accountsscreen"
     },
     {
@@ -25475,8 +25607,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_accounts_screen_accountsscreenstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 24,
+      "community_name": "accounts_screen.dart",
       "norm_label": "_accountsscreenstate"
     },
     {
@@ -25827,8 +25959,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_advanced_settings_dialogs_clearcachedialog",
-      "community": 69,
-      "community_name": "advanced_settings_dialogs.dart",
+      "community": 114,
+      "community_name": "app_error.dart",
       "norm_label": "clearcachedialog"
     },
     {
@@ -25838,8 +25970,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_advanced_settings_dialogs_clearcachedialogstate",
-      "community": 69,
-      "community_name": "advanced_settings_dialogs.dart",
+      "community": 114,
+      "community_name": "app_error.dart",
       "norm_label": "_clearcachedialogstate"
     },
     {
@@ -25849,8 +25981,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_advanced_settings_dialogs_resetsettingsdialog",
-      "community": 52,
-      "community_name": "ConsumerWidget",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "resetsettingsdialog"
     },
     {
@@ -25860,8 +25992,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_advanced_settings_dialogs_rebuilddrivedialog",
-      "community": 69,
-      "community_name": "advanced_settings_dialogs.dart",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "rebuilddrivedialog"
     },
     {
@@ -26058,8 +26190,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_appearance_settings_screen_appearancesettingsscreen",
-      "community": 88,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
       "norm_label": "appearancesettingsscreen"
     },
     {
@@ -26102,8 +26234,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_appearance_settings_screen_dropdowntile",
-      "community": 52,
-      "community_name": "ConsumerWidget",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "_dropdowntile"
     },
     {
@@ -26212,8 +26344,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_appearance_settings_screen_build",
-      "community": 88,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "build"
     },
     {
@@ -26531,8 +26663,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_auto_backup_settings_dialogs_saveprofiles",
-      "community": 115,
-      "community_name": "_AeroDriveAppState",
+      "community": 16,
+      "community_name": "auto_backup_settings_dialogs.dart",
       "norm_label": "_saveprofiles"
     },
     {
@@ -26685,8 +26817,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_backup_dialogs_backupscheduledialog",
-      "community": 26,
-      "community_name": "ConsumerStatefulWidget",
+      "community": 19,
+      "community_name": "backup_dialogs.dart",
       "norm_label": "backupscheduledialog"
     },
     {
@@ -26696,8 +26828,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_backup_dialogs_backupscheduledialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 19,
+      "community_name": "backup_dialogs.dart",
       "norm_label": "_backupscheduledialogstate"
     },
     {
@@ -26927,8 +27059,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_backup_dialogs_executeimport",
-      "community": 52,
-      "community_name": "ConsumerWidget",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "_executeimport"
     },
     {
@@ -27026,8 +27158,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_channels_screen_channelsscreenstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 85,
+      "community_name": "channels_screen.dart",
       "norm_label": "_channelsscreenstate"
     },
     {
@@ -27147,8 +27279,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_channels_screen_savechannelslist",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 85,
+      "community_name": "channels_screen.dart",
       "norm_label": "_savechannelslist"
     },
     {
@@ -27202,8 +27334,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_channels_screen_showlinkexistingchanneldialog",
-      "community": 62,
-      "community_name": "List",
+      "community": 85,
+      "community_name": "channels_screen.dart",
       "norm_label": "_showlinkexistingchanneldialog"
     },
     {
@@ -27587,8 +27719,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_dropbox_service_dropboxservice",
-      "community": 46,
-      "community_name": "infrastructure_providers.dart",
+      "community": 167,
+      "community_name": "StateNotifier",
       "norm_label": "dropboxservice"
     },
     {
@@ -28016,8 +28148,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_integration_settings_dialogs_inlinebotsetupdialog",
-      "community": 114,
-      "community_name": "app_error.dart",
+      "community": 49,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "inlinebotsetupdialog"
     },
     {
@@ -28027,8 +28159,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_integration_settings_dialogs_inlinebotsetupdialogstate",
-      "community": 114,
-      "community_name": "app_error.dart",
+      "community": 49,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "_inlinebotsetupdialogstate"
     },
     {
@@ -28896,8 +29028,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_network_settings_dialogs_save",
-      "community": 52,
-      "community_name": "ConsumerWidget",
+      "community": 64,
+      "community_name": "core/providers/repository_providers.dart",
       "norm_label": "_save"
     },
     {
@@ -28918,8 +29050,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_profile_screen",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "profile_screen.dart"
     },
     {
@@ -28929,8 +29061,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_profile_screen_profilescreen",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "profilescreen"
     },
     {
@@ -28940,8 +29072,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_profile_screen_buildavatar",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "_buildavatar"
     },
     {
@@ -28951,8 +29083,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_profile_screen_build",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "build"
     },
     {
@@ -29204,8 +29336,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_security_settings_dialogs_duresspindialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "_duresspindialogstate"
     },
     {
@@ -29226,8 +29358,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_security_settings_dialogs_recoverfromphrasedialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "_recoverfromphrasedialogstate"
     },
     {
@@ -29248,8 +29380,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_security_settings_dialogs_recoveryphrasedialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 26,
+      "community_name": "ConsumerStatefulWidget",
       "norm_label": "_recoveryphrasedialogstate"
     },
     {
@@ -29413,8 +29545,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "session_screen.dart"
     },
     {
@@ -29424,8 +29556,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_sessionscreen",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "sessionscreen"
     },
     {
@@ -29435,8 +29567,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_formatlastactive",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "_formatlastactive"
     },
     {
@@ -29446,8 +29578,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_getdeviceicon",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "_getdeviceicon"
     },
     {
@@ -29457,8 +29589,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_confirmterminatesession",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "_confirmterminatesession"
     },
     {
@@ -29468,8 +29600,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_confirmterminateallothersessions",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "_confirmterminateallothersessions"
     },
     {
@@ -29479,8 +29611,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_settings_session_screen_build",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "build"
     },
     {
@@ -31591,8 +31723,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_sharing_sharing_screen",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "sharing_screen.dart"
     },
     {
@@ -31602,8 +31734,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_sharing_sharing_screen_sharingscreen",
-      "community": 75,
-      "community_name": "StatelessWidget",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "sharingscreen"
     },
     {
@@ -31613,8 +31745,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_sharing_sharing_screen_build",
-      "community": 116,
-      "community_name": "smart_tags_screen.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "build"
     },
     {
@@ -32009,8 +32141,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_dialog_hexcolor",
-      "community": 60,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 44,
+      "community_name": "Color",
       "norm_label": "hexcolor"
     },
     {
@@ -32163,8 +32295,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "tag_service_dart",
-      "community": 79,
-      "community_name": "tag_dialog.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "tag_service.dart"
     },
     {
@@ -32174,8 +32306,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_providers",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "tag_providers.dart"
     },
     {
@@ -32185,8 +32317,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_providers_filetagsprovider",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "filetagsprovider"
     },
     {
@@ -32196,8 +32328,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_providers_service",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "service"
     },
     {
@@ -32218,8 +32350,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_providers_db",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "db"
     },
     {
@@ -32229,8 +32361,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_providers_gettagsforfile",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 74,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "gettagsforfile"
     },
     {
@@ -32240,8 +32372,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "tag_service.dart"
     },
     {
@@ -32251,8 +32383,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_tagservice",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "tagservice"
     },
     {
@@ -32262,8 +32394,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_ref",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "_ref"
     },
     {
@@ -32273,8 +32405,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_curatedcolors",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "curatedcolors"
     },
     {
@@ -32295,8 +32427,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_getorcreatetag",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "getorcreatetag"
     },
     {
@@ -32306,8 +32438,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_attachtagtofile",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "attachtagtofile"
     },
     {
@@ -32317,8 +32449,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_removetagfromfile",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "removetagfromfile"
     },
     {
@@ -32328,8 +32460,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_gettagsforfile",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "gettagsforfile"
     },
     {
@@ -32339,8 +32471,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_tags_tag_service_watchalltags",
-      "community": 128,
-      "community_name": "Ref",
+      "community": 160,
+      "community_name": "streamingServerProvider",
       "norm_label": "watchalltags"
     },
     {
@@ -32427,8 +32559,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_manager_adminchannelsprovider",
-      "community": 62,
-      "community_name": "List",
+      "community": 85,
+      "community_name": "channels_screen.dart",
       "norm_label": "adminchannelsprovider"
     },
     {
@@ -32460,8 +32592,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_manager_activesessionsprovider",
-      "community": 24,
-      "community_name": "accounts_screen.dart",
+      "community": 119,
+      "community_name": "core/logger.dart",
       "norm_label": "activesessionsprovider"
     },
     {
@@ -32482,8 +32614,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_manager_initprimaryandrestore",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 62,
+      "community_name": "List",
       "norm_label": "_initprimaryandrestore"
     },
     {
@@ -32592,8 +32724,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_service_telegramauthstate",
-      "community": 147,
-      "community_name": "aerodrive_logo.dart",
+      "community": 124,
+      "community_name": "recovery_scanner.dart",
       "norm_label": "telegramauthstate"
     },
     {
@@ -32603,8 +32735,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_service_telegraminitdebuginfo",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "telegraminitdebuginfo"
     },
     {
@@ -32614,8 +32746,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_telegram_telegram_service_telegramservice",
-      "community": 147,
-      "community_name": "aerodrive_logo.dart",
+      "community": 124,
+      "community_name": "recovery_scanner.dart",
       "norm_label": "telegramservice"
     },
     {
@@ -33780,8 +33912,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "global_progress_bar.dart"
     },
     {
@@ -33791,8 +33923,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar_globalprogressbar",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "globalprogressbar"
     },
     {
@@ -33802,8 +33934,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar_aggregatetransferprogressprovider",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "aggregatetransferprogressprovider"
     },
     {
@@ -33813,8 +33945,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar_db",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "db"
     },
     {
@@ -33824,8 +33956,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar_select",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "select"
     },
     {
@@ -33835,8 +33967,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_features_transfers_widgets_global_progress_bar_build",
-      "community": 145,
-      "community_name": "file_tags_row.dart",
+      "community": 60,
+      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
       "norm_label": "build"
     },
     {
@@ -34319,8 +34451,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_initstate",
-      "community": 115,
-      "community_name": "_AeroDriveAppState",
+      "community": 16,
+      "community_name": "auto_backup_settings_dialogs.dart",
       "norm_label": "initstate"
     },
     {
@@ -34330,8 +34462,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_handlebootlaunch",
-      "community": 67,
-      "community_name": "dropbox_backup_screen.dart",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
       "norm_label": "_handlebootlaunch"
     },
     {
@@ -34341,8 +34473,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_main_checkscheduledbackup",
-      "community": 67,
-      "community_name": "dropbox_backup_screen.dart",
+      "community": 115,
+      "community_name": "_AeroDriveAppState",
       "norm_label": "_checkscheduledbackup"
     },
     {
@@ -34509,17 +34641,6 @@
       "community": 13,
       "community_name": "main.dart",
       "norm_label": "domain/upload_crash_debugger.dart"
-    },
-    {
-      "label": "domain/sync/realtime_sync_service.dart",
-      "file_type": "code",
-      "source_file": null,
-      "source_location": null,
-      "_origin": "ast",
-      "id": "domain_sync_realtime_sync_service_dart",
-      "community": 13,
-      "community_name": "main.dart",
-      "norm_label": "domain/sync/realtime_sync_service.dart"
     },
     {
       "label": "features/sharing/share_service.dart",
@@ -34726,8 +34847,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_folder_picker_dialog_folderpickerdialogstate",
-      "community": 17,
-      "community_name": "settingsRepositoryProvider",
+      "community": 45,
+      "community_name": "ConsumerState",
       "norm_label": "_folderpickerdialogstate"
     },
     {
@@ -34968,8 +35089,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_sync_debug_overlay",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "sync_debug_overlay.dart"
     },
     {
@@ -34979,8 +35100,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_sync_debug_overlay_syncdebugoverlay",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "syncdebugoverlay"
     },
     {
@@ -34990,8 +35111,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "lib_widgets_sync_debug_overlay_build",
-      "community": 148,
-      "community_name": "security_providers.dart",
+      "community": 71,
+      "community_name": "State",
       "norm_label": "build"
     },
     {
@@ -35939,8 +36060,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_data_crypto_core_features_test",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "core_features_test.dart"
     },
     {
@@ -35950,8 +36071,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_data_crypto_core_features_test_main",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "main"
     },
     {
@@ -35961,8 +36082,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_recovery_caption_codec_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "package:aerodrive/domain/recovery/caption_codec.dart"
     },
     {
@@ -35972,8 +36093,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_thumbnail_cache_manager_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 77,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "package:aerodrive/domain/thumbnail_cache_manager.dart"
     },
     {
@@ -36115,8 +36236,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_data_db_database_dart",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "package:aerodrive/data/db/database.dart"
     },
     {
@@ -36159,8 +36280,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_load_balancer_test",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "channel_load_balancer_test.dart"
     },
     {
@@ -36170,8 +36291,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_load_balancer_test_db",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "db"
     },
     {
@@ -36181,8 +36302,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_load_balancer_test_settings",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "settings"
     },
     {
@@ -36192,8 +36313,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_load_balancer_test_main",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "main"
     },
     {
@@ -36203,8 +36324,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_data_repositories_settings_repository_dart",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "package:aerodrive/data/repositories/settings_repository.dart"
     },
     {
@@ -36214,8 +36335,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_channel_load_balancer_dart",
-      "community": 123,
-      "community_name": "repository_test.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "package:aerodrive/domain/channel_load_balancer.dart"
     },
     {
@@ -36225,8 +36346,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_setup_wizard_dialog_test",
-      "community": 74,
-      "community_name": "package:flutter/material.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "channel_setup_wizard_dialog_test.dart"
     },
     {
@@ -36236,8 +36357,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_channel_setup_wizard_dialog_test_main",
-      "community": 74,
-      "community_name": "package:flutter/material.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "main"
     },
     {
@@ -36247,8 +36368,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_features_drive_widgets_channel_setup_wizard_dialog_dart",
-      "community": 74,
-      "community_name": "package:flutter/material.dart",
+      "community": 148,
+      "community_name": "security_providers.dart",
       "norm_label": "package:aerodrive/features/drive/widgets/channel_setup_wizard_dialog.dart"
     },
     {
@@ -36258,8 +36379,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_chunk_confirmation_test",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "chunk_confirmation_test.dart"
     },
     {
@@ -36269,8 +36390,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_chunk_confirmation_test_db",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "db"
     },
     {
@@ -36280,8 +36401,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_chunk_confirmation_test_main",
-      "community": 139,
-      "community_name": "thumbnail_cache_service.dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
       "norm_label": "main"
     },
     {
@@ -36291,8 +36412,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_infrastructure_test",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "infrastructure_test.dart"
     },
     {
@@ -36302,8 +36423,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_infrastructure_test_main",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "main"
     },
     {
@@ -36313,8 +36434,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_core_constants_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "package:aerodrive/core/constants.dart"
     },
     {
@@ -36324,8 +36445,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_infrastructure_channel_description_codec_dart",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "package:aerodrive/domain/infrastructure/channel_description_codec.dart"
     },
     {
@@ -36335,8 +36456,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_orchestrator_test",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "orchestrator_test.dart"
     },
     {
@@ -36346,8 +36467,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "test_domain_orchestrator_test_main",
-      "community": 22,
-      "community_name": "package:drift/drift.dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
       "norm_label": "main"
     },
     {
@@ -36357,9 +36478,86 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_upload_orchestrator_dart",
+      "community": 138,
+      "community_name": "package:cryptography/cryptography.dart",
+      "norm_label": "package:aerodrive/domain/upload_orchestrator.dart"
+    },
+    {
+      "label": "sync_state_test.dart",
+      "file_type": "code",
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_domain_sync_state_test",
       "community": 22,
       "community_name": "package:drift/drift.dart",
-      "norm_label": "package:aerodrive/domain/upload_orchestrator.dart"
+      "norm_label": "sync_state_test.dart"
+    },
+    {
+      "label": "db",
+      "file_type": "code",
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_domain_sync_state_test_db",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "db"
+    },
+    {
+      "label": "container",
+      "file_type": "code",
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_domain_sync_state_test_container",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "container"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "test_domain_sync_state_test_main",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "main"
+    },
+    {
+      "label": "package:aerodrive/core/providers.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_aerodrive_core_providers_dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "package:aerodrive/core/providers.dart"
+    },
+    {
+      "label": "package:aerodrive/core/providers/repository_providers.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_aerodrive_core_providers_repository_providers_dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "package:aerodrive/core/providers/repository_providers.dart"
+    },
+    {
+      "label": "package:aerodrive/domain/sync/config_sync_service.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_aerodrive_domain_sync_config_sync_service_dart",
+      "community": 22,
+      "community_name": "package:drift/drift.dart",
+      "norm_label": "package:aerodrive/domain/sync/config_sync_service.dart"
     },
     {
       "label": "manifest.json",
@@ -37356,7 +37554,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L36",
+      "source_location": "L39",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_start",
@@ -37366,7 +37564,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L46",
+      "source_location": "L49",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_stop",
@@ -37376,7 +37574,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L92",
+      "source_location": "L110",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_buildnotification",
@@ -37386,7 +37584,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L103",
+      "source_location": "L121",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_createnotificationchannel",
@@ -37396,7 +37594,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L53",
+      "source_location": "L63",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onbind",
@@ -37406,7 +37604,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L55",
+      "source_location": "L65",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_oncreate",
@@ -37416,7 +37614,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L85",
+      "source_location": "L96",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_ondestroy",
@@ -37426,7 +37624,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L79",
+      "source_location": "L90",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onstartcommand",
@@ -37458,7 +37656,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L66",
+      "source_location": "L77",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_oncreate",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_kt_flutterengine",
@@ -37468,7 +37666,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L36",
+      "source_location": "L39",
       "weight": 1.0,
       "context": "parameter_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_start",
@@ -37480,7 +37678,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L37",
+      "source_location": "L40",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_start",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_kt_intent",
@@ -37490,7 +37688,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L46",
+      "source_location": "L49",
       "weight": 1.0,
       "context": "parameter_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_stop",
@@ -37502,7 +37700,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L47",
+      "source_location": "L57",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_stop",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_kt_intent",
@@ -37512,7 +37710,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L53",
+      "source_location": "L63",
       "weight": 1.0,
       "context": "parameter_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onbind",
@@ -37523,7 +37721,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L53",
+      "source_location": "L63",
       "weight": 1.0,
       "context": "return_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onbind",
@@ -37534,7 +37732,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L79",
+      "source_location": "L90",
       "weight": 1.0,
       "context": "parameter_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onstartcommand",
@@ -37546,7 +37744,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L59",
+      "source_location": "L70",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_oncreate",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_buildnotification",
@@ -37557,7 +37755,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L58",
+      "source_location": "L69",
       "weight": 1.0,
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_oncreate",
       "target": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_createnotificationchannel",
@@ -37567,7 +37765,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L79",
+      "source_location": "L90",
       "weight": 1.0,
       "context": "return_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_onstartcommand",
@@ -37578,7 +37776,7 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt",
-      "source_location": "L92",
+      "source_location": "L110",
       "weight": 1.0,
       "context": "return_type",
       "source": "android_app_src_main_kotlin_com_aerodrive_aerodrive_aerodrivebackupservice_aerodrivebackupservice_buildnotification",
@@ -41924,6 +42122,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_flutter_riverpod_flutter_riverpod_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/domain/auto_backup_watcher.dart",
       "source_location": null,
       "weight": 1.0,
@@ -42008,6 +42216,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_streaming_streaming_server",
+      "target": "data_db_database_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
       "target": "data_db_database_dart"
     },
     {
@@ -45621,6 +45839,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "dart_convert"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/domain/integrity/integrity_verification_service.dart",
       "source_location": null,
       "weight": 1.0,
@@ -47476,6 +47704,26 @@
       "weight": 1.0,
       "source": "lib_widgets_transfer_progress_bar",
       "target": "features_transfers_transfers_screen_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
+      "target": "features_trash_trash_screen_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "features_trash_trash_screen_dart"
     },
     {
       "relation": "imports",
@@ -50204,6 +50452,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_auto_backup_watcher",
+      "target": "features_drive_providers_drive_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
       "target": "features_drive_providers_drive_providers_dart"
     },
     {
@@ -54736,6 +54994,17 @@
       "target": "lib_data_db_database_aerodrivedatabase"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_domain_sync_state_test",
+      "target": "lib_data_db_database_aerodrivedatabase"
+    },
+    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -54883,6 +55152,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_streaming_streaming_server",
+      "target": "package_drift_drift_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
       "target": "package_drift_drift_dart"
     },
     {
@@ -55269,6 +55548,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_drift_drift_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/data/repositories/repository_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -55293,6 +55582,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "test_domain_chunk_confirmation_test",
+      "target": "package_drift_native_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
       "target": "package_drift_native_dart"
     },
     {
@@ -57915,6 +58214,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
+      "target": "core_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/domain/sync/realtime_sync_service.dart",
       "source_location": null,
       "weight": 1.0,
@@ -58638,6 +58947,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "timer"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/domain/upload_crash_debugger.dart",
       "source_location": null,
       "weight": 1.0,
@@ -58761,6 +59081,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_streaming_streaming_server",
+      "target": "dart_async"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
       "target": "dart_async"
     },
     {
@@ -61026,6 +61356,17 @@
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "streamsubscription"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/domain/upload_queue_service.dart",
       "source_location": null,
       "weight": 1.0,
@@ -61846,6 +62187,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_infrastructure_infrastructure_provisioning_service",
+      "target": "sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/recovery/recovery_scanner.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_recovery_recovery_scanner",
       "target": "sync_config_sync_service_dart"
     },
     {
@@ -62909,17 +63260,6 @@
       "weight": 1.0,
       "context": "riverpod_reference",
       "source": "lib_features_drive_drive_screen_applyrestoredconfig",
-      "target": "lib_domain_recovery_recovery_scanner_recoveryserviceprovider"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/features/drive/drive_screen.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "riverpod_reference",
-      "source": "lib_features_drive_drive_screen_build",
       "target": "lib_domain_recovery_recovery_scanner_recoveryserviceprovider"
     },
     {
@@ -64141,6 +64481,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_sync_config_sync_service",
+      "target": "lib_domain_sync_config_sync_service_applyremotedrivestate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
       "target": "lib_domain_sync_config_sync_service_archiveandmute"
     },
     {
@@ -64242,6 +64592,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_sync_config_sync_service",
+      "target": "lib_domain_sync_config_sync_service_recordpermanentdeletion"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/config_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_config_sync_service",
       "target": "lib_domain_sync_config_sync_service_ref"
     },
     {
@@ -64314,6 +64674,17 @@
       "source_location": null,
       "weight": 1.0,
       "context": "riverpod_reference",
+      "source": "lib_features_drive_drive_screen_handledeleteselected",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
       "source": "lib_features_drive_drive_screen_runconfigandsetupcheck",
       "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
     },
@@ -64326,6 +64697,116 @@
       "weight": 1.0,
       "context": "riverpod_reference",
       "source": "lib_features_drive_drive_screen_showchannelsetupprompt",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_media_player_screen_mediaplayerscreenstate",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_media_player_screen_showdeleteconfirm",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_file_grid_item_filegriditem",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_file_grid_item_showdeleteconfirm",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_file_list_item_filelistitem",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_file_list_item_showdeleteconfirm",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_folder_grid_item_foldergriditemstate",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_folder_grid_item_showdeleteconfirm",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_folder_list_item_folderlistitemstate",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_widgets_folder_list_item_showdeleteconfirm",
       "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
     },
     {
@@ -64351,6 +64832,50 @@
       "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/trash/trash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_trash_trash_screen_build",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/trash/trash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_trash_trash_screen_permanentlydeletefile",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/trash/trash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_trash_trash_screen_permanentlydeletefolder",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/trash/trash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_trash_trash_screen_trashscreen",
+      "target": "lib_domain_sync_config_sync_service_configsyncserviceprovider"
+    },
+    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -64359,6 +64884,26 @@
       "weight": 1.0,
       "source": "lib_domain_sync_realtime_sync_service",
       "target": "config_sync_service_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_alleventssub"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_catchup"
     },
     {
       "relation": "defines",
@@ -64389,6 +64934,16 @@
       "weight": 1.0,
       "source": "lib_domain_sync_realtime_sync_service",
       "target": "lib_domain_sync_realtime_sync_service_getconfigchatid"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_getstoragechannelids"
     },
     {
       "relation": "defines",
@@ -64438,7 +64993,37 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_iscatchingup"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
       "target": "lib_domain_sync_realtime_sync_service_islistening"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_periodiccatchuptimer"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/domain/sync/realtime_sync_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_domain_sync_realtime_sync_service",
+      "target": "lib_domain_sync_realtime_sync_service_processmessage"
     },
     {
       "relation": "references",
@@ -64521,6 +65106,50 @@
       "context": "type_lookup",
       "source": "lib_domain_sync_realtime_sync_service",
       "target": "lib_features_telegram_telegram_service_telegramauthstate"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_drive_screen_build",
+      "target": "lib_domain_sync_realtime_sync_service_realtimesyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_drive_screen_didchangeapplifecyclestate",
+      "target": "lib_domain_sync_realtime_sync_service_realtimesyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_drive_screen_drivescreenstate",
+      "target": "lib_domain_sync_realtime_sync_service_realtimesyncserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_drive_screen_runconfigandsetupcheck",
+      "target": "lib_domain_sync_realtime_sync_service_realtimesyncserviceprovider"
     },
     {
       "relation": "references",
@@ -66899,6 +67528,17 @@
       "target": "providercontainer"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "variable_type",
+      "source": "test_domain_sync_state_test",
+      "target": "providercontainer"
+    },
+    {
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -68779,6 +69419,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_features_drive_drive_screen",
+      "target": "domain_sync_realtime_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_drive_screen",
       "target": "file_picker_util_dart"
     },
     {
@@ -68920,6 +69570,26 @@
       "weight": 1.0,
       "source": "lib_features_drive_drive_screen",
       "target": "lib_features_drive_drive_screen_createstate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_drive_screen",
+      "target": "lib_features_drive_drive_screen_didchangeapplifecyclestate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_drive_screen",
+      "target": "lib_features_drive_drive_screen_dispose"
     },
     {
       "relation": "defines",
@@ -69480,6 +70150,16 @@
       "target": "lib_features_transfers_widgets_global_progress_bar_aggregatetransferprogressprovider"
     },
     {
+      "relation": "mixes_in",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/drive_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_drive_screen_drivescreenstate",
+      "target": "widgetsbindingobserver"
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -69971,6 +70651,56 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_media_player_screen",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_widgets_file_grid_item",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/file_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_widgets_file_list_item",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_grid_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_widgets_folder_grid_item",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/widgets/folder_list_item.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_widgets_folder_list_item",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/features/settings/channels_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -69991,6 +70721,26 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "lib/features/trash/trash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_trash_trash_screen",
+      "target": "domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_main",
+      "target": "domain_sync_realtime_sync_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "lib/features/settings/shared_links_screen.dart",
       "source_location": null,
       "weight": 1.0,
@@ -70006,6 +70756,16 @@
       "weight": 1.0,
       "source": "lib_features_upload_queue_upload_queue_screen",
       "target": "transfers_transfers_screen_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "lib_features_drive_media_player_screen",
+      "target": "providers_drive_providers_dart"
     },
     {
       "relation": "imports",
@@ -71074,6 +71834,28 @@
       "weight": 1.0,
       "source": "lib_features_drive_media_player_screen_mediaplayerscreenstate",
       "target": "lib_features_drive_media_player_screen_mediaplayerscreen"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_media_player_screen_mediaplayerscreenstate",
+      "target": "lib_features_drive_providers_drive_providers_dbrebuildversionprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "lib/features/drive/media_player_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "lib_features_drive_media_player_screen_showdeleteconfirm",
+      "target": "lib_features_drive_providers_drive_providers_dbrebuildversionprovider"
     },
     {
       "relation": "navigates",
@@ -90946,16 +91728,6 @@
       "source_location": null,
       "weight": 1.0,
       "source": "lib_main",
-      "target": "domain_sync_realtime_sync_service_dart"
-    },
-    {
-      "relation": "imports",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "lib/main.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "source": "lib_main",
       "target": "domain_upload_crash_debugger_dart"
     },
     {
@@ -92832,6 +93604,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/data/crypto/core_features_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -93023,6 +93805,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_aerodrive_data_db_database_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "test/domain/channel_load_balancer_test.dart",
       "source_location": null,
       "weight": 1.0,
@@ -93068,6 +93860,16 @@
       "weight": 1.0,
       "source": "test_domain_channel_load_balancer_test",
       "target": "test_domain_channel_load_balancer_test_settings"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_aerodrive_data_repositories_settings_repository_dart"
     },
     {
       "relation": "imports",
@@ -93158,6 +93960,66 @@
       "weight": 1.0,
       "source": "test_domain_orchestrator_test",
       "target": "test_domain_orchestrator_test_main"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_aerodrive_core_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_aerodrive_core_providers_repository_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "package_aerodrive_domain_sync_config_sync_service_dart"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "test_domain_sync_state_test_container"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "test_domain_sync_state_test_db"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "test/domain/sync_state_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "test_domain_sync_state_test",
+      "target": "test_domain_sync_state_test_main"
     },
     {
       "relation": "contains",
@@ -94690,5 +95552,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "4c58032d0bbf7f31cfd901447adc107e4fb59630"
+  "built_at_commit": "7ded61bcd4fe08747ad314a6062af8c05b32f588"
 }

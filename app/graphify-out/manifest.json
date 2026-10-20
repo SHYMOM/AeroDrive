@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt": {
-    "mtime": 1783622007.2421875,
-    "ast_hash": "dfc507458dfd8d07e3e4830490dac353",
+    "mtime": 1792484482.5467029,
+    "ast_hash": "eb89d0520be91e6efdef4af098f30cc6",
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/aerodrive/aerodrive/BootReceiver.kt": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "lib/core/utils/reset_helper.dart": {
-    "mtime": 1792436860.0638628,
-    "ast_hash": "404ac2295a6b608760b71f1edf8962eb",
+    "mtime": 1792484687.610744,
+    "ast_hash": "dbe8b8884a88501f0e70d684cab6e7b3",
     "semantic_hash": ""
   },
   "lib/core/widgets/aerodrive_logo.dart": {
@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "lib/features/telegram/telegram_service.dart": {
-    "mtime": 1792436764.2326837,
-    "ast_hash": "499a0348fdbd3c2d29e348651cf3a8f6",
+    "mtime": 1792485643.5820282,
+    "ast_hash": "149ae9f33c44ac13cb1d03a96abc7252",
     "semantic_hash": ""
   },
   "lib/features/transfers/transfers_screen.dart": {

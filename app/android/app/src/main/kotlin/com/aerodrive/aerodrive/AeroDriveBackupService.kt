@@ -33,6 +33,9 @@ class AeroDriveBackupService : Service() {
         private const val CHANNEL_ID = "aerodrive_backup_channel"
         private const val NOTIFICATION_ID = 1001
 
+        @Volatile
+        var activeInstance: AeroDriveBackupService? = null
+
         fun start(context: Context) {
             val intent = Intent(context, AeroDriveBackupService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -44,6 +47,13 @@ class AeroDriveBackupService : Service() {
         }
 
         fun stop(context: Context) {
+            try {
+                activeInstance?.flutterEngine?.destroy()
+                activeInstance?.flutterEngine = null
+                activeInstance?.stopSelf()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping activeInstance directly", e)
+            }
             val intent = Intent(context, AeroDriveBackupService::class.java)
             context.stopService(intent)
             Log.d(TAG, "AeroDriveBackupService stop requested")
@@ -54,6 +64,7 @@ class AeroDriveBackupService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        activeInstance = this
         Log.d(TAG, "AeroDriveBackupService created")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
@@ -85,8 +96,15 @@ class AeroDriveBackupService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "AeroDriveBackupService destroyed")
-        flutterEngine?.destroy()
+        try {
+            flutterEngine?.destroy()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error destroying flutterEngine", e)
+        }
         flutterEngine = null
+        if (activeInstance == this) {
+            activeInstance = null
+        }
     }
 
     private fun buildNotification(): Notification {

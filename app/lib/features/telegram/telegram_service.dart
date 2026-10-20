@@ -217,6 +217,24 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         _instances[_clientId] = this;
         _activeAccountClientIds[accountId] = _clientId;
         AppLogger.info('TDLib client created for $accountId (clientId: $_clientId)');
+
+        // If this is client ID > 1, any IDs 1.._clientId-1 not tracked in _instances
+        // belong to a previous session/isolate. Destroy them so they release file locks.
+        if (_clientId > 1) {
+          var destroyedOrphans = false;
+          for (var id = 1; id < _clientId; id++) {
+            if (!_instances.containsKey(id)) {
+              destroyedOrphans = true;
+              AppLogger.warning('Destroying orphaned TDLib client ID $id from previous session');
+              try {
+                TdPlugin.instance.tdSend(id, jsonEncode({"@type": "destroy"}));
+              } catch (_) {}
+            }
+          }
+          if (destroyedOrphans) {
+            await Future.delayed(const Duration(milliseconds: 300));
+          }
+        }
       } catch (e, s) {
         AppLogger.error('tdCreate failed for $accountId', e, s);
         _updateDebugError('tdCreate failed: $e');
@@ -376,20 +394,17 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
       // Handle "Can't lock file ... because it is already in use by current program"
       if (errorMsg.contains('already in use')) {
-        if (_lockRetryCount < 8) {
+        if (_lockRetryCount < 3) {
           _lockRetryCount++;
-          _updateDebugStep('Database locked by previous session. Retrying in 1.5s (attempt $_lockRetryCount/8)...');
-          AppLogger.warning('TDLib database locked. Waiting for lock release and retrying setTdlibParameters for $accountId (attempt $_lockRetryCount/8)...');
-          Future.delayed(const Duration(milliseconds: 1500), () {
-            if (_clientId != 0 && (state == TelegramAuthState.initial || state == TelegramAuthState.error)) {
-              _sendTdlibParameters();
-            }
-          });
+          _updateDebugStep('Database locked by previous session. Releasing native locks and recreating client (attempt $_lockRetryCount/3)...');
+          AppLogger.warning('TDLib database locked. Destroying dead client and cleaning orphaned locks for $accountId (attempt $_lockRetryCount/3)...');
+          _recoverFromLockedDatabase();
           return;
         } else {
-          _updateDebugStep('Database lock persisted. Attempting recovery...');
-          AppLogger.error('TDLib database locked after 8 retries for $accountId. Attempting client recovery.');
-          _recoverFromLockedDatabase();
+          _updateDebugStep('Database lock persisted.');
+          AppLogger.error('TDLib database locked after 3 recovery attempts for $accountId.');
+          _updateDebugError('Database locked by previous session. Please restart the app or tap Reset App.');
+          state = TelegramAuthState.error;
           return;
         }
       }
@@ -831,79 +846,140 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     });
   }
 
-  Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
-    final normalizedPath = localFilePath.replaceAll(r'\', '/');
+  static bool _useWrappedPayload = !kIsWeb && Platform.isWindows;
 
-    Map<String, dynamic> buildWrappedPayload() {
-      final inputContent = <String, dynamic>{
-        "@type": "inputMessageDocument",
-        "document": {
-          "@type": "inputDocument",
-          "document": {
-            "@type": "inputFileLocal",
-            "path": normalizedPath,
-          },
-          "disable_content_type_detection": true,
-        },
-      };
-
-      if (caption != null) {
-        inputContent["caption"] = {
-          "@type": "formattedText",
-          "text": caption,
-          "entities": <dynamic>[],
-        };
-      }
-
-      return <String, dynamic>{
-        "@type": "sendMessage",
-        "chat_id": chatId,
-        "input_message_content": inputContent,
-      };
-    }
-
-    Map<String, dynamic> buildFlatPayload() {
-      final inputContent = <String, dynamic>{
-        "@type": "inputMessageDocument",
+  Map<String, dynamic> _buildDocumentPayload({
+    required int chatId,
+    required String normalizedPath,
+    required bool wrapped,
+    String? caption,
+  }) {
+    final Map<String, dynamic> docContent;
+    if (wrapped) {
+      docContent = {
+        "@type": "inputDocument",
         "document": {
           "@type": "inputFileLocal",
           "path": normalizedPath,
         },
         "disable_content_type_detection": true,
       };
-
-      if (caption != null) {
-        inputContent["caption"] = {
-          "@type": "formattedText",
-          "text": caption,
-          "entities": <dynamic>[],
-        };
-      }
-
-      return <String, dynamic>{
-        "@type": "sendMessage",
-        "chat_id": chatId,
-        "input_message_content": inputContent,
+    } else {
+      docContent = {
+        "@type": "inputFileLocal",
+        "path": normalizedPath,
       };
     }
 
-    final primaryPayload = buildWrappedPayload();
+    final inputContent = <String, dynamic>{
+      "@type": "inputMessageDocument",
+      "document": docContent,
+      "disable_content_type_detection": true,
+    };
+
+    if (caption != null) {
+      inputContent["caption"] = {
+        "@type": "formattedText",
+        "text": caption,
+        "entities": <dynamic>[],
+      };
+    }
+
+    return <String, dynamic>{
+      "@type": "sendMessage",
+      "chat_id": chatId,
+      "input_message_content": inputContent,
+    };
+  }
+
+  Map<String, dynamic> _buildPhotoPayload({
+    required int chatId,
+    required String normalizedPath,
+    required bool wrapped,
+    String? caption,
+  }) {
+    final Map<String, dynamic> photoContent;
+    if (wrapped) {
+      photoContent = {
+        "@type": "inputPhoto",
+        "photo": {
+          "@type": "inputFileLocal",
+          "path": normalizedPath,
+        },
+      };
+    } else {
+      photoContent = {
+        "@type": "inputFileLocal",
+        "path": normalizedPath,
+      };
+    }
+
+    final inputContent = <String, dynamic>{
+      "@type": "inputMessagePhoto",
+      "photo": photoContent,
+    };
+
+    if (caption != null) {
+      inputContent["caption"] = {
+        "@type": "formattedText",
+        "text": caption,
+        "entities": <dynamic>[],
+      };
+    }
+
+    return <String, dynamic>{
+      "@type": "sendMessage",
+      "chat_id": chatId,
+      "input_message_content": inputContent,
+    };
+  }
+
+  bool _isPayloadFormatError(dynamic response) {
+    if (response is! Map<String, dynamic> || response['@type'] != 'error') {
+      return false;
+    }
+    final msg = response['message']?.toString() ?? '';
+    return msg.contains('InputFile is not specified') ||
+           msg.contains('Unknown class "inputDocument"') ||
+           msg.contains('Unknown class "inputPhoto"') ||
+           msg.contains('FIELD_NAME_INVALID') ||
+           msg.contains('unsupported');
+  }
+
+  Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
+    final normalizedPath = localFilePath.replaceAll(r'\', '/');
+
     AppLogger.info('=== TDLib sendMessage (uploadDocument) ===');
-    AppLogger.info('ChatId: $chatId, File: $normalizedPath, HasCaption: ${caption != null}');
+    AppLogger.info('ChatId: $chatId, File: $normalizedPath, HasCaption: ${caption != null}, useWrapped: $_useWrappedPayload');
     if (caption != null) {
       AppLogger.info('Caption length: ${caption.length} chars');
     } else {
       AppLogger.warning('>>> CAPTION IS NULL - Manifest will be MISSING from Telegram message!');
     }
 
+    final primaryPayload = _buildDocumentPayload(
+      chatId: chatId,
+      normalizedPath: normalizedPath,
+      wrapped: _useWrappedPayload,
+      caption: caption,
+    );
+
     var response = await sendRequest(primaryPayload, timeout: const Duration(hours: 6));
-    if (response['@type'] == 'error' &&
-        (response['message']?.toString().contains('InputFile is not specified') == true ||
-         response['message']?.toString().contains('FIELD_NAME_INVALID') == true ||
-         response['message']?.toString().contains('unsupported') == true)) {
-      AppLogger.warning('Wrapped uploadDocument failed (${response['message']}), falling back to flat payload');
-      final fallbackPayload = buildFlatPayload();
-      response = await sendRequest(fallbackPayload, timeout: const Duration(hours: 6));
+
+    if (_isPayloadFormatError(response)) {
+      AppLogger.warning('Primary uploadDocument failed (${response['message']}), retrying with alternative payload format (useWrapped: ${!_useWrappedPayload})');
+      final fallbackPayload = _buildDocumentPayload(
+        chatId: chatId,
+        normalizedPath: normalizedPath,
+        wrapped: !_useWrappedPayload,
+        caption: caption,
+      );
+      final fallbackResponse = await sendRequest(fallbackPayload, timeout: const Duration(hours: 6));
+      if (fallbackResponse['@type'] != 'error') {
+        _useWrappedPayload = !_useWrappedPayload;
+        AppLogger.info('Alternative uploadDocument payload succeeded! Updated default _useWrappedPayload to $_useWrappedPayload');
+        return fallbackResponse;
+      }
     }
 
     return response;
@@ -912,63 +988,29 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
     final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
-    Map<String, dynamic> buildWrappedPayload() {
-      final inputContent = <String, dynamic>{
-        "@type": "inputMessagePhoto",
-        "photo": {
-          "@type": "inputPhoto",
-          "photo": {
-            "@type": "inputFileLocal",
-            "path": normalizedPath,
-          },
-        },
-      };
+    final primaryPayload = _buildPhotoPayload(
+      chatId: chatId,
+      normalizedPath: normalizedPath,
+      wrapped: _useWrappedPayload,
+      caption: caption,
+    );
 
-      if (caption != null) {
-        inputContent["caption"] = {
-          "@type": "formattedText",
-          "text": caption,
-          "entities": <dynamic>[],
-        };
+    var response = await sendRequest(primaryPayload);
+
+    if (_isPayloadFormatError(response)) {
+      AppLogger.warning('Primary uploadPhoto failed (${response['message']}), retrying with alternative payload format (useWrapped: ${!_useWrappedPayload})');
+      final fallbackPayload = _buildPhotoPayload(
+        chatId: chatId,
+        normalizedPath: normalizedPath,
+        wrapped: !_useWrappedPayload,
+        caption: caption,
+      );
+      final fallbackResponse = await sendRequest(fallbackPayload);
+      if (fallbackResponse['@type'] != 'error') {
+        _useWrappedPayload = !_useWrappedPayload;
+        AppLogger.info('Alternative uploadPhoto payload succeeded! Updated default _useWrappedPayload to $_useWrappedPayload');
+        return fallbackResponse;
       }
-
-      return <String, dynamic>{
-        "@type": "sendMessage",
-        "chat_id": chatId,
-        "input_message_content": inputContent,
-      };
-    }
-
-    Map<String, dynamic> buildFlatPayload() {
-      final inputContent = <String, dynamic>{
-        "@type": "inputMessagePhoto",
-        "photo": {
-          "@type": "inputFileLocal",
-          "path": normalizedPath,
-        },
-      };
-
-      if (caption != null) {
-        inputContent["caption"] = {
-          "@type": "formattedText",
-          "text": caption,
-          "entities": <dynamic>[],
-        };
-      }
-
-      return <String, dynamic>{
-        "@type": "sendMessage",
-        "chat_id": chatId,
-        "input_message_content": inputContent,
-      };
-    }
-
-    var response = await sendRequest(buildWrappedPayload());
-    if (response['@type'] == 'error' &&
-        (response['message']?.toString().contains('InputFile is not specified') == true ||
-         response['message']?.toString().contains('FIELD_NAME_INVALID') == true ||
-         response['message']?.toString().contains('unsupported') == true)) {
-      response = await sendRequest(buildFlatPayload());
     }
 
     return response;
@@ -1065,6 +1107,8 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         }));
       } catch (_) {}
       _activeAccountClientIds.remove(accountId);
+      _instances.remove(_clientId);
+      _clientId = 0;
     }
     state = TelegramAuthState.closed;
   }
@@ -1201,21 +1245,69 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
 
   Future<void> _recoverFromLockedDatabase() async {
     try {
-      if (_clientId != 0) {
+      final deadId = _clientId;
+      if (deadId != 0) {
         try {
-          TdPlugin.instance.tdSend(_clientId, jsonEncode({"@type": "close"}));
-          TdPlugin.instance.tdSend(_clientId, jsonEncode({"@type": "destroy"}));
+          TdPlugin.instance.tdSend(deadId, jsonEncode({"@type": "close"}));
+          TdPlugin.instance.tdSend(deadId, jsonEncode({"@type": "destroy"}));
         } catch (_) {}
-        _instances.remove(_clientId);
+        _instances.remove(deadId);
         _activeAccountClientIds.remove(accountId);
         _clientId = 0;
       }
-      await Future.delayed(const Duration(seconds: 1));
-      _lockRetryCount = 0;
+
+      // Explicitly destroy any client IDs in the native process that could be holding the database lock
+      final maxId = (deadId > 0 ? deadId + 5 : 10);
+      for (var id = 1; id <= maxId; id++) {
+        if (!_instances.containsKey(id)) {
+          try {
+            TdPlugin.instance.tdSend(id, jsonEncode({"@type": "destroy"}));
+          } catch (_) {}
+        }
+      }
+
+      // Allow native worker threads time to close database files and release binlog locks
+      await Future.delayed(const Duration(milliseconds: 1200));
+
       _updateDebugStep('Reinitializing TDLib client after lock recovery...');
-      await _initClient();
-    } catch (e) {
-      AppLogger.error('Failed to recover from locked database: $e');
+      _clientId = TdPlugin.instance.tdCreate();
+      _instances[_clientId] = this;
+      _activeAccountClientIds[accountId] = _clientId;
+      AppLogger.info('Fresh TDLib client created after lock recovery for $accountId (clientId: $_clientId)');
+
+      if (isHeadless) {
+        _updateDebugStep('Applying headless options configuration');
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "setOption",
+          "name": "online",
+          "value": {"@type": "optionValueBoolean", "value": false}
+        }));
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "setOption",
+          "name": "disable_network_statistics",
+          "value": {"@type": "optionValueBoolean", "value": true}
+        }));
+        TdPlugin.instance.tdSend(_clientId, jsonEncode({
+          "@type": "setOption",
+          "name": "disable_contact_registered_notifications",
+          "value": {"@type": "optionValueBoolean", "value": true}
+        }));
+      }
+
+      TdPlugin.instance.tdSend(_clientId, jsonEncode({
+        "@type": "setLogVerbosityLevel",
+        "new_verbosity_level": 1
+      }));
+
+      // Give TDLib 1.2s to emit authorizationStateWaitTdlibParameters; if not received, send parameters proactively
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (_clientId != 0 && (state == TelegramAuthState.initial || state == TelegramAuthState.error)) {
+          _sendTdlibParameters();
+        }
+      });
+    } catch (e, s) {
+      AppLogger.error('Failed to recover from locked database for $accountId', e, s);
+      _updateDebugError('Recovery failed: $e');
     }
   }
 

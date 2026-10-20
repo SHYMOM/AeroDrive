@@ -52,14 +52,19 @@ class AppResetHelper {
       }
 
       try {
-        // 1. Close and destroy all active TDLib clients so files are released
+        // 1. Close and destroy all active TDLib clients and any orphaned client IDs so files are released
         for (final entry in TelegramService.activeInstances.entries) {
           try {
             TdPlugin.instance.tdSend(entry.key, jsonEncode({"@type": "close"}));
             TdPlugin.instance.tdSend(entry.key, jsonEncode({"@type": "destroy"}));
           } catch (_) {}
         }
-        await Future.delayed(const Duration(milliseconds: 600));
+        for (var id = 1; id <= 25; id++) {
+          try {
+            TdPlugin.instance.tdSend(id, jsonEncode({"@type": "destroy"}));
+          } catch (_) {}
+        }
+        await Future.delayed(const Duration(milliseconds: 1000));
 
         // 2. Delete the entire AeroDrive documents directory
         final docDir = await getApplicationDocumentsDirectory();
