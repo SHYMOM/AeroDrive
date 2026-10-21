@@ -733,8 +733,8 @@ class UploadQueueService {
         final analyzer = SmartAnalyzer(_db);
         final result = await analyzer.analyzeImageForUpload(sourceFile, fileId);
         photoTakenAt = result.photoTakenAt;
-        latitude = result.latitude;
-        longitude = result.longitude;
+        latitude = (result.latitude != null && result.latitude!.isFinite) ? result.latitude : null;
+        longitude = (result.longitude != null && result.longitude!.isFinite) ? result.longitude : null;
         locality = result.locality;
         country = result.country;
         tags = result.tags;
@@ -908,10 +908,12 @@ class UploadQueueService {
             chunkIndex: i,
             totalChunks: totalChunks,
             isChunked: totalChunks > 1 ? 1 : 0,
-            duration: videoDuration?.inSeconds,
+            duration: (videoDuration?.inSeconds != null && videoDuration!.inSeconds > 0)
+                ? videoDuration.inSeconds
+                : null,
             photoTakenAt: photoTakenAt,
-            latitude: latitude,
-            longitude: longitude,
+            latitude: (latitude != null && latitude.isFinite) ? latitude : null,
+            longitude: (longitude != null && longitude.isFinite) ? longitude : null,
             locality: locality,
             country: country,
             tags: tags,

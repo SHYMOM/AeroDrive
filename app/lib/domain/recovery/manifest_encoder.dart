@@ -83,6 +83,9 @@ class ManifestEncoder {
     int version = 1,
     DateTime? createdAt,
   }) async {
+    final safeLat = (latitude != null && latitude.isFinite) ? latitude : null;
+    final safeLng = (longitude != null && longitude.isFinite) ? longitude : null;
+
     // Start with full data
     var finalTags = tags;
     var finalFaces = faces;
@@ -101,8 +104,8 @@ class ManifestEncoder {
       totalChunks: totalChunks,
       duration: duration,
       photoTakenAt: photoTakenAt,
-      latitude: latitude,
-      longitude: longitude,
+      latitude: safeLat,
+      longitude: safeLng,
       locality: locality,
       country: country,
       tags: finalTags,
@@ -144,8 +147,8 @@ class ManifestEncoder {
       totalChunks: totalChunks,
       duration: duration,
       photoTakenAt: photoTakenAt,
-      latitude: latitude,
-      longitude: longitude,
+      latitude: safeLat,
+      longitude: safeLng,
       locality: locality,
       country: country,
       tags: finalTags,
@@ -195,8 +198,8 @@ class ManifestEncoder {
       if (wrappedDekBase64 != null) "k": wrappedDekBase64,
       if (ctrIvBase64 != null) "iv": ctrIvBase64,
       if (duration != null) "dur": duration,
-      if (latitude != null) "lat": latitude,
-      if (longitude != null) "lng": longitude,
+      if (latitude != null && latitude.isFinite) "lat": latitude,
+      if (longitude != null && longitude.isFinite) "lng": longitude,
       if (tags != null && tags.isNotEmpty) "tags": tags,
       if (faces != null && faces.isNotEmpty) "faces": faces,
     };

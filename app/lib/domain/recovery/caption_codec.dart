@@ -54,6 +54,28 @@ class CaptionSerializer {
     final safeName = name.length > 200 ? name.substring(0, 200) : name;
     final ts = (createdAt ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
     
+    final safeLat = (latitude != null && latitude.isFinite) ? latitude : null;
+    final safeLng = (longitude != null && longitude.isFinite) ? longitude : null;
+    final safeDuration = (duration != null && duration > 0) ? duration : null;
+
+    List<Map<String, dynamic>>? safeFaces;
+    if (faces != null && faces.isNotEmpty) {
+      safeFaces = [];
+      for (final f in faces) {
+        final safeF = <String, dynamic>{};
+        f.forEach((key, val) {
+          if (val is num) {
+            if (val is double && !val.isFinite) return;
+            safeF[key] = val;
+          } else if (val != null) {
+            safeF[key] = val;
+          }
+        });
+        if (safeF.isNotEmpty) safeFaces.add(safeF);
+      }
+      if (safeFaces.isEmpty) safeFaces = null;
+    }
+
     final Map<String, dynamic> jsonMap = {
       "t": "file",
       "id": fileId,
@@ -70,18 +92,47 @@ class CaptionSerializer {
       if (totalChunks != null) "tc": totalChunks,
       if (wrappedDekBase64 != null) "k": wrappedDekBase64,
       if (ctrIvBase64 != null) "iv": ctrIvBase64,
-      if (duration != null) "dur": duration,
+      if (safeDuration != null) "dur": safeDuration,
       if (photoTakenAt != null) "pt": photoTakenAt.millisecondsSinceEpoch ~/ 1000,
-      if (latitude != null) "lat": latitude,
-      if (longitude != null) "lng": longitude,
-      if (locality != null) "loc": locality,
-      if (country != null) "cnt": country,
+      if (safeLat != null) "lat": safeLat,
+      if (safeLng != null) "lng": safeLng,
+      if (locality != null && locality.isNotEmpty) "loc": locality,
+      if (country != null && country.isNotEmpty) "cnt": country,
       if (tags != null && tags.isNotEmpty) "tags": tags,
-      if (faces != null && faces.isNotEmpty) "faces": faces,
+      if (safeFaces != null && safeFaces.isNotEmpty) "faces": safeFaces,
     };
 
-    final jsonStr = jsonEncode(jsonMap);
+    final sanitized = _sanitizeForJson(jsonMap) as Map<String, dynamic>;
+    final jsonStr = jsonEncode(sanitized);
     return _encryptAndEncode(jsonStr, masterKey);
+  }
+
+  /// Recursively strips out non-finite double values (NaN, Infinity, -Infinity)
+  /// and null map entries to ensure jsonEncode never fails.
+  static dynamic _sanitizeForJson(dynamic value) {
+    if (value == null) return null;
+    if (value is num) {
+      if (value is double && !value.isFinite) return null;
+      return value;
+    }
+    if (value is String || value is bool) return value;
+    if (value is List) {
+      return value
+          .map(_sanitizeForJson)
+          .where((v) => v != null)
+          .toList();
+    }
+    if (value is Map) {
+      final clean = <String, dynamic>{};
+      value.forEach((k, v) {
+        final cleanV = _sanitizeForJson(v);
+        if (cleanV != null) {
+          clean[k.toString()] = cleanV;
+        }
+      });
+      return clean;
+    }
+    return value;
   }
 
   /// Serializes and encrypts a Thumbnail Caption.
@@ -94,7 +145,8 @@ class CaptionSerializer {
       "fid": fileId,
     };
 
-    final jsonStr = jsonEncode(jsonMap);
+    final sanitized = _sanitizeForJson(jsonMap) as Map<String, dynamic>;
+    final jsonStr = jsonEncode(sanitized);
     return _encryptAndEncode(jsonStr, masterKey);
   }
 
@@ -119,7 +171,8 @@ class CaptionSerializer {
       "col": color,
     };
 
-    final jsonStr = jsonEncode(jsonMap);
+    final sanitized = _sanitizeForJson(jsonMap) as Map<String, dynamic>;
+    final jsonStr = jsonEncode(sanitized);
     return _encryptAndEncode(jsonStr, masterKey);
   }
 }

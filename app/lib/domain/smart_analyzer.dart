@@ -22,28 +22,37 @@ class SmartAnalyzer {
   final Uuid _uuid = const Uuid();
 
   double? _convertExifGps(dynamic gpsTag, String ref) {
-    final list = gpsTag.values.toList();
-    if (list.length < 3) return null;
-    
-    double convertRational(dynamic value) {
-      if (value is Ratio) {
-        return value.numerator / value.denominator;
+    try {
+      final list = gpsTag.values.toList();
+      if (list.length < 3) return null;
+      
+      double convertRational(dynamic value) {
+        if (value is Ratio) {
+          if (value.denominator == 0) return 0.0;
+          final res = value.numerator / value.denominator;
+          return res.isFinite ? res : 0.0;
+        }
+        final parsed = double.tryParse(value.toString());
+        return (parsed != null && parsed.isFinite) ? parsed : 0.0;
       }
-      return double.tryParse(value.toString()) ?? 0.0;
-    }
 
-    final d = convertRational(list[0]);
-    final m = convertRational(list[1]);
-    final s = convertRational(list[2]);
+      final d = convertRational(list[0]);
+      final m = convertRational(list[1]);
+      final s = convertRational(list[2]);
 
-    double decimal = d + (m / 60.0) + (s / 3600.0);
-    if (ref == 'S' || ref == 'W') {
-      decimal = -decimal;
+      double decimal = d + (m / 60.0) + (s / 3600.0);
+      if (!decimal.isFinite) return null;
+      if (ref == 'S' || ref == 'W') {
+        decimal = -decimal;
+      }
+      return decimal.isFinite ? decimal : null;
+    } catch (_) {
+      return null;
     }
-    return decimal;
   }
 
   Future<Map<String, String>?> _geocodeLocation(String fileId, double lat, double lng) async {
+    if (!lat.isFinite || !lng.isFinite) return null;
     try {
       final jsonStr = await rootBundle.loadString('assets/cities.json');
       final List cities = jsonDecode(jsonStr);
@@ -127,8 +136,10 @@ class SmartAnalyzer {
 
           if (latTag != null && latRef != null && longTag != null && longRef != null) {
             try {
-              latitude = _convertExifGps(latTag, latRef.toString());
-              longitude = _convertExifGps(longTag, longRef.toString());
+              final rawLat = _convertExifGps(latTag, latRef.toString());
+              final rawLong = _convertExifGps(longTag, longRef.toString());
+              if (rawLat != null && rawLat.isFinite) latitude = rawLat;
+              if (rawLong != null && rawLong.isFinite) longitude = rawLong;
             } catch (_) {}
           }
         }
@@ -142,7 +153,7 @@ class SmartAnalyzer {
         );
       }
 
-      if (latitude != null && longitude != null) {
+      if (latitude != null && longitude != null && latitude.isFinite && longitude.isFinite) {
         await _geocodeLocation(fileId, latitude, longitude);
       }
 
@@ -159,7 +170,7 @@ class SmartAnalyzer {
         if (isDesktop) {
           labels = ['Nature', 'Sky', 'Outdoor', 'Pet'];
           final decoded = await img.decodeImageFile(imageFile.path);
-          if (decoded != null) {
+          if (decoded != null && decoded.width > 0 && decoded.height > 0) {
             final hw = decoded.width / 4;
             final hh = decoded.height / 4;
             faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
@@ -266,8 +277,10 @@ class SmartAnalyzer {
 
           if (latTag != null && latRef != null && longTag != null && longRef != null) {
             try {
-              latitude = _convertExifGps(latTag, latRef.toString());
-              longitude = _convertExifGps(longTag, longRef.toString());
+              final rawLat = _convertExifGps(latTag, latRef.toString());
+              final rawLong = _convertExifGps(longTag, longRef.toString());
+              if (rawLat != null && rawLat.isFinite) latitude = rawLat;
+              if (rawLong != null && rawLong.isFinite) longitude = rawLong;
             } catch (_) {}
           }
         }
@@ -281,7 +294,7 @@ class SmartAnalyzer {
         );
       }
 
-      if (latitude != null && longitude != null) {
+      if (latitude != null && longitude != null && latitude.isFinite && longitude.isFinite) {
         final geocodeResult = await _geocodeLocation(fileId, latitude, longitude);
         if (geocodeResult != null) {
           locality = geocodeResult['locality'];
@@ -300,7 +313,7 @@ class SmartAnalyzer {
         if (isDesktop) {
           tags = ['Nature', 'Sky', 'Outdoor', 'Pet'];
           final decoded = await img.decodeImageFile(imageFile.path);
-          if (decoded != null) {
+          if (decoded != null && decoded.width > 0 && decoded.height > 0) {
             final hw = decoded.width / 4;
             final hh = decoded.height / 4;
             faceRects.add(Rect.fromLTWH(decoded.width / 2 - hw/2, decoded.height / 2 - hh/2, hw, hh));
@@ -354,21 +367,29 @@ class SmartAnalyzer {
       decodedImage = await img.decodeImageFile(imageFile.path);
     } catch (_) {}
 
-    final double wOrig = decodedImage?.width.toDouble() ?? 1.0;
-    final double hOrig = decodedImage?.height.toDouble() ?? 1.0;
+    final double wOrig = (decodedImage?.width != null && decodedImage!.width > 0)
+        ? decodedImage.width.toDouble()
+        : 1.0;
+    final double hOrig = (decodedImage?.height != null && decodedImage!.height > 0)
+        ? decodedImage.height.toDouble()
+        : 1.0;
 
     for (final rect in faceRects) {
+      final double normLeft = rect.left / wOrig;
+      final double normTop = rect.top / hOrig;
+      final double normWidth = rect.width / wOrig;
+      final double normHeight = rect.height / hOrig;
+
+      if (!normLeft.isFinite || !normTop.isFinite || !normWidth.isFinite || !normHeight.isFinite) {
+        continue;
+      }
+
       final clusterId = _uuid.v4();
       await _db.into(_db.faceClusters).insert(
         FaceClustersCompanion.insert(
           id: clusterId,
         )
       );
-
-      final double normLeft = rect.left / wOrig;
-      final double normTop = rect.top / hOrig;
-      final double normWidth = rect.width / wOrig;
-      final double normHeight = rect.height / hOrig;
 
       final mappingId = _uuid.v4();
       await _db.into(_db.photoFaces).insert(
@@ -545,6 +566,11 @@ class SmartAnalyzer {
             final double? width = double.tryParse(faceObj['w'].toString());
             final double? height = double.tryParse(faceObj['h'].toString());
 
+            final safeLeft = (left != null && left.isFinite) ? left : null;
+            final safeTop = (top != null && top.isFinite) ? top : null;
+            final safeWidth = (width != null && width.isFinite) ? width : null;
+            final safeHeight = (height != null && height.isFinite) ? height : null;
+
             if (clusterId != null) {
               // Ensure cluster exists in local db
               var cluster = await (_db.select(_db.faceClusters)..where((fc) => fc.id.equals(clusterId))).getSingleOrNull();
@@ -563,10 +589,10 @@ class SmartAnalyzer {
                   id: mappingId,
                   fileId: fileId,
                   faceClusterId: clusterId,
-                  boxLeft: drift.Value(left),
-                  boxTop: drift.Value(top),
-                  boxWidth: drift.Value(width),
-                  boxHeight: drift.Value(height),
+                  boxLeft: drift.Value(safeLeft),
+                  boxTop: drift.Value(safeTop),
+                  boxWidth: drift.Value(safeWidth),
+                  boxHeight: drift.Value(safeHeight),
                 ),
                 mode: drift.InsertMode.insertOrIgnore,
               );

@@ -77,11 +77,16 @@ class PlacesService {
 
       if (latValue.length < 3 || lonValue.length < 3) return;
 
-      double lat = _convertToDecimal(latValue);
-      double lon = _convertToDecimal(lonValue);
+      final double? rawLat = _convertToDecimal(latValue);
+      final double? rawLon = _convertToDecimal(lonValue);
+      if (rawLat == null || rawLon == null || !rawLat.isFinite || !rawLon.isFinite) return;
+
+      double lat = rawLat;
+      double lon = rawLon;
 
       if (latRef == 'S') lat = -lat;
       if (lonRef == 'W') lon = -lon;
+      if (!lat.isFinite || !lon.isFinite) return;
 
       AppLogger.info('Extracted GPS for ${file.name}: $lat, $lon');
 
@@ -133,20 +138,24 @@ class PlacesService {
     }
   }
 
-  double _convertToDecimal(List<dynamic> dms) {
+  double? _convertToDecimal(List<dynamic> dms) {
     // Exif values are Ratio objects with numerator/denominator
     double getValue(dynamic val) {
       if (val is Ratio) {
-        return val.numerator / val.denominator;
+        if (val.denominator == 0) return 0.0;
+        final res = val.numerator / val.denominator;
+        return res.isFinite ? res : 0.0;
       }
-      return val is int ? val.toDouble() : double.parse(val.toString());
+      final parsed = double.tryParse(val.toString());
+      return (parsed != null && parsed.isFinite) ? parsed : 0.0;
     }
 
     final double d = getValue(dms[0]);
     final double m = getValue(dms[1]);
     final double s = getValue(dms[2]);
 
-    return d + (m / 60) + (s / 3600);
+    final decimal = d + (m / 60) + (s / 3600);
+    return decimal.isFinite ? decimal : null;
   }
 }
 

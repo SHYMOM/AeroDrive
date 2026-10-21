@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:aerodrive/domain/recovery/caption_codec.dart';
+import 'package:aerodrive/domain/recovery/manifest_encoder.dart';
 import 'package:aerodrive/domain/thumbnail_cache_manager.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -140,5 +141,70 @@ void main() {
     await ThumbnailCacheManager.clearCache();
     final deletedFile = File(savedPath);
     expect(deletedFile.existsSync(), false);
+  });
+
+  test('CaptionSerializer and ManifestEncoder handle NaN and Infinity gracefully without throwing', () async {
+    final cipher = AesGcm.with256bits();
+    final masterKey = await cipher.newSecretKey();
+
+    // Serialize file with NaN / Infinity coordinates and face metadata
+    final encrypted = await CaptionSerializer.serializeFile(
+      fileId: 'nan-file-test',
+      name: 'photo_with_corrupt_exif.jpg',
+      parentFolderId: null,
+      hash: 'sha256-test',
+      size: 1024,
+      mime: 'image/jpeg',
+      masterKey: masterKey,
+      latitude: double.nan,
+      longitude: double.infinity,
+      duration: -1,
+      faces: [
+        {
+          'c': 'cluster-1',
+          'l': double.nan,
+          't': 0.25,
+          'w': double.infinity,
+          'h': 0.5,
+        }
+      ],
+    );
+
+    expect(encrypted, isNotEmpty);
+    final decrypted = await CaptionDecryptor.deserialize(encrypted, masterKey);
+    expect(decrypted, isNotNull);
+    expect(decrypted!['id'], 'nan-file-test');
+    // Ensure NaN and Infinity were safely stripped
+    expect(decrypted.containsKey('lat'), false);
+    expect(decrypted.containsKey('lng'), false);
+    expect(decrypted.containsKey('dur'), false);
+
+    // Also verify ManifestEncoder.encodeFileManifest handles NaN / Infinity without throwing
+    final manifestCaption = await ManifestEncoder.encodeFileManifest(
+      fileId: 'nan-file-test-2',
+      fileName: 'photo_test_2.jpg',
+      parentFolderId: null,
+      masterKey: masterKey,
+      hash: 'sha256-test-2',
+      size: 2048,
+      mime: 'image/jpeg',
+      latitude: double.nan,
+      longitude: double.infinity,
+      duration: null,
+      faces: [
+        {
+          'c': 'cluster-2',
+          'l': double.nan,
+          't': double.negativeInfinity,
+        }
+      ],
+    );
+
+    expect(manifestCaption, isNotEmpty);
+    final decryptedManifest = await CaptionDecryptor.deserialize(manifestCaption, masterKey);
+    expect(decryptedManifest, isNotNull);
+    expect(decryptedManifest!['id'], 'nan-file-test-2');
+    expect(decryptedManifest.containsKey('lat'), false);
+    expect(decryptedManifest.containsKey('lng'), false);
   });
 }
