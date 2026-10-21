@@ -15,6 +15,7 @@ import 'appearance_settings_screen.dart';
 import 'auto_backup_settings_dialogs.dart';
 import 'backup_dialogs.dart';
 import 'media_settings_dialogs.dart';
+import 'telegram_api_dialog.dart';
 import 'transfer_settings_dialogs.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -60,6 +61,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   _buildSettingsGroup('Account', Icons.person_outline, cs, [
                     _SettingsItem('Telegram Accounts', 'Add, remove, or switch accounts', Icons.switch_account, onTap: () => context.push('/settings/accounts')),
+                    _SettingsItem('Telegram API Credentials', 'View or change API ID & Hash', Icons.key_outlined, onTap: () => showDialog(context: context, builder: (_) => const TelegramApiCredentialsDialog())),
                     _SettingsItem('Session Management', 'Active sessions, remote logout', Icons.devices, onTap: () => context.push('/settings/session')),
                     _SettingsItem('Profile', 'Name, Avatar', Icons.badge_outlined, onTap: () => context.push('/settings/profile')),
                   ]),

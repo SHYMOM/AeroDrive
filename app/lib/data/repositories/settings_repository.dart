@@ -26,6 +26,22 @@ class SettingsRepository {
     return int.tryParse(value) ?? defaultValue;
   }
 
+  /// Get nullable int or null if not set.
+  Future<int?> getInt(String key) async {
+    final value = await getSetting(key);
+    if (value == null) return null;
+    return int.tryParse(value);
+  }
+
+  /// Get nullable string or null if not set.
+  Future<String?> getString(String key) => getSetting(key);
+
+  /// Set a string setting.
+  Future<void> setString(String key, String value) => setSetting(key, value);
+
+  /// Set an integer setting.
+  Future<void> setInt(String key, int value) => setIntSetting(key, value);
+
   /// Set a string setting.
   Future<void> setSetting(String key, String value) async {
     await _db.into(_db.settings).insertOnConflictUpdate(

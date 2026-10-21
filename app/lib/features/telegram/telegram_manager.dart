@@ -105,7 +105,8 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
   }
 
   Future<TelegramService> _initSecondaryClient(String accountId) async {
-    final client = TelegramService(accountId: accountId, isHeadless: true);
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+    final client = TelegramService(accountId: accountId, isHeadless: true, settingsRepo: settingsRepo);
 
     // Ensure TDLib database directory exists
     try {
@@ -148,7 +149,8 @@ class TelegramManager extends StateNotifier<List<TelegramService>> {
     for (final c in state) {
       if (c.accountId == accountId) return c;
     }
-    final client = TelegramService(accountId: accountId, isHeadless: isHeadless);
+    final settingsRepo = ref.read(settingsRepositoryProvider);
+    final client = TelegramService(accountId: accountId, isHeadless: isHeadless, settingsRepo: settingsRepo);
     _setupClientListener(client);
 
     client.onReady = () {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/phone_validator.dart';
@@ -23,6 +25,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _passwordFocusNode = FocusNode();
+  final _apiIdController = TextEditingController();
+  final _apiHashController = TextEditingController();
 
   late final AnimationController _fadeController;
 
@@ -31,6 +35,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   bool _isSubmittingPassword = false;
   bool _showPassword = false;
   bool _codeSent = false;
+  bool _isSavingCredentials = false;
+  String? _credentialsError;
 
   @override
   void initState() {
@@ -46,6 +52,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _phoneController.dispose();
     _passwordController.dispose();
     _passwordFocusNode.dispose();
+    _apiIdController.dispose();
+    _apiHashController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
@@ -139,6 +147,67 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       }
     } finally {
       if (mounted) setState(() => _isSubmittingPassword = false);
+    }
+  }
+
+  Future<void> _submitApiCredentials(TelegramService service) async {
+    final rawId = _apiIdController.text.trim();
+    final hash = _apiHashController.text.trim();
+
+    if (rawId.isEmpty || hash.isEmpty) {
+      setState(() => _credentialsError = 'Both API ID and API Hash are required.');
+      return;
+    }
+
+    final apiId = int.tryParse(rawId);
+    if (apiId == null || apiId <= 0) {
+      setState(() => _credentialsError = 'API ID must be a valid positive number.');
+      return;
+    }
+
+    if (hash.length < 16) {
+      setState(() => _credentialsError = 'API Hash must be a valid 32-character string.');
+      return;
+    }
+
+    setState(() {
+      _isSavingCredentials = true;
+      _credentialsError = null;
+    });
+
+    try {
+      await service.setApiCredentials(apiId, hash);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _credentialsError = 'Failed to initialize with provided credentials: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSavingCredentials = false);
+      }
+    }
+  }
+
+  Future<void> _pasteToController(TextEditingController controller) async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    if (data?.text != null && data!.text!.trim().isNotEmpty) {
+      setState(() {
+        controller.text = data.text!.trim();
+        _credentialsError = null;
+      });
+    }
+  }
+
+  Future<void> _openTelegramDevPortal() async {
+    final uri = Uri.parse('https://my.telegram.org');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error launching my.telegram.org: $e');
     }
   }
 
@@ -253,6 +322,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     switch (tdState) {
       case TelegramAuthState.initial:
         return _buildInitializing(cs);
+      case TelegramAuthState.waitApiCredentials:
+        return _buildApiCredentialsEntry(service, cs);
       case TelegramAuthState.waitPhoneNumber:
         return _buildPhoneEntry(cs);
       case TelegramAuthState.waitCode:
@@ -301,6 +372,272 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ],
       ),
     ).animate().fadeIn();
+
+  Widget _buildApiCredentialsEntry(TelegramService service, ColorScheme cs) => Column(
+      key: const ValueKey('api_credentials'),
+      children: [
+        _buildCard(
+          cs: cs,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: cs.primary.withValues(alpha: 0.12),
+                    ),
+                    child: Icon(Icons.key_rounded, color: cs.primary, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Telegram API Setup',
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          'Direct TDLib Client Configuration',
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'AeroDrive connects directly to Telegram servers. Enter your personal Telegram API credentials to get started.',
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Instructions Card
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  color: cs.primary.withValues(alpha: 0.06),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.help_outline_rounded, size: 16, color: cs.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'How to get your free API credentials:',
+                          style: TextStyle(
+                            color: cs.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    _buildStepRow(
+                      number: '1',
+                      text: 'Log in with your phone number at my.telegram.org',
+                      cs: cs,
+                    ),
+                    const SizedBox(height: 6),
+                    _buildStepRow(
+                      number: '2',
+                      text: 'Click on "API development tools"',
+                      cs: cs,
+                    ),
+                    const SizedBox(height: 6),
+                    _buildStepRow(
+                      number: '3',
+                      text: 'Create an app (e.g. App title: AeroDrive)',
+                      cs: cs,
+                    ),
+                    const SizedBox(height: 6),
+                    _buildStepRow(
+                      number: '4',
+                      text: 'Copy your App api_id and App api_hash below',
+                      cs: cs,
+                    ),
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: _openTelegramDevPortal,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Open my.telegram.org',
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Icon(Icons.open_in_new_rounded, size: 14, color: cs.primary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // API ID Field
+              PremiumTextField(
+                controller: _apiIdController,
+                label: 'API ID (api_id)',
+                hint: 'e.g. 12345678',
+                keyboardType: TextInputType.number,
+                enabled: !_isSavingCredentials,
+                prefixIcon: Icons.tag_rounded,
+                suffixIcon: IconButton(
+                  tooltip: 'Paste from clipboard',
+                  icon: Icon(Icons.content_paste_rounded, size: 18, color: cs.onSurfaceVariant),
+                  onPressed: _isSavingCredentials ? null : () => _pasteToController(_apiIdController),
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // API HASH Field
+              PremiumTextField(
+                controller: _apiHashController,
+                label: 'API Hash (api_hash)',
+                hint: 'e.g. 0123456789abcdef0123456789abcdef',
+                keyboardType: TextInputType.text,
+                enabled: !_isSavingCredentials,
+                prefixIcon: Icons.key_rounded,
+                suffixIcon: IconButton(
+                  tooltip: 'Paste from clipboard',
+                  icon: Icon(Icons.content_paste_rounded, size: 18, color: cs.onSurfaceVariant),
+                  onPressed: _isSavingCredentials ? null : () => _pasteToController(_apiHashController),
+                ),
+              ),
+
+              if (_credentialsError != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: cs.error.withValues(alpha: 0.12),
+                    border: Border.all(color: cs.error.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline_rounded, size: 16, color: cs.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _credentialsError!,
+                          style: TextStyle(color: cs.error, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              FilledButton(
+                onPressed: _isSavingCredentials ? null : () => _submitApiCredentials(service),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isSavingCredentials
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Save & Continue'),
+              ),
+
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shield_outlined, size: 13, color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Credentials are saved locally on your device only.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.04, end: 0),
+      ],
+    );
+
+  Widget _buildStepRow({required String number, required String text, required ColorScheme cs}) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: cs.primary.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            number,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: cs.primary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: cs.onSurfaceVariant,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
 
   Widget _buildPhoneEntry(ColorScheme cs) => Column(
       key: const ValueKey('phone'),

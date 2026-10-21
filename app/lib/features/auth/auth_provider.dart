@@ -33,7 +33,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         _ensureInfrastructure().catchError((e) {
           AppLogger.error('AuthNotifier: Infrastructure setup failed', e);
         });
-      } else if (next == TelegramAuthState.waitPhoneNumber ||
+      } else if (next == TelegramAuthState.waitApiCredentials ||
+                 next == TelegramAuthState.waitPhoneNumber ||
                  next == TelegramAuthState.waitCode ||
                  next == TelegramAuthState.waitPassword) {
         if (!_hasBeenAuthenticated) {

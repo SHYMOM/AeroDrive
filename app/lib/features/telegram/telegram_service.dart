@@ -10,9 +10,12 @@ import 'package:tdlib/tdlib.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/logger.dart';
+import '../../core/providers/repository_providers.dart';
+import '../../data/repositories/settings_repository.dart';
 
 enum TelegramAuthState {
   initial,
+  waitApiCredentials,
   waitPhoneNumber,
   waitCode,
   waitPassword,
@@ -51,9 +54,15 @@ class TelegramInitDebugInfo {
 }
 
 class TelegramService extends StateNotifier<TelegramAuthState> {
-  TelegramService({this.accountId = 'primary', this.isHeadless = false}) : super(TelegramAuthState.initial) {
+  TelegramService({
+    this.accountId = 'primary',
+    this.isHeadless = false,
+    this.settingsRepo,
+  }) : super(TelegramAuthState.initial) {
     _initClient();
   }
+
+  final SettingsRepository? settingsRepo;
 
   final debugInfo = ValueNotifier<TelegramInitDebugInfo>(TelegramInitDebugInfo());
   final Map<String, String> _pendingRequestTypes = {};
@@ -114,32 +123,38 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 
   Future<void> _initClient() async {
-    _updateDebugStep('Loading credentials from .env');
-    final apiIdStr = dotenv.env['TELEGRAM_API_ID'];
-    final apiHash = dotenv.env['TELEGRAM_API_HASH'];
+    _updateDebugStep('Loading credentials from settings or .env');
+    String? apiIdStr;
+    String? apiHash;
 
-    if (apiIdStr == null || apiIdStr.isEmpty) {
-      AppLogger.error('Missing or empty TELEGRAM_API_ID in .env');
-      _updateDebugError('Missing or empty TELEGRAM_API_ID in .env');
-      state = TelegramAuthState.error;
-      return;
-    }
-    if (apiHash == null || apiHash.isEmpty) {
-      AppLogger.error('Missing or empty TELEGRAM_API_HASH in .env');
-      _updateDebugError('Missing or empty TELEGRAM_API_HASH in .env');
-      state = TelegramAuthState.error;
-      return;
+    if (settingsRepo != null) {
+      apiIdStr = await settingsRepo!.getSetting('telegram_api_id');
+      apiHash = await settingsRepo!.getSetting('telegram_api_hash');
     }
 
-    final parsedId = int.tryParse(apiIdStr);
+    if (apiIdStr == null || apiIdStr.trim().isEmpty) {
+      apiIdStr = dotenv.env['TELEGRAM_API_ID'];
+    }
+    if (apiHash == null || apiHash.trim().isEmpty) {
+      apiHash = dotenv.env['TELEGRAM_API_HASH'];
+    }
+
+    if (apiIdStr == null || apiIdStr.trim().isEmpty || apiHash == null || apiHash.trim().isEmpty) {
+      AppLogger.info('Telegram credentials not configured. Transitioning to waitApiCredentials.');
+      _updateDebugStep('Waiting for user to enter Telegram API credentials');
+      state = TelegramAuthState.waitApiCredentials;
+      return;
+    }
+
+    final parsedId = int.tryParse(apiIdStr.trim());
     if (parsedId == null) {
       AppLogger.error('TELEGRAM_API_ID is not a valid integer: $apiIdStr');
       _updateDebugError('TELEGRAM_API_ID is not a valid integer: $apiIdStr');
-      state = TelegramAuthState.error;
+      state = TelegramAuthState.waitApiCredentials;
       return;
     }
     _apiId = parsedId;
-    _apiHash = apiHash;
+    _apiHash = apiHash.trim();
 
     try {
       _updateDebugStep('Retrieving application documents directory');
@@ -1327,6 +1342,20 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     await _initClient();
   }
 
+  int get apiId => _apiId;
+  String get apiHash => _apiHash;
+
+  Future<void> setApiCredentials(int apiId, String apiHash) async {
+    _apiId = apiId;
+    _apiHash = apiHash.trim();
+    if (settingsRepo != null) {
+      await settingsRepo!.setSetting('telegram_api_id', apiId.toString());
+      await settingsRepo!.setSetting('telegram_api_hash', apiHash.trim());
+    }
+    state = TelegramAuthState.initial;
+    await _initClient();
+  }
+
   TelegramAuthState get authState => state;
 
   @override
@@ -1345,6 +1374,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   }
 }
 
-final telegramServiceProvider = StateNotifierProvider<TelegramService, TelegramAuthState>((ref) => TelegramService());
+final telegramServiceProvider = StateNotifierProvider<TelegramService, TelegramAuthState>((ref) {
+  final settingsRepo = ref.watch(settingsRepositoryProvider);
+  return TelegramService(settingsRepo: settingsRepo);
+});
 
 

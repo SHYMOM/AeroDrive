@@ -213,6 +213,7 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         return _buildLoadingView('Logging out...');
       case TelegramAuthState.closed:
         return _buildLoadingView('Connection closed...');
+      case TelegramAuthState.waitApiCredentials:
       case TelegramAuthState.error:
         return _buildErrorView();
     }
