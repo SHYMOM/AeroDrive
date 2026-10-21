@@ -610,8 +610,8 @@ class ShareService {
 
     final random = Random.secure();
     final receiverDekBytes = List<int>.generate(32, (_) => random.nextInt(256));
-    final isVideo = fileMimeType != null && fileMimeType.startsWith('video/');
-    final List<int>? receiverCtrIvBytes = isVideo ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
+    final isStreamable = fileMimeType != null && (fileMimeType.startsWith('video/') || fileMimeType.startsWith('audio/'));
+    final List<int>? receiverCtrIvBytes = isStreamable ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
 
     final tempDir = await getTemporaryDirectory();
     final engine = EncryptionEngine();
@@ -1695,8 +1695,8 @@ class ShareService {
 
     final random = Random.secure();
     final receiverDekBytes = List<int>.generate(32, (_) => random.nextInt(256));
-    final isVideo = fileMimeType != null && fileMimeType.startsWith('video/');
-    final List<int>? receiverCtrIvBytes = isVideo ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
+    final isStreamable = fileMimeType != null && (fileMimeType.startsWith('video/') || fileMimeType.startsWith('audio/'));
+    final List<int>? receiverCtrIvBytes = isStreamable ? List<int>.generate(16, (_) => random.nextInt(256)) : null;
 
     final tempDir = await getTemporaryDirectory();
     final engine = EncryptionEngine();

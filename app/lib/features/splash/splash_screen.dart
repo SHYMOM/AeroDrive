@@ -30,26 +30,39 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _runSync() async {
-    // ── Step 1: Quick animation ───────────────────────────────────
-    if (mounted) setState(() { _statusText = 'Starting...'; _progress = 0.4; });
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // ── Step 1: Animation start ───────────────────────────────────
+    if (mounted) setState(() { _statusText = 'Connecting to AeroDrive...'; _progress = 0.3; });
+    await Future<void>.delayed(const Duration(milliseconds: 250));
 
-    if (mounted) setState(() { _statusText = 'Loading...'; _progress = 0.8; });
-    await Future<void>.delayed(const Duration(milliseconds: 200));
+    // ── Step 2: Await TDLib Auth State Transition ─────────────────
+    // TDLib opens local SQLite database and checks session keys asynchronously.
+    // We wait up to 4.5 seconds for it to transition from TelegramAuthState.initial.
+    final stopwatch = Stopwatch()..start();
+    TelegramAuthState telegramState = ref.read(telegramServiceProvider);
+
+    while (mounted &&
+           telegramState == TelegramAuthState.initial &&
+           stopwatch.elapsedMilliseconds < 4500) {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+      telegramState = ref.read(telegramServiceProvider);
+      
+      final waitRatio = (stopwatch.elapsedMilliseconds / 4500.0).clamp(0.0, 1.0);
+      setState(() {
+        _progress = 0.3 + (0.55 * waitRatio);
+      });
+    }
 
     if (!mounted) return;
 
-    // ── Step 2: Navigate based on auth state ──────────────────────
-    final telegramState = ref.read(telegramServiceProvider);
-
+    // ── Step 3: Navigate based on determined auth state ────────────
     if (telegramState == TelegramAuthState.ready) {
-      // Already authenticated, go to drive
       setState(() { _statusText = 'Welcome back!'; _progress = 1.0; });
-      await Future<void>.delayed(const Duration(milliseconds: 200));
+      await Future<void>.delayed(const Duration(milliseconds: 250));
       if (mounted) context.go('/drive');
     } else {
-      // Need to authenticate or finish connecting
       setState(() { _progress = 1.0; });
+      await Future<void>.delayed(const Duration(milliseconds: 150));
       if (mounted) context.go('/auth');
     }
   }

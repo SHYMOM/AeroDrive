@@ -10,8 +10,6 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import io.flutter.embedding.engine.FlutterEngine
-import io.flutter.embedding.engine.dart.DartExecutor
 
 /**
  * AeroDriveBackupService
@@ -26,15 +24,10 @@ import io.flutter.embedding.engine.dart.DartExecutor
  */
 class AeroDriveBackupService : Service() {
 
-    private var flutterEngine: FlutterEngine? = null
-
     companion object {
         private const val TAG = "AeroDriveBackupService"
         private const val CHANNEL_ID = "aerodrive_backup_channel"
         private const val NOTIFICATION_ID = 1001
-
-        @Volatile
-        var activeInstance: AeroDriveBackupService? = null
 
         fun start(context: Context) {
             val intent = Intent(context, AeroDriveBackupService::class.java)
@@ -47,13 +40,6 @@ class AeroDriveBackupService : Service() {
         }
 
         fun stop(context: Context) {
-            try {
-                activeInstance?.flutterEngine?.destroy()
-                activeInstance?.flutterEngine = null
-                activeInstance?.stopSelf()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error stopping activeInstance directly", e)
-            }
             val intent = Intent(context, AeroDriveBackupService::class.java)
             context.stopService(intent)
             Log.d(TAG, "AeroDriveBackupService stop requested")
@@ -64,27 +50,9 @@ class AeroDriveBackupService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        activeInstance = this
         Log.d(TAG, "AeroDriveBackupService created")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification())
-
-        try {
-            val loader = io.flutter.embedding.engine.loader.FlutterLoader()
-            loader.startInitialization(applicationContext)
-            loader.ensureInitializationComplete(applicationContext, null)
-
-            flutterEngine = FlutterEngine(this)
-            flutterEngine?.dartExecutor?.executeDartEntrypoint(
-                DartExecutor.DartEntrypoint(
-                    loader.findAppBundlePath(),
-                    "backgroundMain"
-                )
-            )
-            Log.d(TAG, "Headless Flutter Engine started successfully running backgroundMain")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start headless Flutter Engine", e)
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -96,15 +64,6 @@ class AeroDriveBackupService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         Log.d(TAG, "AeroDriveBackupService destroyed")
-        try {
-            flutterEngine?.destroy()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error destroying flutterEngine", e)
-        }
-        flutterEngine = null
-        if (activeInstance == this) {
-            activeInstance = null
-        }
     }
 
     private fun buildNotification(): Notification {

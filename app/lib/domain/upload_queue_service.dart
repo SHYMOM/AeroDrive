@@ -695,15 +695,15 @@ class UploadQueueService {
         .write(TransferQueueCompanion(totalBytes: drift.Value(fileLength)));
     final fileName = sourceFile.path.contains('/') ? sourceFile.path.split('/').last : sourceFile.path.split('\\').last;
     final mimeType = _getMimeType(fileName);
-    final isVideo = mimeType.startsWith('video/');
+    final isStreamable = mimeType.startsWith('video/') || mimeType.startsWith('audio/');
 
     final random = Random.secure();
     final dekBytes = List<int>.generate(32, (_) => random.nextInt(256));
     final encryptionNonce = List<int>.generate(12, (_) => random.nextInt(256));
-    final encryptionAlgo = isVideo ? 'AES-256-CTR' : 'AES-256-GCM';
+    final encryptionAlgo = isStreamable ? 'AES-256-CTR' : 'AES-256-GCM';
 
     List<int>? ctrIv;
-    if (isVideo) {
+    if (isStreamable) {
       ctrIv = List<int>.generate(16, (_) => random.nextInt(256));
     }
 

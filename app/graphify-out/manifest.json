@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/aerodrive/aerodrive/AeroDriveBackupService.kt": {
-    "mtime": 1792484482.5467029,
-    "ast_hash": "eb89d0520be91e6efdef4af098f30cc6",
+    "mtime": 1792585612.9537642,
+    "ast_hash": "a6947ac41f0acfe2b13701cde5215800",
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/aerodrive/aerodrive/BootReceiver.kt": {
@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "android/app/src/main/kotlin/com/aerodrive/aerodrive/MainActivity.kt": {
-    "mtime": 1792436777.9013538,
-    "ast_hash": "df95ad118c4108d35f44030e2368fb13",
+    "mtime": 1792585392.8084314,
+    "ast_hash": "82f36ba3c2cf8a17c437a828ecc3fb06",
     "semantic_hash": ""
   },
   "android/build.gradle.kts": {
@@ -265,8 +265,8 @@
     "semantic_hash": ""
   },
   "lib/domain/streaming/streaming_server.dart": {
-    "mtime": 1792426753.0638034,
-    "ast_hash": "e2b03a7b7e2f6dd83f82da9eec6df32b",
+    "mtime": 1792587807.7348354,
+    "ast_hash": "907b18f104efcb70c0647fe762e9b38e",
     "semantic_hash": ""
   },
   "lib/domain/sync/config_sync_service.dart": {
@@ -295,8 +295,8 @@
     "semantic_hash": ""
   },
   "lib/domain/upload_queue_service.dart": {
-    "mtime": 1792426636.4478836,
-    "ast_hash": "fc487a94d7395e308e51af489713ac47",
+    "mtime": 1792587727.862225,
+    "ast_hash": "8edc0cca8541500668e2ffaf38378f48",
     "semantic_hash": ""
   },
   "lib/domain/video_thumbnail_service.dart": {
@@ -700,8 +700,8 @@
     "semantic_hash": ""
   },
   "lib/features/sharing/share_service.dart": {
-    "mtime": 1792411469.3179328,
-    "ast_hash": "b6fcb3dd3579c1aedee04953fa54b978",
+    "mtime": 1792587743.3349044,
+    "ast_hash": "686e39d635567f599152d6d146c8a3a6",
     "semantic_hash": ""
   },
   "lib/features/sharing/sharing_screen.dart": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "lib/features/splash/splash_screen.dart": {
-    "mtime": 1783643857.5850778,
-    "ast_hash": "4d5f7e200aae906458fd4f8faf3d41ed",
+    "mtime": 1792585603.15597,
+    "ast_hash": "55d5fca2dad96403275dca6877b92bd0",
     "semantic_hash": ""
   },
   "lib/features/splash/testing_ended_screen.dart": {
@@ -740,8 +740,8 @@
     "semantic_hash": ""
   },
   "lib/features/telegram/telegram_service.dart": {
-    "mtime": 1792485643.5820282,
-    "ast_hash": "149ae9f33c44ac13cb1d03a96abc7252",
+    "mtime": 1792585701.319239,
+    "ast_hash": "25008312791a9dcf4612e72cb92af950",
     "semantic_hash": ""
   },
   "lib/features/transfers/transfers_screen.dart": {
@@ -1117,6 +1117,11 @@
   "test/domain/sync_state_test.dart": {
     "mtime": 1792439977.7386982,
     "ast_hash": "08bd2360a68d03c003702a5e92e39e7b",
+    "semantic_hash": ""
+  },
+  "test/domain/streaming_server_test.dart": {
+    "mtime": 1792587831.4758918,
+    "ast_hash": "f4848a7b3c1d16efee6abe9f83506c28",
     "semantic_hash": ""
   }
 }

@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
@@ -83,9 +84,6 @@ class StreamingServer {
         return Response(404, body: 'File not found');
       }
 
-      final plainFileSize = fileData.size ?? 0;
-      final mimeType = fileData.mimeType ?? 'video/mp4';
-
       // 2. Fetch chunks from local DB
       final chunks = await (db.select(db.chunks)
         ..where((c) => c.fileId.equals(fileId))
@@ -107,8 +105,32 @@ class StreamingServer {
       final unwrapped = await engine.unwrapDek(fileData.sha256Hash!, masterKeyBytes);
       final dekBytes = unwrapped[0]!;
       final ctrIv = unwrapped[1];
+      final isCtr = ctrIv != null;
 
-      // 4. Handle Range Header
+      // 4. Calculate chunk infos and exact plain file size
+      final chunkInfos = _buildChunkInfos(
+        rawChunks: chunks,
+        isCtr: isCtr,
+        dbFileSize: fileData.size ?? 0,
+        totalChunks: fileData.totalChunks,
+      );
+
+      final int plainFileSize = chunkInfos.isNotEmpty
+          ? (chunkInfos.last.end + 1)
+          : (fileData.size ?? 0);
+
+      // Self-heal file size in database if it was previously recorded as ciphertext size
+      if (fileData.size != plainFileSize && plainFileSize > 0) {
+        unawaited(
+          (db.update(db.files)..where((f) => f.id.equals(fileId))).write(
+            FilesCompanion(size: Value(plainFileSize)),
+          ),
+        );
+      }
+
+      final mimeType = fileData.mimeType ?? 'video/mp4';
+
+      // 5. Handle Range Header
       final rangeHeader = request.headers['range'];
       var start = 0;
       int end = plainFileSize - 1;
@@ -128,26 +150,26 @@ class StreamingServer {
       end = min(end, plainFileSize - 1);
       final contentLength = end - start + 1;
 
-      final headers = {
+      final isPartial = rangeHeader != null;
+      final statusCode = isPartial ? 206 : 200;
+      final headers = <String, String>{
         'Content-Type': mimeType,
         'Accept-Ranges': 'bytes',
         'Content-Length': contentLength.toString(),
-        'Content-Range': 'bytes $start-$end/$plainFileSize',
+        if (isPartial) 'Content-Range': 'bytes $start-$end/$plainFileSize',
       };
 
-      // 5. Create streaming response body
+      // 6. Create streaming response body
       final stream = _createDecryptionStream(
-        chunks,
+        chunkInfos,
         start,
         end,
         dekBytes,
         ctrIv,
-        plainFileSize: plainFileSize,
-        totalChunks: fileData.totalChunks,
       );
 
       return Response(
-        206, // Partial Content
+        statusCode,
         headers: headers,
         body: stream,
       );
@@ -157,19 +179,25 @@ class StreamingServer {
     }
   }
 
-  Stream<List<int>> _createDecryptionStream(
-    List<ChunkData> rawChunks,
-    int startPlain,
-    int endPlain,
-    List<int> dekBytes,
-    List<int>? ctrIv, {
-    required int plainFileSize,
+  @visibleForTesting
+  List<StreamChunkInfo> buildChunkInfosForTesting({
+    required List<ChunkData> rawChunks,
+    required bool isCtr,
+    required int dbFileSize,
     required int totalChunks,
-  }) async* {
-    final telegram = ref.read(telegramServiceProvider.notifier);
+  }) => _buildChunkInfos(
+    rawChunks: rawChunks,
+    isCtr: isCtr,
+    dbFileSize: dbFileSize,
+    totalChunks: totalChunks,
+  );
 
-    final isCtr = ctrIv != null;
-
+  List<StreamChunkInfo> _buildChunkInfos({
+    required List<ChunkData> rawChunks,
+    required bool isCtr,
+    required int dbFileSize,
+    required int totalChunks,
+  }) {
     // Deduplicate chunks by chunkIndex, preferring valid messageId > 0
     final Map<int, ChunkData> uniqueChunksMap = {};
     for (final chunk in rawChunks) {
@@ -185,25 +213,25 @@ class StreamingServer {
     final chunks = uniqueChunksMap.values.toList()
       ..sort((a, b) => (a.chunkIndex ?? 0).compareTo(b.chunkIndex ?? 0));
 
-    final int optimalChunkSize = plainFileSize > 0
-        ? UploadOrchestrator.getOptimalChunkSize(plainFileSize)
+    final int optimalChunkSize = dbFileSize > 0
+        ? UploadOrchestrator.getOptimalChunkSize(dbFileSize)
         : 20 * 1024 * 1024;
 
-    // Calculate cumulative chunk boundaries
     var currentOffset = 0;
-    final List<Map<String, dynamic>> chunkInfos = [];
+    final List<StreamChunkInfo> chunkInfos = [];
     for (var i = 0; i < chunks.length; i++) {
       final chunk = chunks[i];
       final chunkIdx = chunk.chunkIndex ?? i;
       int plainSize;
       final isLastChunk = (i == chunks.length - 1) || (totalChunks > 0 && chunkIdx == totalChunks - 1);
 
-      if (chunk.size != null && (chunks.length == 1 || chunk.size! < plainFileSize)) {
+      if (chunk.size != null && chunk.size! > 0) {
         if (isCtr) {
           plainSize = chunk.size!;
         } else {
+          // In AES-GCM mode, each 4MB block on disk has 12-byte nonce + 16-byte MAC = 28 bytes overhead
           const int plainBlockSize = 4 * 1024 * 1024;
-          const int cryptoBlockSize = plainBlockSize + 12 + 16; // 4MB + 12B nonce + 16B MAC
+          const int cryptoBlockSize = plainBlockSize + 12 + 16;
           final size = chunk.size!;
           final fullBlocks = size ~/ cryptoBlockSize;
           final remainder = size % cryptoBlockSize;
@@ -212,29 +240,41 @@ class StreamingServer {
         }
       } else {
         // Fallback / Corrupt DB size recovery: compute from optimal chunk size and file boundaries
-        if (isLastChunk && plainFileSize > 0) {
-          plainSize = max(0, plainFileSize - currentOffset);
+        if (isLastChunk && dbFileSize > 0) {
+          plainSize = max(0, dbFileSize - currentOffset);
         } else {
           plainSize = optimalChunkSize;
         }
       }
 
-      chunkInfos.add({
-        'chunk': chunk,
-        'start': currentOffset,
-        'end': currentOffset + plainSize - 1,
-      });
+      chunkInfos.add(StreamChunkInfo(
+        chunk: chunk,
+        start: currentOffset,
+        end: currentOffset + plainSize - 1,
+        plainSize: plainSize,
+      ));
       currentOffset += plainSize;
     }
+    return chunkInfos;
+  }
+
+  Stream<List<int>> _createDecryptionStream(
+    List<StreamChunkInfo> chunkInfos,
+    int startPlain,
+    int endPlain,
+    List<int> dekBytes,
+    List<int>? ctrIv,
+  ) async* {
+    final telegram = ref.read(telegramServiceProvider.notifier);
 
     final ctrAlgorithm = AesCtr.with256bits(macAlgorithm: MacAlgorithm.empty);
     final dekSecretKey = await ctrAlgorithm.newSecretKeyFromBytes(dekBytes);
 
     // Iterate over chunks and stream relevant bytes
     for (final chunkInfo in chunkInfos) {
-      final ChunkData chunk = chunkInfo['chunk'];
-      final int startOffset = chunkInfo['start'];
-      final int endOffset = chunkInfo['end'];
+      final ChunkData chunk = chunkInfo.chunk;
+      final int startOffset = chunkInfo.start;
+      final int endOffset = chunkInfo.end;
 
       // Check if this chunk overlaps with requested range
       if (startOffset > endPlain || endOffset < startPlain) {
@@ -324,6 +364,7 @@ class StreamingServer {
           final int offsetInBlock = currentChunkOffset - blockStartPlain;
           final int remainingRequested = chunkEnd - currentChunkOffset + 1;
           final int lenToTake = min(decryptedData.length - offsetInBlock, remainingRequested);
+          if (lenToTake <= 0) break;
 
           final safeStart = min(max(0, offsetInBlock), decryptedData.length);
           final safeEnd = min(safeStart + lenToTake, decryptedData.length);
@@ -448,3 +489,17 @@ class StreamingServer {
 }
 
 final streamingServerProvider = Provider<StreamingServer>(StreamingServer.new);
+
+class StreamChunkInfo {
+  final ChunkData chunk;
+  final int start;
+  final int end;
+  final int plainSize;
+
+  const StreamChunkInfo({
+    required this.chunk,
+    required this.start,
+    required this.end,
+    required this.plainSize,
+  });
+}

@@ -23,11 +23,6 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        try {
-            AeroDriveBackupService.stop(this)
-        } catch (e: Exception) {
-            // Ignore
-        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

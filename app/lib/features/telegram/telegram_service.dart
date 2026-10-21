@@ -199,10 +199,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       // Clean up any pre-existing client for this accountId in the current process
       final existingClientId = _activeAccountClientIds[accountId];
       if (existingClientId != null && existingClientId != 0) {
-        AppLogger.warning('Found existing TDLib client $existingClientId for $accountId. Cleaning it up before creating new client.');
+        AppLogger.warning('Found existing TDLib client $existingClientId for $accountId. Closing it cleanly before creating new client.');
         try {
           TdPlugin.instance.tdSend(existingClientId, jsonEncode({"@type": "close"}));
-          TdPlugin.instance.tdSend(existingClientId, jsonEncode({"@type": "destroy"}));
         } catch (e) {
           AppLogger.error('Error closing pre-existing client $existingClientId', e);
         }
@@ -217,24 +216,6 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         _instances[_clientId] = this;
         _activeAccountClientIds[accountId] = _clientId;
         AppLogger.info('TDLib client created for $accountId (clientId: $_clientId)');
-
-        // If this is client ID > 1, any IDs 1.._clientId-1 not tracked in _instances
-        // belong to a previous session/isolate. Destroy them so they release file locks.
-        if (_clientId > 1) {
-          var destroyedOrphans = false;
-          for (var id = 1; id < _clientId; id++) {
-            if (!_instances.containsKey(id)) {
-              destroyedOrphans = true;
-              AppLogger.warning('Destroying orphaned TDLib client ID $id from previous session');
-              try {
-                TdPlugin.instance.tdSend(id, jsonEncode({"@type": "destroy"}));
-              } catch (_) {}
-            }
-          }
-          if (destroyedOrphans) {
-            await Future.delayed(const Duration(milliseconds: 300));
-          }
-        }
       } catch (e, s) {
         AppLogger.error('tdCreate failed for $accountId', e, s);
         _updateDebugError('tdCreate failed: $e');
@@ -1101,11 +1082,6 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
         await Future.delayed(const Duration(milliseconds: 100));
         attempts++;
       }
-      try {
-        TdPlugin.instance.tdSend(_clientId, jsonEncode({
-          "@type": "destroy"
-        }));
-      } catch (_) {}
       _activeAccountClientIds.remove(accountId);
       _instances.remove(_clientId);
       _clientId = 0;
@@ -1249,19 +1225,18 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       if (deadId != 0) {
         try {
           TdPlugin.instance.tdSend(deadId, jsonEncode({"@type": "close"}));
-          TdPlugin.instance.tdSend(deadId, jsonEncode({"@type": "destroy"}));
         } catch (_) {}
         _instances.remove(deadId);
         _activeAccountClientIds.remove(accountId);
         _clientId = 0;
       }
 
-      // Explicitly destroy any client IDs in the native process that could be holding the database lock
-      final maxId = (deadId > 0 ? deadId + 5 : 10);
+      // Close any untracked clients to release binlog locks gracefully without wiping data
+      final maxId = (deadId > 0 ? deadId + 3 : 5);
       for (var id = 1; id <= maxId; id++) {
         if (!_instances.containsKey(id)) {
           try {
-            TdPlugin.instance.tdSend(id, jsonEncode({"@type": "destroy"}));
+            TdPlugin.instance.tdSend(id, jsonEncode({"@type": "close"}));
           } catch (_) {}
         }
       }
@@ -1363,9 +1338,6 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       try {
         TdPlugin.instance.tdSend(_clientId, jsonEncode({
           "@type": "close"
-        }));
-        TdPlugin.instance.tdSend(_clientId, jsonEncode({
-          "@type": "destroy"
         }));
       } catch (_) {}
     }
