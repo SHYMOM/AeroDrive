@@ -259,6 +259,8 @@ class _TelegramAccountCardState extends ConsumerState<TelegramAccountCard> {
         return _buildCodeInput();
       case TelegramAuthState.waitPassword:
         return _buildPasswordInput();
+      case TelegramAuthState.waitApiCredentials:
+        return _buildLoadingView('Waiting for API credentials...');
       case TelegramAuthState.initial:
         return _buildLoadingView('Initializing TDLib client...');
       case TelegramAuthState.loggingOut:
