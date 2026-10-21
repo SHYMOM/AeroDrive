@@ -203,11 +203,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   Future<void> _openTelegramDevPortal() async {
     final uri = Uri.parse('https://my.telegram.org');
     try {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
       }
     } catch (e) {
       debugPrint('Error launching my.telegram.org: $e');
+      try {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      } catch (e2) {
+        debugPrint('Fallback launch error: $e2');
+        if (mounted) {
+          await Clipboard.setData(const ClipboardData(text: 'https://my.telegram.org'));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open browser. Link copied to clipboard: https://my.telegram.org'),
+            ),
+          );
+        }
+      }
     }
   }
 

@@ -315,8 +315,8 @@
     "semantic_hash": ""
   },
   "app/lib/features/auth/auth_screen.dart": {
-    "mtime": 1792594777.3531187,
-    "ast_hash": "3617cfa959dfa635549bcc8aa2668724",
+    "mtime": 1792603100.7637758,
+    "ast_hash": "f38f67c5d6fa8a289ec932ced98e231e",
     "semantic_hash": ""
   },
   "app/lib/features/debug/debug_error_screen.dart": {
@@ -1290,8 +1290,8 @@
     "semantic_hash": ""
   },
   "app/lib/features/settings/telegram_api_dialog.dart": {
-    "mtime": 1792594808.768669,
-    "ast_hash": "2e2e9a7e0c1b65a68c6a62aa26a1cba8",
+    "mtime": 1792603089.0060718,
+    "ast_hash": "ac674fa91a52241cb1ea396f96bcdc12",
     "semantic_hash": ""
   },
   "app/test/domain/streaming_server_test.dart": {
