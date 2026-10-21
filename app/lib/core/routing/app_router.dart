@@ -77,14 +77,37 @@ enum AppDestination {
   final String path;
 }
 
+class AppRouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  AppRouterNotifier(this._ref) {
+    _ref.listen<AuthState>(
+      authProvider,
+      (_, __) => notifyListeners(),
+    );
+    _ref.listen<bool>(
+      hasNavigatedPastSplashProvider,
+      (_, __) => notifyListeners(),
+    );
+  }
+}
+
+final routerNotifierProvider = Provider<AppRouterNotifier>((ref) {
+  final notifier = AppRouterNotifier(ref);
+  ref.onDispose(notifier.dispose);
+  return notifier;
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
-  final hasNavigatedPastSplash = ref.watch(hasNavigatedPastSplashProvider);
+  final notifier = ref.watch(routerNotifierProvider);
 
   return GoRouter(
     initialLocation: '/splash',
+    refreshListenable: notifier,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final authState = ref.read(authProvider);
+      final hasNavigatedPastSplash = ref.read(hasNavigatedPastSplashProvider);
 
       // Allow splash screen to proceed without redirect.
       if (location == '/splash') {
@@ -99,7 +122,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Mark that we've left the splash screen
       if (!hasNavigatedPastSplash) {
-        ref.read(hasNavigatedPastSplashProvider.notifier).state = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ref.read(hasNavigatedPastSplashProvider.notifier).state = true;
+        });
       }
 
       final isAuth = authState == AuthState.authenticated;
