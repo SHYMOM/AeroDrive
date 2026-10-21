@@ -52,7 +52,20 @@ class AeroDriveBackupService : Service() {
         super.onCreate()
         Log.d(TAG, "AeroDriveBackupService created")
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification())
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val serviceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                } else {
+                    0
+                }
+                startForeground(NOTIFICATION_ID, buildNotification(), serviceType)
+            } else {
+                startForeground(NOTIFICATION_ID, buildNotification())
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start foreground service", e)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

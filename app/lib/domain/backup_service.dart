@@ -37,14 +37,19 @@ class BackupService {
     return backupDir;
   }
 
-  /// Ensures the public AeroDrive folder tree exists. Requests storage
-  /// permission and returns an error message if creation fails.
-  static Future<String?> ensurePublicFolders() async {
+  /// Ensures the public AeroDrive folder tree exists.
+  /// If requestPermission is true, prompts user for manageExternalStorage.
+  /// If false, creates folders only if permission is already granted.
+  static Future<String?> ensurePublicFolders({bool requestPermission = false}) async {
     try {
       if (Platform.isAndroid) {
-        final status = await Permission.manageExternalStorage.request();
-        if (!status.isGranted) {
-          return 'Storage permission denied. Grant "Manage all files" access in App Settings.';
+        var isGranted = await Permission.manageExternalStorage.isGranted;
+        if (!isGranted && requestPermission) {
+          final status = await Permission.manageExternalStorage.request();
+          isGranted = status.isGranted;
+        }
+        if (!isGranted) {
+          return 'Storage permission not granted. Grant "Manage all files" access in App Settings.';
         }
       }
 

@@ -550,9 +550,9 @@
     "semantic_hash": "0b1f1027f641b11364402c5926725a17"
   },
   "app/lib/features/settings/accounts_screen.dart": {
-    "mtime": 1785143029.6397295,
-    "ast_hash": "6ba8bf1f8194bb1532b7de38ae31901b",
-    "semantic_hash": "6ba8bf1f8194bb1532b7de38ae31901b"
+    "mtime": 1792595118.0135696,
+    "ast_hash": "a3ffb5f3e8096d54441b10a34d884915",
+    "semantic_hash": ""
   },
   "app/lib/features/settings/advanced_settings_dialogs.dart": {
     "mtime": 1783033498.9356027,

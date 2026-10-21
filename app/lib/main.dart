@@ -14,6 +14,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -432,93 +433,82 @@ void main() async {
       logs: AppLogger.logs,
     );
 
-  // 4. Run initialization in a guarded zone so any async error shows a crash
-  //    screen instead of silently closing the app.
-  runZonedGuarded(() async {
-    // 1. MUST initialize binding FIRST, inside the same zone as runApp.
-    WidgetsFlutterBinding.ensureInitialized();
-    
-    // --- Notification Service ---
-    try {
-      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-        await NotificationService.instance.initialize();
-        await NotificationService.instance.requestPermissions();
-      }
-    } catch (e, s) {
-      debugPrint('[AeroDrive] NotificationService init failed: $e\n$s');
-    }
-
-    // --- MediaKit ---
-    try {
-      MediaKit.ensureInitialized();
-    } catch (e, s) {
-      debugPrint('[AeroDrive] MediaKit init failed (non-fatal): $e\n$s');
-    }
-
-    // --- DotEnv ---
-    try {
-      await dotenv.load(fileName: '.env');
-    } catch (e, s) {
-      debugPrint('[AeroDrive] dotenv load failed (non-fatal): $e\n$s');
-    }
-
-    // --- Workmanager (mobile only) ---
-    // Background auto-backup runs when app is closed/in background
+  // 4. Run initialization and launch app
+  // --- Notification Service ---
+  try {
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
-      try {
-        await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-        // Register periodic background backup task:
-        // - No charging requirement (runs anytime)
-        // - No battery-low constraint (we want reliable background backup)
-        // - Minimum 15-minute frequency (Android enforced minimum)
-        await Workmanager().registerPeriodicTask(
-          'aero_drive_backup',
-          'aero_drive_scheduled_backup',
-          frequency: const Duration(minutes: 15),
-          initialDelay: const Duration(minutes: 2),
-          constraints: Constraints(
-            networkType: NetworkType.connected,
-            requiresBatteryNotLow: false,
-            requiresCharging: false,
-          ),
-          existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-          backoffPolicy: BackoffPolicy.linear,
-          backoffPolicyDelay: const Duration(minutes: 5),
-        );
-        debugPrint('[AeroDrive] Background backup task registered successfully');
-      } catch (e) {
-        debugPrint('[AeroDrive] Workmanager init skipped: $e');
-      }
+      await NotificationService.instance.initialize();
     }
+  } catch (e, s) {
+    debugPrint('[AeroDrive] NotificationService init failed: $e\n$s');
+  }
 
-    // --- Ensure Application Folder Exists ---
+  // --- MediaKit ---
+  try {
+    MediaKit.ensureInitialized();
+  } catch (e, s) {
+    debugPrint('[AeroDrive] MediaKit init failed (non-fatal): $e\n$s');
+  }
+
+  // --- DotEnv ---
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e, s) {
+    debugPrint('[AeroDrive] dotenv load failed (non-fatal): $e\n$s');
+  }
+
+  // --- Workmanager (mobile only) ---
+  // Background auto-backup runs when app is closed/in background
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final aerodriveDir = Directory('${appDir.path}${Platform.pathSeparator}AeroDrive');
-      if (!await aerodriveDir.exists()) {
-        await aerodriveDir.create(recursive: true);
-        AppLogger.info('Created application folder: ${aerodriveDir.path}');
-      }
+      await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+      await Workmanager().registerPeriodicTask(
+        'aero_drive_backup',
+        'aero_drive_scheduled_backup',
+        frequency: const Duration(minutes: 15),
+        initialDelay: const Duration(minutes: 2),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+        ),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+        backoffPolicy: BackoffPolicy.linear,
+        backoffPolicyDelay: const Duration(minutes: 5),
+      );
+      debugPrint('[AeroDrive] Background backup task registered successfully');
     } catch (e) {
-      AppLogger.error('Failed to create application folder', e);
+      debugPrint('[AeroDrive] Workmanager init skipped: $e');
     }
+  }
 
-    // --- Ensure Public AeroDrive Folder Tree (Downloads/AeroDrive/) ---
-    if (!kIsWeb && Platform.isAndroid) {
-      final folderError = await BackupService.ensurePublicFolders();
-      if (folderError != null) {
-        AppLogger.error('Public folder setup: $folderError');
-      } else {
+  // --- Ensure Application Folder Exists ---
+  try {
+    final appDir = await getApplicationDocumentsDirectory();
+    final aerodriveDir = Directory('${appDir.path}${Platform.pathSeparator}AeroDrive');
+    if (!await aerodriveDir.exists()) {
+      await aerodriveDir.create(recursive: true);
+      AppLogger.info('Created application folder: ${aerodriveDir.path}');
+    }
+  } catch (e) {
+    AppLogger.error('Failed to create application folder', e);
+  }
+
+  // --- Ensure Public AeroDrive Folder Tree (Downloads/AeroDrive/) if permission already granted ---
+  if (!kIsWeb && Platform.isAndroid) {
+    try {
+      final isGranted = await Permission.manageExternalStorage.isGranted;
+      if (isGranted) {
+        await BackupService.ensurePublicFolders(requestPermission: false);
         AppLogger.info('Public AeroDrive folders ready at Download/AeroDrive/');
       }
+    } catch (e) {
+      AppLogger.warning('Public folder setup skipped: $e');
     }
+  }
 
-    // --- Launch App ---
-    runApp(const ProviderScope(child: AeroDriveApp()));
-  }, (error, stack) {
-    debugPrint('[AeroDrive] FATAL Zone Error: $error\n$stack');
-    _handleGlobalError(error, stack);
-  });
+  // --- Launch App ---
+  runApp(const ProviderScope(child: AeroDriveApp()));
 }
 
 /// Root application widget.
@@ -538,6 +528,15 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
     super.initState();
     _initDeepLinks();
     _checkScheduledBackup();
+
+    // Gracefully request notification permissions once UI is active
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+        try {
+          NotificationService.instance.requestPermissions();
+        } catch (_) {}
+      }
+    });
 
     // Detect any crashed upload from the previous session.
     // The file logger writes continuously during uploads so the log
