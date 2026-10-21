@@ -764,6 +764,7 @@ class UploadQueueService {
     }
 
     // Pre-insert file record to satisfy SQLite foreign key constraints for chunk mapping
+    final uploadDate = item.createdAt ?? DateTime.now();
     await _db.into(_db.files).insert(
       FilesCompanion.insert(
         id: fileId,
@@ -775,7 +776,8 @@ class UploadQueueService {
         isChunked: drift.Value(totalChunks > 1),
         totalChunks: drift.Value(totalChunks),
         sha256Hash: const drift.Value(''), // updated on finalize
-        createdAt: drift.Value(DateTime.now()),
+        createdAt: drift.Value(uploadDate),
+        updatedAt: drift.Value(uploadDate),
         photoTakenAt: drift.Value(photoTakenAt),
         duration: drift.Value(videoDuration?.inSeconds),
       )
@@ -914,6 +916,7 @@ class UploadQueueService {
             country: country,
             tags: tags,
             faces: faces,
+            createdAt: uploadDate,
           );
         }
 
@@ -1248,6 +1251,7 @@ class UploadQueueService {
       final originalPath = originalFileId.split('|')[0];
       final fileName = originalPath.contains('/') ? originalPath.split('/').last : originalPath.split('\\').last;
       final mimeType = _getMimeType(fileName);
+      final uploadDate = item.createdAt ?? DateTime.now();
 
       // Check if file already inserted (placeholder) and update or fallback insert
       final existingFile = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
@@ -1278,7 +1282,8 @@ class UploadQueueService {
                 ? drift.Value(encryptionNonceBase64)
                 : const drift.Value(null),
             encryptionAlgo: drift.Value(encryptionAlgoStr),
-            createdAt: drift.Value(DateTime.now()),
+            createdAt: drift.Value(uploadDate),
+            updatedAt: drift.Value(DateTime.now()),
           )
         );
       }

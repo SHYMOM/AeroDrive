@@ -66,6 +66,24 @@ void main() {
     expect(decryptedFileMap['mime'], mime);
     expect(decryptedFileMap['k'], wrappedDek);
     expect(decryptedFileMap['iv'], ctrIv);
+    expect(decryptedFileMap['ts'], isNotNull);
+
+    // Verify custom createdAt is accurately preserved in timestamp 'ts'
+    final customDate = DateTime(2025, 5, 15, 14, 30);
+    final encryptedFileCaptionWithDate = await CaptionSerializer.serializeFile(
+      fileId: fileId,
+      name: name,
+      parentFolderId: parentId,
+      hash: hash,
+      size: size,
+      mime: mime,
+      masterKey: masterKey,
+      wrappedDekBase64: wrappedDek,
+      ctrIvBase64: ctrIv,
+      createdAt: customDate,
+    );
+    final decryptedWithDate = await CaptionDecryptor.deserialize(encryptedFileCaptionWithDate, masterKey);
+    expect(decryptedWithDate!['ts'], customDate.millisecondsSinceEpoch ~/ 1000);
 
     // 2. Test Folder Caption serialization/decryption
     const folderId = 'test-folder-uuid';

@@ -49,8 +49,10 @@ class CaptionSerializer {
     int version = 1,
     int isEncrypted = 1,
     int isChunked = 0,
+    DateTime? createdAt,
   }) async {
     final safeName = name.length > 200 ? name.substring(0, 200) : name;
+    final ts = (createdAt ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
     
     final Map<String, dynamic> jsonMap = {
       "t": "file",
@@ -60,7 +62,7 @@ class CaptionSerializer {
       "hash": hash,
       "size": size,
       "mime": mime,
-      "ts": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      "ts": ts,
       "ver": version,
       "enc": isEncrypted,
       "chk": isChunked,
@@ -103,15 +105,17 @@ class CaptionSerializer {
     required String? parentFolderId,
     required SecretKey masterKey,
     String? color,
+    DateTime? createdAt,
   }) async {
     final safeName = name.length > 200 ? name.substring(0, 200) : name;
+    final ts = (createdAt ?? DateTime.now()).millisecondsSinceEpoch ~/ 1000;
 
     final Map<String, dynamic> jsonMap = {
       "t": "dir",
       "id": folderId,
       "name": safeName,
       if (parentFolderId != null && parentFolderId.isNotEmpty) "pid": parentFolderId,
-      "ts": DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      "ts": ts,
       "col": color,
     };
 

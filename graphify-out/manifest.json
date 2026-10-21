@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "app/lib/domain/folder_scanner.dart": {
-    "mtime": 1792276865.600776,
-    "ast_hash": "8cae2ac7594eaca1d1071c09ed97c271",
+    "mtime": 1792604924.9363322,
+    "ast_hash": "a387a88f14dfb360ad380ae59bba6018",
     "semantic_hash": ""
   },
   "app/lib/domain/notification_service.dart": {
@@ -230,18 +230,18 @@
     "semantic_hash": "a6224bdd1937c1d1aa9c6615ff97f5c7"
   },
   "app/lib/domain/recovery/caption_codec.dart": {
-    "mtime": 1783613614.0608113,
-    "ast_hash": "e4c4de67776521f79b11393b9c2107ac",
-    "semantic_hash": "e4c4de67776521f79b11393b9c2107ac"
+    "mtime": 1792604839.8992252,
+    "ast_hash": "546e9791c13a6851837aaf19af11db64",
+    "semantic_hash": ""
   },
   "app/lib/domain/recovery/manifest_encoder.dart": {
-    "mtime": 1785068870.2021194,
-    "ast_hash": "0ca1be85f82821928765d5f35a24aa5e",
-    "semantic_hash": "0ca1be85f82821928765d5f35a24aa5e"
+    "mtime": 1792604881.3802683,
+    "ast_hash": "e55c028769e0f7d992d265ed2d77233c",
+    "semantic_hash": ""
   },
   "app/lib/domain/recovery/recovery_scanner.dart": {
-    "mtime": 1792439604.5501883,
-    "ast_hash": "9bf94c7f2f386e130f831b162f5d58e9",
+    "mtime": 1792605014.7231576,
+    "ast_hash": "e429e90f8a1daf1fb7c236f3e11f2425",
     "semantic_hash": ""
   },
   "app/lib/domain/smart_analyzer.dart": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "app/lib/domain/sync/realtime_sync_service.dart": {
-    "mtime": 1792439574.0289903,
-    "ast_hash": "9a4aed1fb260e3a2a38d0e4afd2e1498",
+    "mtime": 1792604979.6729364,
+    "ast_hash": "2836533c093313953e315c6fb3bf7192",
     "semantic_hash": ""
   },
   "app/lib/domain/thumbnail_cache_manager.dart": {
@@ -280,8 +280,8 @@
     "semantic_hash": ""
   },
   "app/lib/domain/upload_queue_service.dart": {
-    "mtime": 1792587727.862225,
-    "ast_hash": "8edc0cca8541500668e2ffaf38378f48",
+    "mtime": 1792605063.309416,
+    "ast_hash": "b9212ce97f673fba24d1097caabb9323",
     "semantic_hash": ""
   },
   "app/lib/domain/video_thumbnail_service.dart": {
@@ -825,9 +825,9 @@
     "semantic_hash": "7b608466b0123800eb670a0ac499e97e"
   },
   "app/test/data/crypto/core_features_test.dart": {
-    "mtime": 1783033498.9427004,
-    "ast_hash": "688f789ff61ba7f6ff2700b99077665a",
-    "semantic_hash": "688f789ff61ba7f6ff2700b99077665a"
+    "mtime": 1792605030.438896,
+    "ast_hash": "f20aef1eca48cf70f41fe544393bc897",
+    "semantic_hash": ""
   },
   "app/test/data/crypto/encryption_engine_test.dart": {
     "mtime": 1792264500.6927955,

@@ -31,11 +31,11 @@ class FolderScanner {
   late final AeroDriveDatabase _db;
   final Uuid _uuid = const Uuid();
 
-  Future<void> uploadFolderManifest(String folderId, String folderName, String? parentId) =>
-      _uploadFolderManifest(folderId, folderName, parentId);
+  Future<void> uploadFolderManifest(String folderId, String folderName, String? parentId, {DateTime? createdAt}) =>
+      _uploadFolderManifest(folderId, folderName, parentId, createdAt: createdAt);
 
   /// Uploads folder metadata manifest as a 1px transparent PNG to Telegram.
-  Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId) async {
+  Future<void> _uploadFolderManifest(String folderId, String folderName, String? parentId, {DateTime? createdAt}) async {
     File? tempFile;
     try {
       final settingsRepo = _ref.read(settingsRepositoryProvider);
@@ -54,6 +54,7 @@ class FolderScanner {
           folderName: folderName,
           parentFolderId: parentId,
           masterKey: secretKey,
+          createdAt: createdAt,
         );
 
         final tempDir = await getTemporaryDirectory();
@@ -150,18 +151,19 @@ class FolderScanner {
 
     // Create DB folder entry
     final folderId = _uuid.v4();
+    final folderCreatedAt = DateTime.now();
     await _db.into(_db.folders).insert(
       FoldersCompanion.insert(
         id: folderId,
         name: folderName,
         parentId: drift.Value(parentFolderId),
-        createdAt: drift.Value(DateTime.now()),
+        createdAt: drift.Value(folderCreatedAt),
       ),
     );
 
     // Upload folder manifest (non-blocking — don't let manifest failure stall file queuing)
     // Bug #4 fix: Removed `await` so this actually runs asynchronously.
-    _uploadFolderManifest(folderId, folderName, parentFolderId)
+    _uploadFolderManifest(folderId, folderName, parentFolderId, createdAt: folderCreatedAt)
         .timeout(const Duration(seconds: 30), onTimeout: () {
       AppLogger.warning('FolderScanner: Manifest upload timed out for "$folderName" — continuing with file queuing');
     }).catchError((e) {

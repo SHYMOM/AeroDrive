@@ -81,6 +81,7 @@ class ManifestEncoder {
     List<Map<String, dynamic>>? faces,
     int isChunked = 0,
     int version = 1,
+    DateTime? createdAt,
   }) async {
     // Start with full data
     var finalTags = tags;
@@ -151,6 +152,7 @@ class ManifestEncoder {
       faces: finalFaces,
       isChunked: isChunked,
       version: version,
+      createdAt: createdAt,
     );
   }
 
@@ -216,12 +218,14 @@ class ManifestEncoder {
     required String? parentFolderId,
     required SecretKey masterKey,
     String? color,
+    DateTime? createdAt,
   }) async => CaptionSerializer.serializeFolder(
       folderId: folderId,
       name: folderName,
       parentFolderId: parentFolderId,
       masterKey: masterKey,
       color: color,
+      createdAt: createdAt,
     );
 
   /// Decodes a Base64 caption back to a JSON map.

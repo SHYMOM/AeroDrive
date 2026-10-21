@@ -121,13 +121,17 @@ class ZeroDBRecoveryService {
           }
 
           if (manifest['t'] == 'dir') {
+            final folderId = manifest['id'] as String;
+            final existingDbFolder = await (_db.select(_db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
             final int? tsSeconds = manifest['ts'] as int?;
             final int? msgDate = msg['date'] as int?;
-            final DateTime recoveredDate = tsSeconds != null 
+            final DateTime remoteDate = tsSeconds != null 
                 ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000) 
                 : (msgDate != null ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000) : DateTime.now());
+            final DateTime recoveredDate = (existingDbFolder?.createdAt != null && existingDbFolder!.createdAt!.isBefore(remoteDate))
+                ? existingDbFolder.createdAt!
+                : remoteDate;
 
-            final folderId = manifest['id'] as String;
             recoveredFolderIds.add(folderId);
             recoveredFolders.add(
               FoldersCompanion.insert(
@@ -204,11 +208,15 @@ class ZeroDBRecoveryService {
               final totalChunksVal = manifest['tc'] as int? ?? (isChunkedVal ? (size / (20 * 1024 * 1024)).ceil() : 1);
               final durationVal = manifest['dur'] as int?;
               
+              final existingDbFile = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
               final int? tsSeconds = manifest['ts'] as int?;
               final int? msgDate = msg['date'] as int?;
-              final DateTime recoveredDate = tsSeconds != null 
+              final DateTime remoteDate = tsSeconds != null 
                   ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000) 
                   : (msgDate != null ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000) : DateTime.now());
+              final DateTime recoveredDate = (existingDbFile?.createdAt != null && existingDbFile!.createdAt!.isBefore(remoteDate))
+                  ? existingDbFile.createdAt!
+                  : remoteDate;
 
               final int? ptSeconds = manifest['pt'] as int?;
               final DateTime? photoTakenAt = ptSeconds != null 

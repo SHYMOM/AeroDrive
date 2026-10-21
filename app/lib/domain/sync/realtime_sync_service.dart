@@ -226,13 +226,34 @@ class RealtimeSyncService {
       await db.transaction(() async {
         if (manifest['t'] == 'dir') {
           final folderId = manifest['id'] as String;
+          final existingFolder = await (db.select(db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
+
+          final int? tsSeconds = manifest['ts'] as int?;
+          final int? msgDate = msg['date'] as int?;
+          final DateTime remoteDate = tsSeconds != null
+              ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000)
+              : (msgDate != null
+                  ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000)
+                  : DateTime.now());
+
+          DateTime folderCreatedAt;
+          if (existingFolder?.createdAt != null) {
+            if (remoteDate.isBefore(existingFolder!.createdAt!)) {
+              folderCreatedAt = remoteDate;
+            } else {
+              folderCreatedAt = existingFolder.createdAt!;
+            }
+          } else {
+            folderCreatedAt = remoteDate;
+          }
+
           await db.into(db.folders).insertOnConflictUpdate(
             FoldersCompanion.insert(
               id: folderId,
               name: manifest['name'] as String,
               parentId: drift.Value(manifest['pid'] as String?),
               color: drift.Value(manifest['col'] as String?),
-              createdAt: drift.Value(DateTime.now()),
+              createdAt: drift.Value(folderCreatedAt),
               updatedAt: drift.Value(DateTime.now()),
             ),
           );
@@ -242,6 +263,8 @@ class RealtimeSyncService {
           // Thumbnail manifests are handled on-demand by thumbnail service
         } else {
           final fileId = manifest['id'] as String;
+          final existingFile = await (db.select(db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
+
           final dekBase64 = manifest['k'] as String?;
           final ctrIvBase64 = manifest['iv'] as String?;
 
@@ -270,6 +293,25 @@ class RealtimeSyncService {
               ? DateTime.fromMillisecondsSinceEpoch(ptSeconds * 1000)
               : null;
 
+          final int? tsSeconds = manifest['ts'] as int?;
+          final int? msgDate = msg['date'] as int?;
+          final DateTime remoteDate = tsSeconds != null
+              ? DateTime.fromMillisecondsSinceEpoch(tsSeconds * 1000)
+              : (msgDate != null
+                  ? DateTime.fromMillisecondsSinceEpoch(msgDate * 1000)
+                  : DateTime.now());
+
+          DateTime fileCreatedAt;
+          if (existingFile?.createdAt != null) {
+            if (remoteDate.isBefore(existingFile!.createdAt!)) {
+              fileCreatedAt = remoteDate;
+            } else {
+              fileCreatedAt = existingFile.createdAt!;
+            }
+          } else {
+            fileCreatedAt = remoteDate;
+          }
+
           await db.into(db.files).insertOnConflictUpdate(
             FilesCompanion.insert(
               id: fileId,
@@ -281,7 +323,8 @@ class RealtimeSyncService {
               isChunked: drift.Value(isChunkedVal),
               totalChunks: drift.Value(totalChunksVal),
               sha256Hash: drift.Value(wrappedDekString),
-              createdAt: drift.Value(DateTime.now()),
+              createdAt: drift.Value(fileCreatedAt),
+              updatedAt: drift.Value(DateTime.now()),
               photoTakenAt: drift.Value(photoTakenAt),
               duration: drift.Value(durationVal),
             ),
