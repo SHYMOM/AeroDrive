@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../core/logger.dart';
@@ -99,12 +100,13 @@ class DownloadOrchestrator {
     String? outputPath,
     List<int>? ctrIv,
   }) async {
+    final safeOriginalFileName = p.basename(originalFileName).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     String finalPath;
     if (outputPath != null) {
       finalPath = outputPath;
     } else {
       final dir = await ensureDownloadDirectory(null);
-      finalPath = '${dir.path}${Platform.pathSeparator}$originalFileName';
+      finalPath = '${dir.path}${Platform.pathSeparator}$safeOriginalFileName';
     }
 
     AppLogger.info('DownloadOrchestrator: Decrypting to $finalPath');

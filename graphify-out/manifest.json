@@ -25,8 +25,8 @@
     "semantic_hash": "57530e0b1b52e54af29dd8deb4e41153"
   },
   "app/android/app/src/main/kotlin/com/aerodrive/aerodrive/MainActivity.kt": {
-    "mtime": 1792620064.8831291,
-    "ast_hash": "90a765fd2f8683a3647558bfe67178d3",
+    "mtime": 1792862098.8545213,
+    "ast_hash": "a19188be4a7805c4e9a0d92cc3246d21",
     "semantic_hash": ""
   },
   "app/android/build.gradle.kts": {
@@ -75,13 +75,13 @@
     "semantic_hash": "3c9a58ac69367c015dc22df0a84d651c"
   },
   "app/lib/core/providers/security_providers.dart": {
-    "mtime": 1783033498.9182508,
-    "ast_hash": "42740596a5fc6655a06c37ff66d77aed",
-    "semantic_hash": "42740596a5fc6655a06c37ff66d77aed"
+    "mtime": 1792862318.8778536,
+    "ast_hash": "c9ea37e916ac67f83dc6420bae15da5b",
+    "semantic_hash": ""
   },
   "app/lib/core/routing/app_router.dart": {
-    "mtime": 1792602097.232859,
-    "ast_hash": "cc3962c3640095cf216e3865932633e4",
+    "mtime": 1792862230.010034,
+    "ast_hash": "d50ef6ff46cea1dbd4d33052a8a116a0",
     "semantic_hash": ""
   },
   "app/lib/core/routing/responsive_scaffold.dart": {
@@ -205,13 +205,13 @@
     "semantic_hash": "1a739dcc6b88863018e4ece4ca1000fe"
   },
   "app/lib/domain/download_orchestrator.dart": {
-    "mtime": 1783231363.8552923,
-    "ast_hash": "f6f8d5f2f4681efe3f8515416899ec15",
-    "semantic_hash": "f6f8d5f2f4681efe3f8515416899ec15"
+    "mtime": 1792862119.3168404,
+    "ast_hash": "e3e5f3d02d8078b6e7df12c19f0e0bdc",
+    "semantic_hash": ""
   },
   "app/lib/domain/download_queue_service.dart": {
-    "mtime": 1792410479.8881898,
-    "ast_hash": "8af5683501a1f9976ff39f766b82bca1",
+    "mtime": 1792862145.9127388,
+    "ast_hash": "7fcaa375d76a50ee6fb6877974af5d9d",
     "semantic_hash": ""
   },
   "app/lib/domain/folder_scanner.dart": {
@@ -490,9 +490,9 @@
     "semantic_hash": ""
   },
   "app/lib/features/preview/archive_viewer.dart": {
-    "mtime": 1783625603.182135,
-    "ast_hash": "728a075317b8f58340358516b7ca4ba3",
-    "semantic_hash": "728a075317b8f58340358516b7ca4ba3"
+    "mtime": 1792862090.2846997,
+    "ast_hash": "e1c924d776a5ca0095af7ea895a69fa0",
+    "semantic_hash": ""
   },
   "app/lib/features/preview/decrypted_image_viewer.dart": {
     "mtime": 1785177234.7187943,
@@ -500,9 +500,9 @@
     "semantic_hash": ""
   },
   "app/lib/features/preview/decrypted_text_viewer.dart": {
-    "mtime": 1783033498.9337308,
-    "ast_hash": "009b1802f6d6506905d246b90a9d2c82",
-    "semantic_hash": "009b1802f6d6506905d246b90a9d2c82"
+    "mtime": 1792862307.389342,
+    "ast_hash": "31cabe54c06361bf2fb1c3a7764dd61c",
+    "semantic_hash": ""
   },
   "app/lib/features/preview/file_decryption_util.dart": {
     "mtime": 1792615689.4191997,
@@ -670,8 +670,8 @@
     "semantic_hash": "a7a56f1d20e5e605d61f32207577b950"
   },
   "app/lib/features/sharing/import_link_dialog.dart": {
-    "mtime": 1792411509.8338742,
-    "ast_hash": "34f3ace0c5ef079e621ee1634cc5949a",
+    "mtime": 1792862276.2928896,
+    "ast_hash": "1855fb54b1b32ed564a8f088272d881d",
     "semantic_hash": ""
   },
   "app/lib/features/sharing/share_dialog.dart": {
@@ -690,8 +690,8 @@
     "semantic_hash": "6289dbf70934e5cf67a5e8a22fe4e0d5"
   },
   "app/lib/features/splash/splash_screen.dart": {
-    "mtime": 1792602116.0464518,
-    "ast_hash": "5f4c17e55084f3b85701308def1dc1d1",
+    "mtime": 1792862247.492168,
+    "ast_hash": "62876b6fa38130f660427f4dff2bd562",
     "semantic_hash": ""
   },
   "app/lib/features/splash/testing_ended_screen.dart": {
@@ -745,8 +745,8 @@
     "semantic_hash": "cd154216b6f7bfc59ad754eb207e9c8d"
   },
   "app/lib/main.dart": {
-    "mtime": 1792596993.3345463,
-    "ast_hash": "6edc21152469882b103a1e83b8d6f361",
+    "mtime": 1792862298.1481376,
+    "ast_hash": "99e0613202f2643adc7efbdc7e5fb4cd",
     "semantic_hash": ""
   },
   "app/lib/widgets/aerodrive_logo.dart": {
@@ -1365,8 +1365,13 @@
     "semantic_hash": ""
   },
   "app/lib/features/security/biometric_auth_service.dart": {
-    "mtime": 1792616147.6004174,
-    "ast_hash": "85dfc005add56117ffb52e086d1b07fb",
+    "mtime": 1792862192.5457368,
+    "ast_hash": "c6f6f8f441737165640cd17ff5d443f5",
+    "semantic_hash": ""
+  },
+  "app/test/security_hardening_test.dart": {
+    "mtime": 1792862356.07085,
+    "ast_hash": "6e9f80796bd6c9c77c1732023de7c8bd",
     "semantic_hash": ""
   }
 }

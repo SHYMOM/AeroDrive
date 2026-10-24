@@ -38,6 +38,7 @@ import 'domain/upload_crash_debugger.dart' as crash;
 import 'domain/sync/realtime_sync_service.dart';
 import 'features/debug/debug_error_screen.dart';
 import 'features/drive/providers/drive_providers.dart';
+import 'features/sharing/import_link_dialog.dart';
 import 'features/sharing/share_service.dart';
 import 'core/providers.dart';
 import 'features/telegram/telegram_manager.dart';
@@ -654,15 +655,10 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
 
   Future<void> _handleIncomingUri(Uri uri) async {
     if (uri.scheme == 'aerodrive' && uri.host == 'share') {
-      try {
-        await ref.read(shareServiceProvider).importShareLink(uri.toString());
-        ref.invalidate(folderContentsProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File imported successfully from deep link!')),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to import deep link: $e')),
+      if (mounted) {
+        showDialog<void>(
+          context: context,
+          builder: (dialogCtx) => ImportLinkDialog(initialUrl: uri.toString()),
         );
       }
     }

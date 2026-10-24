@@ -103,7 +103,11 @@ class MainActivity : FlutterFragmentActivity() {
                                 val uri = Uri.parse(uriStr)
                                 val tempDir = File(cacheDir, "aerodrive_picker")
                                 tempDir.mkdirs()
-                                val tempFile = File(tempDir, fileName)
+                                val safeName = File(fileName).name.ifEmpty { "temp_file" }
+                                val tempFile = File(tempDir, safeName)
+                                if (!tempFile.canonicalPath.startsWith(tempDir.canonicalPath)) {
+                                    throw SecurityException("Illegal file traversal target: $fileName")
+                                }
                                 if (tempFile.exists()) {
                                     tempFile.delete()
                                 }

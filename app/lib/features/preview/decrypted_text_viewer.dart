@@ -177,8 +177,10 @@ class _DecryptedTextViewerState extends ConsumerState<DecryptedTextViewer> {
           style: base.copyWith(color: Colors.blueAccent, decoration: TextDecoration.underline),
           recognizer: TapGestureRecognizer()
             ..onTap = () async {
-              final uri = Uri.tryParse(linkMatch.group(0)!);
-              if (uri != null && await canLaunchUrl(uri)) {
+              final raw = linkMatch.group(0);
+              if (raw == null) return;
+              final uri = Uri.tryParse(raw);
+              if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https') && await canLaunchUrl(uri)) {
                 await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },

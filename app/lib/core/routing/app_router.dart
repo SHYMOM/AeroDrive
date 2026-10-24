@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/auth_provider.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/auth/infrastructure_setup_screen.dart';
+import '../../features/security/app_lock_screen.dart';
+import '../../features/security/biometric_auth_service.dart';
 import '../../features/debug/debug_error_screen.dart';
 import '../../features/drive/drive_screen.dart';
 import '../../features/drive/quick_access_tools_screen.dart';
@@ -89,6 +91,14 @@ class AppRouterNotifier extends ChangeNotifier {
       hasNavigatedPastSplashProvider,
       (_, __) => notifyListeners(),
     );
+    _ref.listen<bool>(
+      appLockEnabledProvider,
+      (_, __) => notifyListeners(),
+    );
+    _ref.listen<bool>(
+      isVaultUnlockedProvider,
+      (_, __) => notifyListeners(),
+    );
   }
 }
 
@@ -131,6 +141,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthLoading = authState == AuthState.loading;
       final isGoingToAuth = location == '/auth';
       final isGoingToSetup = location == '/setup';
+      final isGoingToLock = location == '/lock';
+      final isLockEnabled = ref.read(appLockEnabledProvider);
+      final isVaultUnlocked = ref.read(isVaultUnlockedProvider);
 
       // If auth is still loading, do not redirect to /setup; stay on current/splash route
       if (isAuthLoading) {
@@ -140,6 +153,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If not authenticated and not heading to auth → redirect to auth
       if (!isAuth && !isGoingToAuth) {
         return '/auth';
+      }
+
+      // Biometric lock enforcement when authenticated
+      if (isAuth && isLockEnabled && !isVaultUnlocked) {
+        if (!isGoingToLock) {
+          return '/lock';
+        }
+        return null;
+      }
+
+      // If unlocked or lock disabled, redirect away from /lock
+      if (isGoingToLock && (!isLockEnabled || isVaultUnlocked)) {
+        return isAuth ? AppDestination.drive.path : '/auth';
       }
 
       // If authenticated and on auth or setup → go to drive
@@ -153,6 +179,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/lock',
+        builder: (context, state) => AppLockScreen(
+          onUnlocked: () {
+            ref.read(isVaultUnlockedProvider.notifier).state = true;
+            context.go(AppDestination.drive.path);
+          },
+        ),
       ),
       GoRoute(
         path: '/auth',

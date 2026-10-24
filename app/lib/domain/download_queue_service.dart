@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:cryptography/cryptography.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/logger.dart';
 import '../core/providers/repository_providers.dart';
@@ -495,13 +496,14 @@ class DownloadQueueService {
       final queueParts = item.fileId?.split('|');
       final String? customOutputPath = (queueParts != null && queueParts.length > 1 && queueParts[1] != 'null' && queueParts[1].isNotEmpty) ? queueParts[1] : null;
 
+      final safeFileName = p.basename(dbFile.name).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
       final targetDir = await DownloadOrchestrator.ensureDownloadDirectory(dbFile.mimeType);
-      final rawOutputPath = customOutputPath ?? '${targetDir.path}${Platform.pathSeparator}${dbFile.name}';
+      final rawOutputPath = customOutputPath ?? '${targetDir.path}${Platform.pathSeparator}$safeFileName';
       final outputPath = await DownloadOrchestrator.dedupFilePath(rawOutputPath);
 
       final decryptedFile = await _orchestrator.processFileForDownload(
         localEncryptedPaths,
-        dbFile.name,
+        safeFileName,
         dekBytes,
         outputPath: outputPath,
         ctrIv: ctrIv,

@@ -1025,8 +1025,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_extensions",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "extensions.dart"
     },
     {
@@ -1036,8 +1036,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_extensions_filesizeextension",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "filesizeextension"
     },
     {
@@ -1047,8 +1047,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_extensions_relativetimeextension",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "relativetimeextension"
     },
     {
@@ -1058,8 +1058,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "datetime",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "datetime"
     },
     {
@@ -1069,8 +1069,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_extensions_truncateextension",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "truncateextension"
     },
     {
@@ -1091,8 +1091,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_extensions_truncate",
-      "community": 35,
-      "community_name": "smart_analyzer.dart",
+      "community": 296,
+      "community_name": "DateTime",
       "norm_label": "truncate"
     },
     {
@@ -1278,8 +1278,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_io",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 130,
+      "community_name": "settings_repository.dart",
       "norm_label": "dart:io"
     },
     {
@@ -1300,8 +1300,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_path_provider_path_provider_dart",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "package:path_provider/path_provider.dart"
     },
     {
@@ -1311,8 +1311,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "providers.dart"
     },
     {
@@ -1322,8 +1322,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_databaseprovider",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "databaseprovider"
     },
     {
@@ -1333,8 +1333,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_db",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "db"
     },
     {
@@ -1344,8 +1344,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "return",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "return"
     },
     {
@@ -1366,8 +1366,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_riverpod_flutter_riverpod_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "package:flutter_riverpod/flutter_riverpod.dart"
     },
     {
@@ -1377,8 +1377,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "data_db_database_dart",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../data/db/database.dart"
     },
     {
@@ -1597,8 +1597,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_cryptography_cryptography_dart",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "package:cryptography/cryptography.dart"
     },
     {
@@ -1630,8 +1630,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_telegram_telegram_manager_dart",
-      "community": 38,
-      "community_name": "multi_account_screen.dart",
+      "community": 74,
+      "community_name": "package:uuid/uuid.dart",
       "norm_label": "features/telegram/telegram_manager.dart"
     },
     {
@@ -1839,8 +1839,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "data_repositories_settings_repository_dart",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 63,
+      "community_name": "repository_providers.dart",
       "norm_label": "data/repositories/settings_repository.dart"
     },
     {
@@ -1916,8 +1916,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_security_providers",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "security_providers.dart"
     },
     {
@@ -1938,8 +1938,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_security_providers_telegramservice",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "telegramservice"
     },
     {
@@ -1949,8 +1949,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_security_providers_userid",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "userid"
     },
     {
@@ -1960,8 +1960,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_security_providers_null",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "null"
     },
     {
@@ -1982,8 +1982,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_providers_security_providers_key",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "key"
     },
     {
@@ -1993,8 +1993,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_convert",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "dart:convert"
     },
     {
@@ -2004,8 +2004,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_crypto_crypto_dart",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "package:crypto/crypto.dart"
     },
     {
@@ -2015,8 +2015,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_telegram_telegram_service_dart",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../features/telegram/telegram_service.dart"
     },
     {
@@ -2026,8 +2026,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "security_master_key_provider_dart",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../security/master_key_provider.dart"
     },
     {
@@ -2059,8 +2059,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_routing_app_router_approuternotifier",
-      "community": 15,
-      "community_name": "app_router.dart",
+      "community": 299,
+      "community_name": "AppRouterNotifier",
       "norm_label": "approuternotifier"
     },
     {
@@ -2070,8 +2070,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "changenotifier",
-      "community": 15,
-      "community_name": "app_router.dart",
+      "community": 299,
+      "community_name": "AppRouterNotifier",
       "norm_label": "changenotifier"
     },
     {
@@ -2103,8 +2103,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "icondata",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 61,
+      "community_name": "testing_ended_screen.dart",
       "norm_label": "icondata"
     },
     {
@@ -2147,8 +2147,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "ref",
-      "community": 225,
-      "community_name": "State",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "ref"
     },
     {
@@ -2191,8 +2191,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_flutter_material_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "package:flutter/material.dart"
     },
     {
@@ -2238,6 +2238,28 @@
       "community": 15,
       "community_name": "app_router.dart",
       "norm_label": "../../features/auth/infrastructure_setup_screen.dart"
+    },
+    {
+      "label": "../../features/security/app_lock_screen.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "features_security_app_lock_screen_dart",
+      "community": 15,
+      "community_name": "app_router.dart",
+      "norm_label": "../../features/security/app_lock_screen.dart"
+    },
+    {
+      "label": "../../features/security/biometric_auth_service.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "features_security_biometric_auth_service_dart",
+      "community": 48,
+      "community_name": "splash_screen.dart",
+      "norm_label": "../../features/security/biometric_auth_service.dart"
     },
     {
       "label": "features/debug/debug_error_screen.dart",
@@ -2532,8 +2554,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "features_transfers_transfers_screen_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "../features/transfers/transfers_screen.dart"
     },
     {
@@ -2598,8 +2620,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_routing_responsive_scaffold_responsivescaffold",
-      "community": 59,
-      "community_name": "responsive_scaffold.dart",
+      "community": 29,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "responsivescaffold"
     },
     {
@@ -2664,8 +2686,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_routing_responsive_scaffold_tabletlayout",
-      "community": 59,
-      "community_name": "responsive_scaffold.dart",
+      "community": 73,
+      "community_name": "appearance_settings_screen.dart",
       "norm_label": "_tabletlayout"
     },
     {
@@ -2708,8 +2730,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_routing_responsive_scaffold_transferbadge",
-      "community": 59,
-      "community_name": "responsive_scaffold.dart",
+      "community": 99,
+      "community_name": "ConsumerWidget",
       "norm_label": "_transferbadge"
     },
     {
@@ -2730,8 +2752,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widget",
-      "community": 51,
-      "community_name": "press_and_hold_preview.dart",
+      "community": 59,
+      "community_name": "responsive_scaffold.dart",
       "norm_label": "widget"
     },
     {
@@ -2774,8 +2796,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "valuechanged",
-      "community": 36,
-      "community_name": "otp_input.dart",
+      "community": 59,
+      "community_name": "responsive_scaffold.dart",
       "norm_label": "valuechanged"
     },
     {
@@ -2911,7 +2933,7 @@
       "norm_label": "features/drive/providers/drive_providers.dart"
     },
     {
-      "label": "../../features/sharing/import_link_dialog.dart",
+      "label": "features/sharing/import_link_dialog.dart",
       "file_type": "code",
       "source_file": null,
       "source_location": null,
@@ -2919,7 +2941,7 @@
       "id": "features_sharing_import_link_dialog_dart",
       "community": 59,
       "community_name": "responsive_scaffold.dart",
-      "norm_label": "../../features/sharing/import_link_dialog.dart"
+      "norm_label": "features/sharing/import_link_dialog.dart"
     },
     {
       "label": "../../features/transfers/widgets/global_progress_bar.dart",
@@ -2972,8 +2994,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "color",
-      "community": 285,
-      "community_name": "package:flutter_animate/flutter_animate.dart",
+      "community": 99,
+      "community_name": "ConsumerWidget",
       "norm_label": "color"
     },
     {
@@ -3049,8 +3071,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "list",
-      "community": 282,
-      "community_name": "video_gallery_screen.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "list"
     },
     {
@@ -3115,8 +3137,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_theme_aerodrive_theme_aerothemepreset",
-      "community": 80,
-      "community_name": "aerodrive_theme.dart",
+      "community": 95,
+      "community_name": "appearance_settings_screen.dart",
       "norm_label": "aerothemepreset"
     },
     {
@@ -3225,8 +3247,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_const_list",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "static const list"
     },
     {
@@ -3962,8 +3984,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "int_get",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "int get"
     },
     {
@@ -3984,8 +4006,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_theme_theme_provider_themeprovider",
-      "community": 95,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 220,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "themeprovider"
     },
     {
@@ -4336,8 +4358,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_widgets_otp_input_otpbox",
-      "community": 56,
-      "community_name": "integration_settings_dialogs.dart",
+      "community": 36,
+      "community_name": "otp_input.dart",
       "norm_label": "_otpbox"
     },
     {
@@ -4347,8 +4369,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_widgets_otp_input_otpboxstate",
-      "community": 56,
-      "community_name": "integration_settings_dialogs.dart",
+      "community": 36,
+      "community_name": "otp_input.dart",
       "norm_label": "_otpboxstate"
     },
     {
@@ -4633,8 +4655,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_widgets_premium_button_premiumbutton",
-      "community": 56,
-      "community_name": "integration_settings_dialogs.dart",
+      "community": 24,
+      "community_name": "premium_button.dart",
       "norm_label": "premiumbutton"
     },
     {
@@ -4644,8 +4666,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_core_widgets_premium_button_premiumbuttonstate",
-      "community": 56,
-      "community_name": "integration_settings_dialogs.dart",
+      "community": 24,
+      "community_name": "premium_button.dart",
       "norm_label": "_premiumbuttonstate"
     },
     {
@@ -4655,8 +4677,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "singletickerproviderstatemixin",
-      "community": 26,
-      "community_name": "auth_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "singletickerproviderstatemixin"
     },
     {
@@ -5007,8 +5029,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_math",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 285,
+      "community_name": "package:flutter_animate/flutter_animate.dart",
       "norm_label": "dart:math"
     },
     {
@@ -5216,8 +5238,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "dart_typed_data",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "dart:typed_data"
     },
     {
@@ -5238,8 +5260,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_crypto_streaming_encryption_engine",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "streaming_encryption_engine.dart"
     },
     {
@@ -5249,8 +5271,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_crypto_streaming_encryption_engine_streamingencryptionengine",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "streamingencryptionengine"
     },
     {
@@ -5260,8 +5282,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_crypto_streaming_encryption_engine_decryptstreamrange",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "decryptstreamrange"
     },
     {
@@ -5271,8 +5293,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_crypto_streaming_encryption_engine_incrementiv",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "_incrementiv"
     },
     {
@@ -5282,8 +5304,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_pointycastle_export_dart",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "package:pointycastle/export.dart"
     },
     {
@@ -5293,8 +5315,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_db_database",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "database.dart"
     },
     {
@@ -5337,8 +5359,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_db_database_schemaversion",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "schemaversion"
     },
     {
@@ -5348,8 +5370,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_db_database_migration",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "migration"
     },
     {
@@ -5359,8 +5381,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "migrationstrategy_get",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "migrationstrategy get"
     },
     {
@@ -5370,8 +5392,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_db_database_openconnection",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "_openconnection"
     },
     {
@@ -5381,8 +5403,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_drift_drift_dart",
-      "community": 209,
-      "community_name": "opencode.json",
+      "community": 151,
+      "community_name": "streamingServerProvider",
       "norm_label": "package:drift/drift.dart"
     },
     {
@@ -5414,8 +5436,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "tables_dart",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 283,
+      "community_name": "security_providers.dart",
       "norm_label": "tables.dart"
     },
     {
@@ -5788,8 +5810,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "set",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 45,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "set"
     },
     {
@@ -6701,8 +6723,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_repositories_chunk_repository_chunkrepository",
-      "community": 151,
-      "community_name": "streamingServerProvider",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "chunkrepository"
     },
     {
@@ -6943,8 +6965,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_data_repositories_folder_repository_folderrepository",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "folderrepository"
     },
     {
@@ -7504,8 +7526,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_logger_dart",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "core/logger.dart"
     },
     {
@@ -7691,8 +7713,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_providers_dart",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "../core/providers.dart"
     },
     {
@@ -8219,8 +8241,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_providers_security_providers_dart",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "../../core/providers/security_providers.dart"
     },
     {
@@ -8285,8 +8307,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_channel_load_balancer",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "channel_load_balancer.dart"
     },
     {
@@ -8296,8 +8318,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_channel_load_balancer_channelloadbalancer",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "channelloadbalancer"
     },
     {
@@ -8307,8 +8329,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_channel_load_balancer_getstoragechannels",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "getstoragechannels"
     },
     {
@@ -8318,8 +8340,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_channel_load_balancer_selectfilebaseindex",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "selectfilebaseindex"
     },
     {
@@ -8329,8 +8351,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_channel_load_balancer_selectstoragechannel",
-      "community": 283,
-      "community_name": "security_providers.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "selectstoragechannel"
     },
     {
@@ -9286,8 +9308,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_importer_takeout_importer_service_takeoutimportsummary",
-      "community": 230,
-      "community_name": "takeout_importer_service.dart",
+      "community": 124,
+      "community_name": "file_decryption_util.dart",
       "norm_label": "takeoutimportsummary"
     },
     {
@@ -9440,8 +9462,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "channel_description_codec.dart"
     },
     {
@@ -9451,8 +9473,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec_channeldescriptioncodec",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "channeldescriptioncodec"
     },
     {
@@ -9462,8 +9484,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec_cipher",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "_cipher"
     },
     {
@@ -9473,8 +9495,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_final_aesgcm",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "static final aesgcm"
     },
     {
@@ -9484,8 +9506,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec_encode",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "encode"
     },
     {
@@ -9495,8 +9517,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec_decode",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "decode"
     },
     {
@@ -9506,8 +9528,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_infrastructure_channel_description_codec_readpurpose",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "readpurpose"
     },
     {
@@ -9517,8 +9539,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_constants_dart",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 293,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "../../../core/constants.dart"
     },
     {
@@ -10518,8 +10540,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_offline_offline_pin_service_offlinepinnedidsnotifier",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 45,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "offlinepinnedidsnotifier"
     },
     {
@@ -10551,8 +10573,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_offline_offline_pin_service_offlinepinnedidsprovider",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "offlinepinnedidsprovider"
     },
     {
@@ -10562,8 +10584,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_offline_offline_pin_service_offlinepinserviceprovider",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "offlinepinserviceprovider"
     },
     {
@@ -10892,8 +10914,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "static_final",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "static final"
     },
     {
@@ -11673,8 +11695,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "httpserver",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "httpserver?"
     },
     {
@@ -11915,8 +11937,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_shelf_shelf_io_dart",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "package:shelf/shelf_io.dart"
     },
     {
@@ -11926,8 +11948,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_shelf_router_shelf_router_dart",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "package:shelf_router/shelf_router.dart"
     },
     {
@@ -11937,8 +11959,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_security_master_key_provider_dart",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../../core/security/master_key_provider.dart"
     },
     {
@@ -12773,8 +12795,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "thumbnail_cache_manager.dart"
     },
     {
@@ -12784,8 +12806,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_thumbnailcachemanager",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "thumbnailcachemanager"
     },
     {
@@ -12795,8 +12817,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_cipher",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "_cipher"
     },
     {
@@ -12806,8 +12828,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_getcachethumbsdirectory",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "_getcachethumbsdirectory"
     },
     {
@@ -12817,8 +12839,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_savethumbnail",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "savethumbnail"
     },
     {
@@ -12828,8 +12850,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_readthumbnail",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "readthumbnail"
     },
     {
@@ -12839,8 +12861,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_domain_thumbnail_cache_manager_clearcache",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 89,
+      "community_name": "package:path_provider/path_provider.dart",
       "norm_label": "clearcache"
     },
     {
@@ -14951,8 +14973,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "api_service.dart"
     },
     {
@@ -14962,8 +14984,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_apiservice",
-      "community": 63,
-      "community_name": "repository_providers.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "apiservice"
     },
     {
@@ -14973,8 +14995,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_port",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "port"
     },
     {
@@ -14984,8 +15006,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_container",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "container"
     },
     {
@@ -15006,8 +15028,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_server",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_server"
     },
     {
@@ -15017,8 +15039,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_isrunning",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "isrunning"
     },
     {
@@ -15028,8 +15050,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_start",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "start"
     },
     {
@@ -15039,8 +15061,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_stop",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "stop"
     },
     {
@@ -15050,8 +15072,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_corsmiddleware",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_corsmiddleware"
     },
     {
@@ -15061,8 +15083,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_jsonmiddleware",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_jsonmiddleware"
     },
     {
@@ -15072,8 +15094,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_authmiddleware",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_authmiddleware"
     },
     {
@@ -15083,8 +15105,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handlehealth",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handlehealth"
     },
     {
@@ -15094,8 +15116,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handlelistfiles",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handlelistfiles"
     },
     {
@@ -15105,8 +15127,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handlegetfile",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handlegetfile"
     },
     {
@@ -15116,8 +15138,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handlelistfolders",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handlelistfolders"
     },
     {
@@ -15127,8 +15149,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handlecreatefolder",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handlecreatefolder"
     },
     {
@@ -15138,8 +15160,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_handleuploadfromurl",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_handleuploadfromurl"
     },
     {
@@ -15149,8 +15171,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_filetojson",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_filetojson"
     },
     {
@@ -15160,8 +15182,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_api_api_service_foldertojson",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "_foldertojson"
     },
     {
@@ -15171,8 +15193,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_folder_scanner_dart",
-      "community": 19,
-      "community_name": "preview_router.dart",
+      "community": 94,
+      "community_name": "dart:io",
       "norm_label": "domain/folder_scanner.dart"
     },
     {
@@ -15182,8 +15204,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "auth_provider.dart"
     },
     {
@@ -15193,8 +15215,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_authstate",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "authstate"
     },
     {
@@ -15204,8 +15226,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_authnotifier",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "authnotifier"
     },
     {
@@ -15215,8 +15237,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_telegramauthstateprovider",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_telegramauthstateprovider"
     },
     {
@@ -15226,8 +15248,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_ref",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_ref"
     },
     {
@@ -15237,8 +15259,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_hasbeenauthenticated",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_hasbeenauthenticated"
     },
     {
@@ -15259,8 +15281,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_watch",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "watch"
     },
     {
@@ -15270,8 +15292,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_init",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_init"
     },
     {
@@ -15281,8 +15303,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_ensureinfrastructure",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_ensureinfrastructure"
     },
     {
@@ -15292,8 +15314,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_provider_forceunauthenticated",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "forceunauthenticated"
     },
     {
@@ -15303,8 +15325,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_providers_infrastructure_providers_dart",
-      "community": 140,
-      "community_name": "quick_access_row.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "../../core/providers/infrastructure_providers.dart"
     },
     {
@@ -15336,8 +15358,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_auth_auth_screen_authscreenstate",
-      "community": 26,
-      "community_name": "auth_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_authscreenstate"
     },
     {
@@ -15798,8 +15820,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_theme_app_colors_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "../core/theme/app_colors.dart"
     },
     {
@@ -15853,8 +15875,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "telegram_telegram_service_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "../telegram/telegram_service.dart"
     },
     {
@@ -15875,8 +15897,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "offset",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "offset"
     },
     {
@@ -16150,8 +16172,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "filedata",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 12,
+      "community_name": "Audio UI Screen",
       "norm_label": "filedata?"
     },
     {
@@ -16249,8 +16271,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_intl_intl_dart",
-      "community": 118,
-      "community_name": "shared_links_screen.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "package:intl/intl.dart"
     },
     {
@@ -16491,8 +16513,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "core_utils_reset_helper_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../core/utils/reset_helper.dart"
     },
     {
@@ -16524,8 +16546,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_drive_screen_drivescreen",
-      "community": 206,
-      "community_name": "../telegram/telegram_service.dart",
+      "community": 31,
+      "community_name": "drive_screen.dart",
       "norm_label": "drivescreen"
     },
     {
@@ -16535,8 +16557,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_drive_screen_drivescreenstate",
-      "community": 206,
-      "community_name": "../telegram/telegram_service.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_drivescreenstate"
     },
     {
@@ -16546,8 +16568,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "widgetsbindingobserver",
-      "community": 206,
-      "community_name": "../telegram/telegram_service.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "widgetsbindingobserver"
     },
     {
@@ -16645,8 +16667,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_drive_screen_showchannelsetupprompt",
-      "community": 71,
-      "community_name": "transfer_progress_bar.dart",
+      "community": 31,
+      "community_name": "drive_screen.dart",
       "norm_label": "_showchannelsetupprompt"
     },
     {
@@ -16986,8 +17008,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_file_picker_file_picker_dart",
-      "community": 124,
-      "community_name": "file_decryption_util.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "package:file_picker/file_picker.dart"
     },
     {
@@ -17008,8 +17030,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_channel_load_balancer_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "../../../domain/channel_load_balancer.dart"
     },
     {
@@ -17085,8 +17107,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "providers_drive_providers_dart",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 122,
+      "community_name": "AeroDriveDatabase",
       "norm_label": "../providers/drive_providers.dart"
     },
     {
@@ -17195,8 +17217,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_file_picker_util",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "file_picker_util.dart"
     },
     {
@@ -17206,8 +17228,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_file_picker_util_result",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "result"
     },
     {
@@ -17217,8 +17239,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_file_picker_util_paths",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "paths"
     },
     {
@@ -17228,8 +17250,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_file_picker_util_channel",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "channel"
     },
     {
@@ -17239,8 +17261,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_file_picker_util_pickfilesforupload",
-      "community": 130,
-      "community_name": "settings_repository.dart",
+      "community": 297,
+      "community_name": "file_picker_util.dart",
       "norm_label": "pickfilesforupload"
     },
     {
@@ -17580,8 +17602,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_media_player_screen_mediaplayerscreenstate",
-      "community": 71,
-      "community_name": "transfer_progress_bar.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_mediaplayerscreenstate"
     },
     {
@@ -18119,8 +18141,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_providers_drive_providers_dbrebuildversionprovider",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "dbrebuildversionprovider"
     },
     {
@@ -18295,8 +18317,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_providers_drive_providers_foldersizeprovider",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "foldersizeprovider"
     },
     {
@@ -18449,8 +18471,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_providers_drive_providers_folderitemscountprovider",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folderitemscountprovider"
     },
     {
@@ -18592,8 +18614,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_offline_offline_pin_service_dart",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "../../domain/offline/offline_pin_service.dart"
     },
     {
@@ -18647,8 +18669,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_channel_setup_wizard_dialog_channelsetupwizarddialog",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 55,
+      "community_name": "telegramManagerProvider",
       "norm_label": "channelsetupwizarddialog"
     },
     {
@@ -18944,8 +18966,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "telegram_telegram_manager_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "../telegram/telegram_manager.dart"
     },
     {
@@ -18955,8 +18977,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "create_folder_dialog.dart"
     },
     {
@@ -18966,8 +18988,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_createfolderdialog",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "createfolderdialog"
     },
     {
@@ -18988,8 +19010,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_namecontroller",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "_namecontroller"
     },
     {
@@ -18999,8 +19021,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_selectedcolorhex",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "_selectedcolorhex"
     },
     {
@@ -19010,8 +19032,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_createstate",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "createstate"
     },
     {
@@ -19021,8 +19043,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_dispose",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "dispose"
     },
     {
@@ -19032,8 +19054,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_create_folder_dialog_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "build"
     },
     {
@@ -19043,8 +19065,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_recovery_manifest_encoder_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 292,
+      "community_name": "create_folder_dialog.dart",
       "norm_label": "../../domain/recovery/manifest_encoder.dart"
     },
     {
@@ -19065,8 +19087,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_grid_item_filegriditem",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "filegriditem"
     },
     {
@@ -19208,8 +19230,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_grid_item_togglefavorite",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_togglefavorite"
     },
     {
@@ -19241,8 +19263,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_grid_item_showmovedialog",
-      "community": 32,
-      "community_name": "file_grid_item.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showmovedialog"
     },
     {
@@ -19252,8 +19274,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_grid_item_showcopydialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcopydialog"
     },
     {
@@ -19362,8 +19384,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_list_item_filelistitem",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "filelistitem"
     },
     {
@@ -19439,8 +19461,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_list_item_togglefavorite",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_togglefavorite"
     },
     {
@@ -19472,8 +19494,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_list_item_showmovedialog",
-      "community": 32,
-      "community_name": "file_grid_item.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showmovedialog"
     },
     {
@@ -19483,8 +19505,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_file_list_item_showcopydialog",
-      "community": 32,
-      "community_name": "file_grid_item.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcopydialog"
     },
     {
@@ -19758,8 +19780,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder_grid_item.dart"
     },
     {
@@ -19769,8 +19791,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_foldergriditem",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "foldergriditem"
     },
     {
@@ -19780,8 +19802,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_foldergriditemstate",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_foldergriditemstate"
     },
     {
@@ -19791,8 +19813,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_folder",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder"
     },
     {
@@ -19813,8 +19835,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_ishovered",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_ishovered"
     },
     {
@@ -19824,8 +19846,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_tapposition",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_tapposition"
     },
     {
@@ -19835,8 +19857,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_createstate",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "createstate"
     },
     {
@@ -19846,8 +19868,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_getfoldercolor",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_getfoldercolor"
     },
     {
@@ -19857,8 +19879,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_build",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "build"
     },
     {
@@ -19868,8 +19890,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_buildoptionsmenu",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildoptionsmenu"
     },
     {
@@ -19879,8 +19901,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_showcolorpickerdialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcolorpickerdialog"
     },
     {
@@ -19890,8 +19912,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_showinfodialog",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_showinfodialog"
     },
     {
@@ -19901,8 +19923,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_buildinforow",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildinforow"
     },
     {
@@ -19912,8 +19934,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_togglefavorite",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_togglefavorite"
     },
     {
@@ -19934,8 +19956,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_formatfoldersize",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_formatfoldersize"
     },
     {
@@ -19945,8 +19967,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_formatfolderbadgesize",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_formatfolderbadgesize"
     },
     {
@@ -19956,8 +19978,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_showrenamedialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showrenamedialog"
     },
     {
@@ -19978,8 +20000,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_showmovedialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showmovedialog"
     },
     {
@@ -19989,8 +20011,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_showcopydialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcopydialog"
     },
     {
@@ -20000,8 +20022,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_grid_item_copyfolderrecursive",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_copyfolderrecursive"
     },
     {
@@ -20022,8 +20044,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "security_biometric_auth_service_dart",
-      "community": 103,
-      "community_name": "folder_picker_dialog.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "../../security/biometric_auth_service.dart"
     },
     {
@@ -20033,8 +20055,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder_list_item.dart"
     },
     {
@@ -20044,8 +20066,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_folderlistitem",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folderlistitem"
     },
     {
@@ -20055,8 +20077,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_folderlistitemstate",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_folderlistitemstate"
     },
     {
@@ -20066,8 +20088,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_folder",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "folder"
     },
     {
@@ -20077,8 +20099,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_ishovered",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_ishovered"
     },
     {
@@ -20088,8 +20110,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_createstate",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "createstate"
     },
     {
@@ -20099,8 +20121,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_getfoldercolor",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_getfoldercolor"
     },
     {
@@ -20110,8 +20132,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_build",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "build"
     },
     {
@@ -20121,8 +20143,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_buildoptionsmenu",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildoptionsmenu"
     },
     {
@@ -20132,8 +20154,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_showcolorpickerdialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcolorpickerdialog"
     },
     {
@@ -20143,8 +20165,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_togglefavorite",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_togglefavorite"
     },
     {
@@ -20165,8 +20187,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_formatfoldersize",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_formatfoldersize"
     },
     {
@@ -20176,8 +20198,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_showrenamedialog",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showrenamedialog"
     },
     {
@@ -20198,8 +20220,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_showmovedialog",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showmovedialog"
     },
     {
@@ -20209,8 +20231,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_showcopydialog",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "_showcopydialog"
     },
     {
@@ -20220,8 +20242,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_copyfolderrecursive",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_copyfolderrecursive"
     },
     {
@@ -20231,8 +20253,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_showinfodialog",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_showinfodialog"
     },
     {
@@ -20242,8 +20264,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_folder_list_item_buildinforow",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "_buildinforow"
     },
     {
@@ -20253,8 +20275,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "marquee_text_dart",
-      "community": 138,
-      "community_name": "global_progress_bar.dart",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "marquee_text.dart"
     },
     {
@@ -20473,8 +20495,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_marquee_text_marqueetext",
-      "community": 57,
-      "community_name": "marquee_text.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "marqueetext"
     },
     {
@@ -20484,8 +20506,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_marquee_text_marqueetextstate",
-      "community": 57,
-      "community_name": "marquee_text.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "_marqueetextstate"
     },
     {
@@ -20913,8 +20935,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_press_and_hold_preview_loadpreview",
-      "community": 62,
-      "community_name": "package:flutter/material.dart",
+      "community": 51,
+      "community_name": "press_and_hold_preview.dart",
       "norm_label": "_loadpreview"
     },
     {
@@ -20946,8 +20968,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "quick_access_row.dart"
     },
     {
@@ -20957,8 +20979,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row_quickaccesscategory",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "quickaccesscategory"
     },
     {
@@ -20979,8 +21001,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row_title",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "title"
     },
     {
@@ -20990,8 +21012,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row_icon",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "icon"
     },
     {
@@ -21001,8 +21023,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row_iconcolor",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "iconcolor"
     },
     {
@@ -21012,8 +21034,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_quick_access_row_categories",
-      "community": 99,
-      "community_name": "ConsumerWidget",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "categories"
     },
     {
@@ -21089,8 +21111,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_storage_banner",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "storage_banner.dart"
     },
     {
@@ -21111,8 +21133,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_storage_banner_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "build"
     },
     {
@@ -21122,8 +21144,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_storage_widget",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "storage_widget.dart"
     },
     {
@@ -21144,8 +21166,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_drive_widgets_storage_widget_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "build"
     },
     {
@@ -21177,8 +21199,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_faces_faces_screen_facesscreen",
-      "community": 42,
-      "community_name": "faces_screen.dart",
+      "community": 298,
+      "community_name": "_FacesScreenState",
       "norm_label": "facesscreen"
     },
     {
@@ -21188,8 +21210,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_faces_faces_screen_facesscreenstate",
-      "community": 42,
-      "community_name": "faces_screen.dart",
+      "community": 298,
+      "community_name": "_FacesScreenState",
       "norm_label": "_facesscreenstate"
     },
     {
@@ -21199,8 +21221,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "faceclustersprovider",
-      "community": 42,
-      "community_name": "faces_screen.dart",
+      "community": 298,
+      "community_name": "_FacesScreenState",
       "norm_label": "faceclustersprovider"
     },
     {
@@ -21463,8 +21485,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_faces_faces_screen_mergeselectedclusters",
-      "community": 42,
-      "community_name": "faces_screen.dart",
+      "community": 298,
+      "community_name": "_FacesScreenState",
       "norm_label": "_mergeselectedclusters"
     },
     {
@@ -21474,8 +21496,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_faces_faces_screen_build",
-      "community": 42,
-      "community_name": "faces_screen.dart",
+      "community": 298,
+      "community_name": "_FacesScreenState",
       "norm_label": "build"
     },
     {
@@ -21683,8 +21705,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_gallery_screen_loadthumbnail",
-      "community": 62,
-      "community_name": "package:flutter/material.dart",
+      "community": 120,
+      "community_name": "about_screen.dart",
       "norm_label": "_loadthumbnail"
     },
     {
@@ -21749,8 +21771,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "thumbnail_service.dart"
     },
     {
@@ -21760,8 +21782,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_thumbnailservice",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "thumbnailservice"
     },
     {
@@ -21771,8 +21793,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_ref",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_ref"
     },
     {
@@ -21793,8 +21815,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_getthumbnail",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "getthumbnail"
     },
     {
@@ -21804,8 +21826,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_fetchthumbnailfromtelegram",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_fetchthumbnailfromtelegram"
     },
     {
@@ -21815,8 +21837,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_generateandcachethumbnail",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_generateandcachethumbnail"
     },
     {
@@ -21826,8 +21848,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_gallery_thumbnail_service_downloadfile",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "_downloadfile"
     },
     {
@@ -21837,8 +21859,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "domain_thumbnail_cache_manager_dart",
-      "community": 77,
-      "community_name": "transfers_screen.dart",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "../../domain/thumbnail_cache_manager.dart"
     },
     {
@@ -22046,8 +22068,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_audio_screen_audiosscreen",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 29,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "audiosscreen"
     },
     {
@@ -22057,8 +22079,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_audio_screen_audioitem",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 62,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "_audioitem"
     },
     {
@@ -22090,8 +22112,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_audio_screen_audiosprovider",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 29,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "audiosprovider"
     },
     {
@@ -22123,8 +22145,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_audio_screen_build",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 29,
+      "community_name": "currentFolderIdProvider",
       "norm_label": "build"
     },
     {
@@ -22288,8 +22310,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_image_screen_imageitem",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 62,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "_imageitem"
     },
     {
@@ -22409,8 +22431,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_mediascreen",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "mediascreen"
     },
     {
@@ -22420,8 +22442,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_mediascreenstate",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "_mediascreenstate"
     },
     {
@@ -22442,8 +22464,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_thumbnailorcover",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 300,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "_thumbnailorcover"
     },
     {
@@ -22453,8 +22475,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_thumbnailorcoverstate",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 300,
+      "community_name": "_ThumbnailOrCoverState",
       "norm_label": "_thumbnailorcoverstate"
     },
     {
@@ -22486,8 +22508,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_mediasortprovider",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "mediasortprovider"
     },
     {
@@ -22497,8 +22519,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_mediacolumncountprovider",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "mediacolumncountprovider"
     },
     {
@@ -22563,8 +22585,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_allmediafoldersprovider",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "allmediafoldersprovider"
     },
     {
@@ -22596,8 +22618,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_smartsearchprovider",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "smartsearchprovider"
     },
     {
@@ -22761,8 +22783,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_exploredataprovider",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "exploredataprovider"
     },
     {
@@ -23113,8 +23135,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_buildoptionsmenu",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "_buildoptionsmenu"
     },
     {
@@ -23135,8 +23157,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_buildphotostab",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "_buildphotostab"
     },
     {
@@ -23146,8 +23168,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_buildtimelinecontent",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "_buildtimelinecontent"
     },
     {
@@ -23168,8 +23190,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_buildalbumstab",
-      "community": 2,
-      "community_name": "Media UI Screens",
+      "community": 205,
+      "community_name": "_MediaScreenState",
       "norm_label": "_buildalbumstab"
     },
     {
@@ -23190,8 +23212,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_media_screen_buildexploretab",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "_buildexploretab"
     },
     {
@@ -23201,8 +23223,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "route_media_people",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "route /media/people"
     },
     {
@@ -23212,8 +23234,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "route_media_places",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "route /media/places"
     },
     {
@@ -23223,8 +23245,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "route_media_smart_tags",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "route /media/smart-tags"
     },
     {
@@ -23234,8 +23256,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "route_media_memories",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "route /media/memories"
     },
     {
@@ -23344,8 +23366,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "memory_story_screen_dart",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 12,
+      "community_name": "Audio UI Screen",
       "norm_label": "memory_story_screen.dart"
     },
     {
@@ -23355,8 +23377,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_memories_screen",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 12,
+      "community_name": "Audio UI Screen",
       "norm_label": "memories_screen.dart"
     },
     {
@@ -23377,8 +23399,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_memories_screen_memorycover",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 62,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "_memorycover"
     },
     {
@@ -23388,8 +23410,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_memories_screen_file",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 12,
+      "community_name": "Audio UI Screen",
       "norm_label": "file"
     },
     {
@@ -23410,8 +23432,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "media_screen_dart",
-      "community": 205,
-      "community_name": "_MediaScreenState",
+      "community": 12,
+      "community_name": "Audio UI Screen",
       "norm_label": "media_screen.dart"
     },
     {
@@ -23663,8 +23685,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_smart_tags_screen_smarttagsscreen",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "smarttagsscreen"
     },
     {
@@ -23674,8 +23696,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_smart_tags_screen_smarttagsscreenstate",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_smarttagsscreenstate"
     },
     {
@@ -23784,8 +23806,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_smart_tags_screen_build",
-      "community": 67,
-      "community_name": "smart_tags_screen.dart",
+      "community": 294,
+      "community_name": "_buildExploreTab",
       "norm_label": "build"
     },
     {
@@ -23850,8 +23872,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_media_video_screen_videoitem",
-      "community": 12,
-      "community_name": "Audio UI Screen",
+      "community": 62,
+      "community_name": "package:flutter/material.dart",
       "norm_label": "_videoitem"
     },
     {
@@ -25148,8 +25170,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_audio_player_screen_audioplayerscreen",
-      "community": 228,
-      "community_name": "core/providers/repository_providers.dart",
+      "community": 47,
+      "community_name": "dart:io",
       "norm_label": "audioplayerscreen"
     },
     {
@@ -25159,8 +25181,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_audio_player_screen_audioplayerscreenstate",
-      "community": 228,
-      "community_name": "core/providers/repository_providers.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_audioplayerscreenstate"
     },
     {
@@ -26138,8 +26160,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "file_decryption_util.dart"
     },
     {
@@ -26149,8 +26171,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_res",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "res"
     },
     {
@@ -26160,8 +26182,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_localpath",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "localpath"
     },
     {
@@ -26171,8 +26193,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_file",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "file"
     },
     {
@@ -26182,8 +26204,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_bytes",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "bytes"
     },
     {
@@ -26193,8 +26215,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_loaddecryptedfile",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "loaddecryptedfile"
     },
     {
@@ -26204,8 +26226,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_streamdecryptedfiletodisk",
-      "community": 75,
-      "community_name": "isSelectionModeProvider",
+      "community": 71,
+      "community_name": "transfer_progress_bar.dart",
       "norm_label": "streamdecryptedfiletodisk"
     },
     {
@@ -26215,8 +26237,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_file_decryption_util_downloadchunk",
-      "community": 65,
-      "community_name": "api_service.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "_downloadchunk"
     },
     {
@@ -26292,8 +26314,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "pagecontroller",
-      "community": 20,
-      "community_name": "media_gallery_screen.dart",
+      "community": 282,
+      "community_name": "video_gallery_screen.dart",
       "norm_label": "pagecontroller"
     },
     {
@@ -26501,8 +26523,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "drive_media_player_screen_dart",
-      "community": 20,
-      "community_name": "media_gallery_screen.dart",
+      "community": 282,
+      "community_name": "video_gallery_screen.dart",
       "norm_label": "../drive/media_player_screen.dart"
     },
     {
@@ -26721,8 +26743,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_preview_screen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "preview_screen.dart"
     },
     {
@@ -26732,8 +26754,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_preview_screen_previewscreen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "previewscreen"
     },
     {
@@ -26743,8 +26765,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_preview_preview_screen_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "build"
     },
     {
@@ -27359,8 +27381,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_scanner_document_scanner_screen_documentscannerscreen",
-      "community": 104,
-      "community_name": "backup_service.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "documentscannerscreen"
     },
     {
@@ -27370,8 +27392,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_scanner_document_scanner_screen_documentscannerscreenstate",
-      "community": 104,
-      "community_name": "backup_service.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_documentscannerscreenstate"
     },
     {
@@ -27986,8 +28008,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_security_biometric_auth_service_biometricauthserviceprovider",
-      "community": 29,
-      "community_name": "currentFolderIdProvider",
+      "community": 75,
+      "community_name": "isSelectionModeProvider",
       "norm_label": "biometricauthserviceprovider"
     },
     {
@@ -28008,8 +28030,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_security_biometric_auth_service_applockenabledprovider",
-      "community": 107,
-      "community_name": "network_settings_dialogs.dart",
+      "community": 48,
+      "community_name": "splash_screen.dart",
       "norm_label": "applockenabledprovider"
     },
     {
@@ -28019,8 +28041,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_security_biometric_auth_service_isvaultunlockedprovider",
-      "community": 107,
-      "community_name": "network_settings_dialogs.dart",
+      "community": 48,
+      "community_name": "splash_screen.dart",
       "norm_label": "isvaultunlockedprovider"
     },
     {
@@ -28250,8 +28272,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_accounts_screen_accountsscreen",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 11,
+      "community_name": "Core Providers & DB",
       "norm_label": "accountsscreen"
     },
     {
@@ -28261,8 +28283,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_accounts_screen_accountsscreenstate",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 11,
+      "community_name": "Core Providers & DB",
       "norm_label": "_accountsscreenstate"
     },
     {
@@ -28272,8 +28294,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_accounts_screen_telegramaccountcard",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 11,
+      "community_name": "Core Providers & DB",
       "norm_label": "telegramaccountcard"
     },
     {
@@ -28613,8 +28635,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_advanced_settings_dialogs_clearcachedialog",
-      "community": 86,
-      "community_name": "advanced_settings_dialogs.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "clearcachedialog"
     },
     {
@@ -28624,8 +28646,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_advanced_settings_dialogs_clearcachedialogstate",
-      "community": 86,
-      "community_name": "advanced_settings_dialogs.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "_clearcachedialogstate"
     },
     {
@@ -28844,8 +28866,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_appearance_settings_screen_appearancesettingsscreen",
-      "community": 95,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 220,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "appearancesettingsscreen"
     },
     {
@@ -28998,8 +29020,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_appearance_settings_screen_build",
-      "community": 95,
-      "community_name": "appearance_settings_screen.dart",
+      "community": 220,
+      "community_name": "channel_description_codec.dart",
       "norm_label": "build"
     },
     {
@@ -29064,8 +29086,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_auto_backup_settings_dialogs_addbackupprofiledialog",
-      "community": 18,
-      "community_name": "auto_backup_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "addbackupprofiledialog"
     },
     {
@@ -29075,8 +29097,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_auto_backup_settings_dialogs_addbackupprofiledialogstate",
-      "community": 18,
-      "community_name": "auto_backup_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_addbackupprofiledialogstate"
     },
     {
@@ -29449,8 +29471,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_backup_dialogs_backupimportdialog",
-      "community": 27,
-      "community_name": "backup_dialogs.dart",
+      "community": 136,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "backupimportdialog"
     },
     {
@@ -29460,8 +29482,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_backup_dialogs_backupimportdialogstate",
-      "community": 27,
-      "community_name": "backup_dialogs.dart",
+      "community": 136,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "_backupimportdialogstate"
     },
     {
@@ -29471,8 +29493,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_backup_dialogs_backupscheduledialog",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 27,
+      "community_name": "backup_dialogs.dart",
       "norm_label": "backupscheduledialog"
     },
     {
@@ -29482,8 +29504,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_backup_dialogs_backupscheduledialogstate",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 27,
+      "community_name": "backup_dialogs.dart",
       "norm_label": "_backupscheduledialogstate"
     },
     {
@@ -29493,8 +29515,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_backup_dialogs_telegramselfbackupdialog",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 27,
+      "community_name": "backup_dialogs.dart",
       "norm_label": "telegramselfbackupdialog"
     },
     {
@@ -29801,8 +29823,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_channels_screen_channelsscreen",
-      "community": 25,
-      "community_name": "settingsRepositoryProvider",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "channelsscreen"
     },
     {
@@ -29944,8 +29966,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_channels_screen_showpoolconfirmationdialog",
-      "community": 25,
-      "community_name": "settingsRepositoryProvider",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_showpoolconfirmationdialog"
     },
     {
@@ -31286,8 +31308,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_multi_account_screen_multiaccountscreen",
-      "community": 28,
-      "community_name": "accounts_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "multiaccountscreen"
     },
     {
@@ -31297,8 +31319,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_multi_account_screen_multiaccountscreenstate",
-      "community": 28,
-      "community_name": "accounts_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_multiaccountscreenstate"
     },
     {
@@ -31308,8 +31330,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_multi_account_screen_telegramaccountcard",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 28,
+      "community_name": "accounts_screen.dart",
       "norm_label": "telegramaccountcard"
     },
     {
@@ -31704,8 +31726,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_profile_screen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "profile_screen.dart"
     },
     {
@@ -31715,8 +31737,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_profile_screen_profilescreen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "profilescreen"
     },
     {
@@ -31726,8 +31748,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_profile_screen_buildavatar",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "_buildavatar"
     },
     {
@@ -31737,8 +31759,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_profile_screen_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "build"
     },
     {
@@ -31770,8 +31792,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_proxy_settings_screen_proxysettingsscreenstate",
-      "community": 30,
-      "community_name": "proxy_settings_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_proxysettingsscreenstate"
     },
     {
@@ -31946,8 +31968,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_security_settings_dialogs_encryptionmodedialogstate",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_encryptionmodedialogstate"
     },
     {
@@ -31968,8 +31990,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_security_settings_dialogs_autolocktimeoutdialogstate",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_autolocktimeoutdialogstate"
     },
     {
@@ -31990,8 +32012,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_security_settings_dialogs_duresspindialogstate",
-      "community": 41,
-      "community_name": "security_settings_dialogs.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_duresspindialogstate"
     },
     {
@@ -32199,8 +32221,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "session_screen.dart"
     },
     {
@@ -32210,8 +32232,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_sessionscreen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "sessionscreen"
     },
     {
@@ -32221,8 +32243,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_formatlastactive",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "_formatlastactive"
     },
     {
@@ -32232,8 +32254,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_getdeviceicon",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "_getdeviceicon"
     },
     {
@@ -32243,8 +32265,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_confirmterminatesession",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "_confirmterminatesession"
     },
     {
@@ -32254,8 +32276,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_confirmterminateallothersessions",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "_confirmterminateallothersessions"
     },
     {
@@ -32265,8 +32287,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_session_screen_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "build"
     },
     {
@@ -32892,8 +32914,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_telegram_api_dialog_telegramapicredentialsdialogstate",
-      "community": 105,
-      "community_name": "media_gallery_screen.dart",
+      "community": 106,
+      "community_name": "ConsumerState",
       "norm_label": "_telegramapicredentialsdialogstate"
     },
     {
@@ -33035,8 +33057,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_telegram_api_dialog_savecredentials",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 105,
+      "community_name": "media_gallery_screen.dart",
       "norm_label": "_savecredentials"
     },
     {
@@ -33068,8 +33090,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "transfer_settings_dialogs.dart"
     },
     {
@@ -33079,8 +33101,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_parallelthreadsdialog",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "parallelthreadsdialog"
     },
     {
@@ -33090,8 +33112,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_parallelthreadsdialogstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_parallelthreadsdialogstate"
     },
     {
@@ -33101,8 +33123,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_bandwidthlimitdialog",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "bandwidthlimitdialog"
     },
     {
@@ -33112,8 +33134,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_bandwidthlimitdialogstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_bandwidthlimitdialogstate"
     },
     {
@@ -33123,8 +33145,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_autoretrycountdialog",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "autoretrycountdialog"
     },
     {
@@ -33134,8 +33156,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_autoretrycountdialogstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_autoretrycountdialogstate"
     },
     {
@@ -33145,8 +33167,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_uploadqualitydialog",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "uploadqualitydialog"
     },
     {
@@ -33156,8 +33178,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_uploadqualitydialogstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_uploadqualitydialogstate"
     },
     {
@@ -33167,8 +33189,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_threads",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_threads"
     },
     {
@@ -33178,8 +33200,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_limit",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_limit"
     },
     {
@@ -33189,8 +33211,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_retry",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_retry"
     },
     {
@@ -33200,8 +33222,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_quality",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_quality"
     },
     {
@@ -33211,8 +33233,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_createstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "createstate"
     },
     {
@@ -33222,8 +33244,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_initstate",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "initstate"
     },
     {
@@ -33233,8 +33255,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_load",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "_load"
     },
     {
@@ -33244,8 +33266,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_settings_transfer_settings_dialogs_build",
-      "community": 52,
-      "community_name": "transfer_settings_dialogs.dart",
+      "community": 41,
+      "community_name": "security_settings_dialogs.dart",
       "norm_label": "build"
     },
     {
@@ -33634,6 +33656,17 @@
       "norm_label": "_importlinkdialogstate"
     },
     {
+      "label": "initialUrl",
+      "file_type": "code",
+      "source_file": "app/lib/features/sharing/import_link_dialog.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "app_lib_features_sharing_import_link_dialog_initialurl",
+      "community": 76,
+      "community_name": "shared_links_screen.dart",
+      "norm_label": "initialurl"
+    },
+    {
       "label": "_urlController",
       "file_type": "code",
       "source_file": "app/lib/features/sharing/import_link_dialog.dart",
@@ -33764,6 +33797,17 @@
       "community": 76,
       "community_name": "shared_links_screen.dart",
       "norm_label": "createstate"
+    },
+    {
+      "label": "initState",
+      "file_type": "code",
+      "source_file": "app/lib/features/sharing/import_link_dialog.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "app_lib_features_sharing_import_link_dialog_initstate",
+      "community": 76,
+      "community_name": "shared_links_screen.dart",
+      "norm_label": "initstate"
     },
     {
       "label": "dispose",
@@ -34619,8 +34663,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_sharing_sharing_screen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "sharing_screen.dart"
     },
     {
@@ -34630,8 +34674,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_sharing_sharing_screen_sharingscreen",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "sharingscreen"
     },
     {
@@ -34641,8 +34685,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_sharing_sharing_screen_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 52,
+      "community_name": "transfer_settings_dialogs.dart",
       "norm_label": "build"
     },
     {
@@ -34754,6 +34798,17 @@
       "community": 48,
       "community_name": "splash_screen.dart",
       "norm_label": "_runsync"
+    },
+    {
+      "label": "Route /lock",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "route_lock",
+      "community": 48,
+      "community_name": "splash_screen.dart",
+      "norm_label": "route /lock"
     },
     {
       "label": "Route /auth",
@@ -35037,8 +35092,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_dialog_hexcolor",
-      "community": 285,
-      "community_name": "package:flutter_animate/flutter_animate.dart",
+      "community": 99,
+      "community_name": "ConsumerWidget",
       "norm_label": "hexcolor"
     },
     {
@@ -35202,8 +35257,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_providers",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "tag_providers.dart"
     },
     {
@@ -35213,8 +35268,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_providers_filetagsprovider",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "filetagsprovider"
     },
     {
@@ -35224,8 +35279,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_providers_service",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "service"
     },
     {
@@ -35246,8 +35301,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_providers_db",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "db"
     },
     {
@@ -35257,8 +35312,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_providers_gettagsforfile",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 225,
+      "community_name": "State",
       "norm_label": "gettagsforfile"
     },
     {
@@ -35268,8 +35323,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "tag_service.dart"
     },
     {
@@ -35279,8 +35334,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_tagservice",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "tagservice"
     },
     {
@@ -35290,8 +35345,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_ref",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "_ref"
     },
     {
@@ -35301,8 +35356,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_curatedcolors",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "curatedcolors"
     },
     {
@@ -35323,8 +35378,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_getorcreatetag",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "getorcreatetag"
     },
     {
@@ -35334,8 +35389,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_attachtagtofile",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "attachtagtofile"
     },
     {
@@ -35345,8 +35400,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_removetagfromfile",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "removetagfromfile"
     },
     {
@@ -35356,8 +35411,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_gettagsforfile",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "gettagsforfile"
     },
     {
@@ -35367,8 +35422,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_tags_tag_service_watchalltags",
-      "community": 126,
-      "community_name": "Ref",
+      "community": 107,
+      "community_name": "network_settings_dialogs.dart",
       "norm_label": "watchalltags"
     },
     {
@@ -35488,8 +35543,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_telegram_telegram_manager_activesessionsprovider",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 103,
+      "community_name": "folder_picker_dialog.dart",
       "norm_label": "activesessionsprovider"
     },
     {
@@ -35510,8 +35565,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_telegram_telegram_manager_initprimaryandrestore",
-      "community": 106,
-      "community_name": "ConsumerState",
+      "community": 114,
+      "community_name": "telegram_manager.dart",
       "norm_label": "_initprimaryandrestore"
     },
     {
@@ -35631,8 +35686,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_telegram_telegram_service_telegraminitdebuginfo",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "telegraminitdebuginfo"
     },
     {
@@ -36709,8 +36764,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_transfers_transfers_screen_transfersstreamprovider",
-      "community": 90,
-      "community_name": "folder_list_item.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "transfersstreamprovider"
     },
     {
@@ -36797,8 +36852,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_transfers_transfers_screen_build",
-      "community": 90,
-      "community_name": "folder_list_item.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "build"
     },
     {
@@ -37083,8 +37138,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_features_upload_queue_upload_queue_screen_build",
-      "community": 90,
-      "community_name": "folder_list_item.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "build"
     },
     {
@@ -37435,8 +37490,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_main_handleincominguri",
-      "community": 118,
-      "community_name": "shared_links_screen.dart",
+      "community": 21,
+      "community_name": "main.dart",
       "norm_label": "_handleincominguri"
     },
     {
@@ -37633,8 +37688,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_aerodrive_logo_aerodrivelogostate",
-      "community": 117,
-      "community_name": "aerodrive_logo.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "_aerodrivelogostate"
     },
     {
@@ -37644,8 +37699,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "aerodrivelogo",
-      "community": 117,
-      "community_name": "aerodrive_logo.dart",
+      "community": 56,
+      "community_name": "integration_settings_dialogs.dart",
       "norm_label": "aerodrivelogo"
     },
     {
@@ -38029,8 +38084,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_sync_debug_overlay",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "sync_debug_overlay.dart"
     },
     {
@@ -38040,8 +38095,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_sync_debug_overlay_syncdebugoverlay",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "syncdebugoverlay"
     },
     {
@@ -38051,8 +38106,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_sync_debug_overlay_build",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "build"
     },
     {
@@ -38062,8 +38117,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "transfer_progress_bar.dart"
     },
     {
@@ -38073,8 +38128,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_transferprogressbar",
-      "community": 90,
-      "community_name": "folder_list_item.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "transferprogressbar"
     },
     {
@@ -38084,8 +38139,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_build",
-      "community": 90,
-      "community_name": "folder_list_item.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "build"
     },
     {
@@ -38095,8 +38150,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_buildicon",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_buildicon"
     },
     {
@@ -38106,8 +38161,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_getbarcolor",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_getbarcolor"
     },
     {
@@ -38117,8 +38172,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_calculateaggregateprogress",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_calculateaggregateprogress"
     },
     {
@@ -38128,8 +38183,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_sumbytes",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_sumbytes"
     },
     {
@@ -38139,8 +38194,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_formatsummary",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_formatsummary"
     },
     {
@@ -38150,8 +38205,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_lib_widgets_transfer_progress_bar_formatbytes",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 138,
+      "community_name": "global_progress_bar.dart",
       "norm_label": "_formatbytes"
     },
     {
@@ -39121,8 +39176,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "repository_test.dart"
     },
     {
@@ -39132,8 +39187,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test_db",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "db"
     },
     {
@@ -39143,8 +39198,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test_folderrepo",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "folderrepo"
     },
     {
@@ -39154,8 +39209,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test_filerepo",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "filerepo"
     },
     {
@@ -39165,8 +39220,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test_chunkrepo",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "chunkrepo"
     },
     {
@@ -39176,8 +39231,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_data_repositories_repository_test_main",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "main"
     },
     {
@@ -39198,8 +39253,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_data_repositories_chunk_repository_dart",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "package:aerodrive/data/repositories/chunk_repository.dart"
     },
     {
@@ -39209,8 +39264,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_data_repositories_file_repository_dart",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "package:aerodrive/data/repositories/file_repository.dart"
     },
     {
@@ -39220,8 +39275,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_data_repositories_folder_repository_dart",
-      "community": 92,
-      "community_name": "folder_repository.dart",
+      "community": 290,
+      "community_name": "repository_test.dart",
       "norm_label": "package:aerodrive/data/repositories/folder_repository.dart"
     },
     {
@@ -39297,8 +39352,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_channel_setup_wizard_dialog_test",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "channel_setup_wizard_dialog_test.dart"
     },
     {
@@ -39308,8 +39363,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_channel_setup_wizard_dialog_test_main",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "main"
     },
     {
@@ -39319,8 +39374,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_features_drive_widgets_channel_setup_wizard_dialog_dart",
-      "community": 132,
-      "community_name": "package:flutter_riverpod/flutter_riverpod.dart",
+      "community": 19,
+      "community_name": "preview_router.dart",
       "norm_label": "package:aerodrive/features/drive/widgets/channel_setup_wizard_dialog.dart"
     },
     {
@@ -39330,8 +39385,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_chunk_confirmation_test",
-      "community": 209,
-      "community_name": "opencode.json",
+      "community": 151,
+      "community_name": "streamingServerProvider",
       "norm_label": "chunk_confirmation_test.dart"
     },
     {
@@ -39341,8 +39396,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_chunk_confirmation_test_db",
-      "community": 209,
-      "community_name": "opencode.json",
+      "community": 151,
+      "community_name": "streamingServerProvider",
       "norm_label": "db"
     },
     {
@@ -39352,8 +39407,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_chunk_confirmation_test_main",
-      "community": 209,
-      "community_name": "opencode.json",
+      "community": 151,
+      "community_name": "streamingServerProvider",
       "norm_label": "main"
     },
     {
@@ -39363,8 +39418,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_infrastructure_test",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "infrastructure_test.dart"
     },
     {
@@ -39374,8 +39429,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_infrastructure_test_main",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "main"
     },
     {
@@ -39385,8 +39440,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_core_constants_dart",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "package:aerodrive/core/constants.dart"
     },
     {
@@ -39396,8 +39451,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_infrastructure_channel_description_codec_dart",
-      "community": 111,
-      "community_name": "channel_discovery_service.dart",
+      "community": 159,
+      "community_name": "offline_pin_service.dart",
       "norm_label": "package:aerodrive/domain/infrastructure/channel_description_codec.dart"
     },
     {
@@ -39407,8 +39462,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_orchestrator_test",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "orchestrator_test.dart"
     },
     {
@@ -39418,8 +39473,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_domain_orchestrator_test_main",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "main"
     },
     {
@@ -39429,8 +39484,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_domain_upload_orchestrator_dart",
-      "community": 284,
-      "community_name": "streamingServerProvider",
+      "community": 65,
+      "community_name": "api_service.dart",
       "norm_label": "package:aerodrive/domain/upload_orchestrator.dart"
     },
     {
@@ -39517,8 +39572,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_core_providers_dart",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "package:aerodrive/core/providers.dart"
     },
     {
@@ -39550,8 +39605,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_features_splash_splash_navigation_test",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "splash_navigation_test.dart"
     },
     {
@@ -39572,8 +39627,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_features_splash_splash_navigation_test_nosuchmethod",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "nosuchmethod"
     },
     {
@@ -39583,8 +39638,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "app_test_features_splash_splash_navigation_test_main",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "main"
     },
     {
@@ -39594,8 +39649,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_core_routing_app_router_dart",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "package:aerodrive/core/routing/app_router.dart"
     },
     {
@@ -39605,8 +39660,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_features_auth_auth_provider_dart",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "package:aerodrive/features/auth/auth_provider.dart"
     },
     {
@@ -39616,8 +39671,8 @@
       "source_location": null,
       "_origin": "ast",
       "id": "package_aerodrive_features_telegram_telegram_service_dart",
-      "community": 109,
-      "community_name": "video_gallery_screen.dart",
+      "community": 295,
+      "community_name": "splash_navigation_test.dart",
       "norm_label": "package:aerodrive/features/telegram/telegram_service.dart"
     },
     {
@@ -39795,6 +39850,50 @@
       "community": 109,
       "community_name": "video_gallery_screen.dart",
       "norm_label": "main"
+    },
+    {
+      "label": "security_hardening_test.dart",
+      "file_type": "code",
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "app_test_security_hardening_test",
+      "community": 284,
+      "community_name": "streamingServerProvider",
+      "norm_label": "security_hardening_test.dart"
+    },
+    {
+      "label": "main",
+      "file_type": "code",
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "_origin": "ast",
+      "id": "app_test_security_hardening_test_main",
+      "community": 284,
+      "community_name": "streamingServerProvider",
+      "norm_label": "main"
+    },
+    {
+      "label": "package:aerodrive/core/providers/security_providers.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_aerodrive_core_providers_security_providers_dart",
+      "community": 284,
+      "community_name": "streamingServerProvider",
+      "norm_label": "package:aerodrive/core/providers/security_providers.dart"
+    },
+    {
+      "label": "package:aerodrive/core/security/master_key_provider.dart",
+      "file_type": "code",
+      "source_file": null,
+      "source_location": null,
+      "_origin": "ast",
+      "id": "package_aerodrive_core_security_master_key_provider_dart",
+      "community": 284,
+      "community_name": "streamingServerProvider",
+      "norm_label": "package:aerodrive/core/security/master_key_provider.dart"
     },
     {
       "label": "manifest.json",
@@ -48955,6 +49054,16 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
+      "target": "dart_io"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "app/lib/data/crypto/encryption_engine.dart",
       "source_location": null,
       "weight": 1.0,
@@ -51744,6 +51853,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "app_test_features_splash_splash_navigation_test",
+      "target": "package_flutter_riverpod_flutter_riverpod_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
       "target": "package_flutter_riverpod_flutter_riverpod_dart"
     },
     {
@@ -56086,6 +56205,26 @@
       "source_location": null,
       "weight": 1.0,
       "source": "app_lib_core_routing_app_router",
+      "target": "features_security_app_lock_screen_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/core/routing/app_router.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_core_routing_app_router",
+      "target": "features_security_biometric_auth_service_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/core/routing/app_router.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_core_routing_app_router",
       "target": "features_settings_about_screen_dart"
     },
     {
@@ -57790,6 +57929,16 @@
       "weight": 1.0,
       "source": "app_lib_features_trash_trash_screen",
       "target": "package_go_router_go_router_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_features_splash_splash_screen",
+      "target": "features_security_biometric_auth_service_dart"
     },
     {
       "relation": "imports",
@@ -60801,6 +60950,16 @@
       "weight": 1.0,
       "source": "app_lib_main",
       "target": "features_drive_providers_drive_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/main.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_main",
+      "target": "features_sharing_import_link_dialog_dart"
     },
     {
       "relation": "imports",
@@ -65946,6 +66105,26 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "app/lib/domain/download_orchestrator.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_domain_download_orchestrator",
+      "target": "package_path_path_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/domain/download_queue_service.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_domain_download_queue_service",
+      "target": "package_path_path_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "app/lib/domain/thumbnail_cache_manager.dart",
       "source_location": null,
       "weight": 1.0,
@@ -65960,6 +66139,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "app_lib_domain_thumbnail_cache_service",
+      "target": "package_path_path_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/preview/archive_viewer.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_features_preview_archive_viewer",
       "target": "package_path_path_dart"
     },
     {
@@ -66000,6 +66189,16 @@
       "source_location": null,
       "weight": 1.0,
       "source": "app_test_data_crypto_encryption_engine_test",
+      "target": "package_path_path_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
       "target": "package_path_path_dart"
     },
     {
@@ -96380,6 +96579,72 @@
       "target": "package_local_auth_local_auth_dart"
     },
     {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_runsync",
+      "target": "app_lib_features_security_biometric_auth_service_biometricauthserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_splashscreenstate",
+      "target": "app_lib_features_security_biometric_auth_service_biometricauthserviceprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_runsync",
+      "target": "app_lib_features_security_biometric_auth_service_applockenabledprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_splashscreenstate",
+      "target": "app_lib_features_security_biometric_auth_service_applockenabledprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_runsync",
+      "target": "app_lib_features_security_biometric_auth_service_isvaultunlockedprovider"
+    },
+    {
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "riverpod_reference",
+      "source": "app_lib_features_splash_splash_screen_splashscreenstate",
+      "target": "app_lib_features_security_biometric_auth_service_isvaultunlockedprovider"
+    },
+    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -102268,6 +102533,26 @@
       "source_location": null,
       "weight": 1.0,
       "source": "app_lib_features_sharing_import_link_dialog",
+      "target": "app_lib_features_sharing_import_link_dialog_initialurl"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/sharing/import_link_dialog.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_features_sharing_import_link_dialog",
+      "target": "app_lib_features_sharing_import_link_dialog_initstate"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/sharing/import_link_dialog.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_lib_features_sharing_import_link_dialog",
       "target": "app_lib_features_sharing_import_link_dialog_iscancelled"
     },
     {
@@ -103087,28 +103372,6 @@
       "target": "app_lib_features_sharing_share_service_uuid"
     },
     {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/lib/main.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "riverpod_reference",
-      "source": "app_lib_main_aerodriveappstate",
-      "target": "app_lib_features_sharing_share_service_shareserviceprovider"
-    },
-    {
-      "relation": "references",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/lib/main.dart",
-      "source_location": null,
-      "weight": 1.0,
-      "context": "riverpod_reference",
-      "source": "app_lib_main_handleincominguri",
-      "target": "app_lib_features_sharing_share_service_shareserviceprovider"
-    },
-    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -103290,6 +103553,17 @@
       "context": "route_path",
       "source": "app_lib_features_splash_splash_screen_runsync",
       "target": "route_auth"
+    },
+    {
+      "relation": "navigates",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/lib/features/splash/splash_screen.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "context": "route_path",
+      "source": "app_lib_features_splash_splash_screen_runsync",
+      "target": "route_lock"
     },
     {
       "relation": "defines",
@@ -107562,6 +107836,16 @@
       "target": "package_flutter_test_flutter_test_dart"
     },
     {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
+      "target": "package_flutter_test_flutter_test_dart"
+    },
+    {
       "relation": "defines",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
@@ -108251,6 +108535,36 @@
       "weight": 1.0,
       "source": "app_test_features_telegram_api_credentials_test",
       "target": "app_test_features_telegram_api_credentials_test_storage"
+    },
+    {
+      "relation": "defines",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
+      "target": "app_test_security_hardening_test_main"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
+      "target": "package_aerodrive_core_providers_security_providers_dart"
+    },
+    {
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/test/security_hardening_test.dart",
+      "source_location": null,
+      "weight": 1.0,
+      "source": "app_test_security_hardening_test",
+      "target": "package_aerodrive_core_security_master_key_provider_dart"
     },
     {
       "relation": "contains",
@@ -115770,5 +116084,5 @@
       "source_file": "tdlib_dl/extracted/CHANGELOG.md"
     }
   ],
-  "built_at_commit": "9ef28ff4ce57941864bd58a8b9f98c8aaed08980"
+  "built_at_commit": "a1c982cc228671d52d4123da519b3fac7abdcdb4"
 }

@@ -33,15 +33,19 @@ class BiometricAuthService {
     try {
       final supported = await isBiometricsSupported();
       if (!supported) {
-        AppLogger.info('Biometrics not supported on device; falling back to allowed.');
-        return true;
+        AppLogger.warning('Biometrics/device authentication is not supported or enrolled on this device.');
+        return false;
       }
 
-      return await _localAuth.authenticate(
+      final success = await _localAuth.authenticate(
         localizedReason: localizedReason,
         biometricOnly: false,
         persistAcrossBackgrounding: true,
       );
+      if (success) {
+        _ref.read(isVaultUnlockedProvider.notifier).state = true;
+      }
+      return success;
     } on PlatformException catch (e) {
       AppLogger.error('Biometric authentication failed or cancelled', e);
       return false;

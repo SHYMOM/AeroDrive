@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../features/security/biometric_auth_service.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../../widgets/aerodrive_logo.dart';
 
@@ -75,8 +76,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         }
         await Future<void>.delayed(const Duration(milliseconds: 250));
         if (!mounted) return;
+
+        final authService = ref.read(biometricAuthServiceProvider);
+        final lockEnabled = await authService.isAppLockEnabled();
+        if (lockEnabled) {
+          ref.read(appLockEnabledProvider.notifier).state = true;
+          ref.read(isVaultUnlockedProvider.notifier).state = false;
+        }
+
         ref.read(hasNavigatedPastSplashProvider.notifier).state = true;
-        if (mounted) context.go('/drive');
+        if (mounted) {
+          if (lockEnabled) {
+            context.go('/lock');
+          } else {
+            context.go('/drive');
+          }
+        }
       } else {
         if (mounted) {
           setState(() {

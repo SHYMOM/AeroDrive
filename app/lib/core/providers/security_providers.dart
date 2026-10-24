@@ -4,8 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../security/master_key_provider.dart';
 
-/// Holds the 256-bit Master Key dynamically derived from Telegram Auth.
+/// Holds the 256-bit Master Key dynamically derived from Telegram Auth or custom vault unlock.
 final masterKeyProvider = Provider<List<int>?>((ref) {
+  if (MasterKeyProvider.instance.key != null) {
+    return MasterKeyProvider.instance.key;
+  }
+
   final telegramService = ref.watch(telegramServiceProvider);
   // Watch the notifier to get the latest userId
   final userId = ref.read(telegramServiceProvider.notifier).userId;

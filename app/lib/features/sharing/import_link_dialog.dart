@@ -18,7 +18,8 @@ enum _ImportStep {
 }
 
 class ImportLinkDialog extends ConsumerStatefulWidget {
-  const ImportLinkDialog({super.key});
+  const ImportLinkDialog({super.key, this.initialUrl});
+  final String? initialUrl;
 
   @override
   ConsumerState<ImportLinkDialog> createState() => _ImportLinkDialogState();
@@ -37,6 +38,14 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   double _speedBytesPerSec = 0.0;
   Completer<bool>? _confirmCompleter;
   bool _isCancelled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialUrl != null && widget.initialUrl!.isNotEmpty) {
+      _urlController.text = widget.initialUrl!;
+    }
+  }
 
   @override
   void dispose() {

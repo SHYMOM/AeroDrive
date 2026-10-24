@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/theme/app_colors.dart';
@@ -64,10 +65,22 @@ class _ArchiveViewerState extends ConsumerState<ArchiveViewer> {
     setState(() => _extractStatus = 'Extracting ${entry.name}...');
     try {
       final tempDir = await getTemporaryDirectory();
-      final outDir = Directory('${tempDir.path}/aerodrive_extracted');
+      final outDir = Directory(p.join(tempDir.path, 'aerodrive_extracted'));
       if (!await outDir.exists()) await outDir.create(recursive: true);
 
-      final outFile = File('${outDir.path}/${entry.name}');
+      // Security: Validate against Zip Slip path traversal
+      final normalizedEntryName = p.normalize(entry.name);
+      if (normalizedEntryName.startsWith('..') ||
+          p.isAbsolute(normalizedEntryName)) {
+        throw const FormatException('Illegal relative path traversal in archive entry');
+      }
+
+      final targetFilePath = p.join(outDir.path, normalizedEntryName);
+      if (!p.isWithin(outDir.path, targetFilePath)) {
+        throw const FormatException('Archive entry targets outside extraction boundary');
+      }
+
+      final outFile = File(targetFilePath);
       await outFile.parent.create(recursive: true);
       await outFile.writeAsBytes(entry.content);
 

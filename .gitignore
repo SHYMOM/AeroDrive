@@ -110,4 +110,6 @@ lcov.info
 *.tmp
 *.bak
 AeroDrive_Windows_Portable.zip
+AeroDrive_Android_Release.apk
+AeroDrive_Backend.exe
 go-bin/
