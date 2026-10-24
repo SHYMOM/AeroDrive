@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/security/master_key_provider.dart';
 import '../../data/crypto/encryption_engine.dart';
 import '../../data/db/database.dart';
+import '../../domain/offline/offline_pin_service.dart';
 import '../telegram/telegram_manager.dart';
 
 /// Decrypts a file into memory. Returns null for files > 50MB (use
@@ -41,6 +42,13 @@ Future<Uint8List?> loadDecryptedFile(ProviderContainer ref, FileData file) async
 /// Suitable for large files (images, videos, etc.).
 Future<File?> streamDecryptedFileToDisk(ProviderContainer ref, FileData file) async {
   try {
+    // 0. If file is pinned offline, return a local temp copy instantly without network!
+    final offlineFile = await ref.read(offlinePinServiceProvider).getOfflineFile(file.id);
+    if (offlineFile != null && await offlineFile.exists()) {
+      final tempDir = await getTemporaryDirectory();
+      final tempCopy = File('${tempDir.path}${Platform.pathSeparator}decrypted_${file.id}');
+      return await offlineFile.copy(tempCopy.path);
+    }
     final masterKeyBytes = MasterKeyProvider.instance.key;
     if (masterKeyBytes == null) return null;
 

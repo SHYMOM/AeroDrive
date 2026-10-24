@@ -88,6 +88,7 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        PreviewFavoriteButton(file: file),
                         PreviewDownloadButton(fileId: file.id),
                         const SizedBox(width: 8),
                       ],

@@ -14,6 +14,7 @@ import '../../../data/db/database.dart';
 import '../providers/drive_providers.dart';
 import '../../../domain/sync/config_sync_service.dart';
 import 'folder_picker_dialog.dart';
+import '../../security/biometric_auth_service.dart';
 import '../../sharing/share_dialog.dart';
 
 class FolderGridItem extends ConsumerStatefulWidget {
@@ -73,10 +74,15 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
         onTapDown: (details) {
           _tapPosition = details.globalPosition;
         },
-        onTap: () {
+        onTap: () async {
           if (isSelectionMode) {
             _toggleSelection();
           } else {
+            if (widget.folder.isVault) {
+              final auth = ref.read(biometricAuthServiceProvider);
+              final ok = await auth.authenticate(localizedReason: 'Authenticate to access Secure Vault');
+              if (!ok) return;
+            }
             final current = ref.read(currentFolderIdProvider);
             ref.read(navigationStackProvider.notifier).update((state) => [...state, current]);
             ref.read(currentFolderIdProvider.notifier).state = widget.folder.id;

@@ -16,6 +16,7 @@ import '../../preview/preview_router.dart';
 import '../../sharing/share_dialog.dart';
 import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
+import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
@@ -203,6 +204,25 @@ class FileGridItem extends ConsumerWidget {
                             ),
                           ),
 
+                        // Bottom-Left Offline Pin Badge
+                        if (ref.watch(offlinePinnedIdsProvider).contains(file.id))
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.offline_pin_rounded,
+                                color: Colors.tealAccent,
+                                size: 12,
+                              ),
+                            ),
+                          ),
+
                         // Video Duration tag at bottom-right
                         if (isVid)
                           Positioned(
@@ -251,29 +271,38 @@ class FileGridItem extends ConsumerWidget {
                   // Bottom Section: Title & details
                   Padding(
                     padding: const EdgeInsets.all(12),
-                    child: Column(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          file.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                file.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$dateString • $sizeString',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 10,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$dateString • $sizeString',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            fontSize: 10,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        if (!isSelectionMode)
+                          _buildOptionsMenu(context, ref),
                       ],
                     ),
                   ),
@@ -362,6 +391,33 @@ class FileGridItem extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Queued ${file.name} for download...')));
           }
+        } else if (value == 'offline') {
+          final pinService = ref.read(offlinePinServiceProvider);
+          final isPinned = ref.read(offlinePinnedIdsProvider).contains(file.id);
+          if (isPinned) {
+            await pinService.unpinFile(file.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Removed ${file.name} from offline access')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Caching ${file.name} for offline access...')),
+            );
+            final pinned = await pinService.pinFile(file);
+            if (context.mounted) {
+              if (pinned != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${file.name} is now available offline')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to cache ${file.name} for offline')),
+                );
+              }
+            }
+          }
         } else if (value == 'share') {
           showDialog(
             context: context,
@@ -379,16 +435,29 @@ class FileGridItem extends ConsumerWidget {
           _toggleFavorite(ref);
         }
       },
-      itemBuilder: (context) => [
-        PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-        const PopupMenuDivider(),
-        PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
-      ],
+      itemBuilder: (context) {
+        final isOfflinePinned = ref.watch(offlinePinnedIdsProvider).contains(file.id);
+        return [
+          PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(
+            value: 'offline',
+            child: Row(
+              children: [
+                Icon(isOfflinePinned ? Icons.offline_pin_outlined : Icons.offline_pin_rounded, color: Colors.tealAccent, size: 18),
+                const SizedBox(width: 8),
+                Text(isOfflinePinned ? 'Remove Offline Access' : 'Available Offline', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              ],
+            ),
+          ),
+          PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          const PopupMenuDivider(),
+          PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
+        ];
+      },
     );
 
   Future<void> _toggleFavorite(WidgetRef ref) async {

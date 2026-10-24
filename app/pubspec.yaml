@@ -68,6 +68,8 @@ dependencies:
   pdfx: ^2.9.2
   flutter_markdown: ^0.7.7+1
   flutter_widget_from_html: ^0.17.2
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

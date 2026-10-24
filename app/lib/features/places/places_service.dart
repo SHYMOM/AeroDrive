@@ -22,11 +22,11 @@ class PlaceLocation {
   });
 
   factory PlaceLocation.fromJson(Map<String, dynamic> json) => PlaceLocation(
-      name: json['name'],
-      admin: json['admin'],
-      country: json['country'],
-      lat: (json['lat'] as num).toDouble(),
-      lon: (json['lon'] as num).toDouble(),
+      name: json['name']?.toString() ?? '',
+      admin: json['admin']?.toString() ?? '',
+      country: json['country']?.toString() ?? '',
+      lat: ((json['lat'] ?? json['latitude']) as num?)?.toDouble() ?? 0.0,
+      lon: ((json['lon'] ?? json['lng'] ?? json['longitude']) as num?)?.toDouble() ?? 0.0,
     );
   final String name;
   final String admin;
@@ -156,6 +156,72 @@ class PlacesService {
 
     final decimal = d + (m / 60) + (s / 3600);
     return decimal.isFinite ? decimal : null;
+  }
+
+  /// Scans all local images in the database that lack place records,
+  /// extracts EXIF GPS from their cached thumbnails, and reverse-geocodes them.
+  /// Also performs timeline-based place inference for nearby photos.
+  Future<int> backfillPlaces() async {
+    final db = _ref.read(databaseProvider);
+    try {
+      final unlinked = await db.customSelect(
+        'SELECT id FROM files '
+        'WHERE mime_type LIKE "image/%" AND deleted_at IS NULL '
+        'AND id NOT IN (SELECT file_id FROM file_places)'
+      ).get();
+
+      if (unlinked.isEmpty) return 0;
+      int count = 0;
+
+      for (final row in unlinked) {
+        final fileId = row.read<String>('id');
+        final fileQuery = await (db.select(db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
+        if (fileQuery != null) {
+          await processImageLocation(fileQuery);
+          count++;
+        }
+      }
+
+      // Timeline estimation pass for remaining unlinked images:
+      // If photo was taken within 4 hours of a placed photo, associate it
+      final remaining = await db.customSelect(
+        'SELECT f.id, f.photo_taken_at FROM files f '
+        'WHERE f.mime_type LIKE "image/%" AND f.deleted_at IS NULL '
+        'AND f.id NOT IN (SELECT file_id FROM file_places) '
+        'AND f.photo_taken_at IS NOT NULL'
+      ).get();
+
+      for (final row in remaining) {
+        final fileId = row.read<String>('id');
+        final takenAt = row.read<DateTime?>('photo_taken_at');
+        if (takenAt == null) continue;
+
+        final start = takenAt.subtract(const Duration(hours: 4));
+        final end = takenAt.add(const Duration(hours: 4));
+        final nearby = await (db.customSelect(
+          'SELECT p.id FROM file_places fp '
+          'JOIN places p ON fp.place_id = p.id '
+          'JOIN files f ON fp.file_id = f.id '
+          'WHERE f.photo_taken_at BETWEEN ? AND ? '
+          'LIMIT 1',
+          variables: [drift.Variable<DateTime>(start), drift.Variable<DateTime>(end)],
+        )).getSingleOrNull();
+
+        if (nearby != null) {
+          final placeId = nearby.read<String>('id');
+          await db.into(db.filePlaces).insert(
+            FilePlacesCompanion.insert(fileId: fileId, placeId: placeId),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+          count++;
+        }
+      }
+
+      return count;
+    } catch (e, s) {
+      AppLogger.error('Failed to backfill places', e, s);
+      return 0;
+    }
   }
 }
 

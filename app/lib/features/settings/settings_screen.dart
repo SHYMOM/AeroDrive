@@ -10,11 +10,14 @@ import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/background_service_manager.dart';
 import '../telegram/telegram_service.dart';
+import '../cleaner/cleaner_screen.dart';
+import '../importer/takeout_importer_dialog.dart';
 import 'advanced_settings_dialogs.dart';
 import 'appearance_settings_screen.dart';
 import 'auto_backup_settings_dialogs.dart';
 import 'backup_dialogs.dart';
 import 'media_settings_dialogs.dart';
+import 'security_settings_dialogs.dart';
 import 'telegram_api_dialog.dart';
 import 'transfer_settings_dialogs.dart';
 
@@ -69,9 +72,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _SettingsItem('Storage Channels', 'Manage storage backends', Icons.dns_outlined, onTap: () => context.push('/settings/channels')),
                     _SettingsItem('Channel Health Check', 'Verify integrity of channel messages', Icons.health_and_safety_outlined, onTap: () => context.push('/settings/channels/health')),
                   ]),
+                  _buildSettingsGroup('Security & Privacy', Icons.shield_outlined, cs, [
+                    _SettingsSwitchItem('Biometric App Lock', 'Require Fingerprint / Face ID to open app', Icons.fingerprint, 'app_lock_biometrics_enabled', false),
+                    _SettingsItem('Recovery Phrase', 'View 24-word BIP39 master backup phrase', Icons.vpn_key_outlined, onTap: () => showDialog(context: context, builder: (_) => const RecoveryPhraseDialog())),
+                    _SettingsItem('Storage Cleaner', 'Find and delete duplicates, large videos, and clutter', Icons.cleaning_services_outlined, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerScreen()))),
+                  ]),
                   _buildSettingsGroup('Backup & Restore', Icons.settings_backup_restore, cs, [
                     _SettingsItem('Export Backup', 'Local .aerobackup file', Icons.download, onTap: () => showDialog(context: context, builder: (_) => const BackupExportDialog())),
                     _SettingsItem('Import Backup', 'Restore from local storage', Icons.upload, onTap: () => showDialog(context: context, builder: (_) => const BackupImportDialog())),
+                    _SettingsItem('Google Takeout Importer', 'Import Google Photos with original dates & GPS', Icons.cloud_download_outlined, onTap: () => showDialog(context: context, builder: (_) => const TakeoutImporterDialog())),
                     _SettingsItem('Auto-Backup Schedule', 'Daily / Weekly / Monthly', Icons.schedule, onTap: () => showDialog(context: context, builder: (_) => const BackupScheduleDialog())),
                     _SettingsItem('Dropbox Backup', 'Connect / Frequency', Icons.cloud_done_outlined, onTap: () => context.push('/settings/backup/dropbox')),
                     _SettingsItem('Telegram Self-Backup', 'Save to Saved Messages', Icons.telegram, onTap: () => showDialog(context: context, builder: (_) => const TelegramSelfBackupDialog())),

@@ -104,6 +104,9 @@ class MainActivity : FlutterFragmentActivity() {
                                 val tempDir = File(cacheDir, "aerodrive_picker")
                                 tempDir.mkdirs()
                                 val tempFile = File(tempDir, fileName)
+                                if (tempFile.exists()) {
+                                    tempFile.delete()
+                                }
                                 val inputStream = contentResolver.openInputStream(uri)
                                 inputStream?.use { input ->
                                     FileOutputStream(tempFile).use { output ->
@@ -112,11 +115,16 @@ class MainActivity : FlutterFragmentActivity() {
                                         while (input.read(buffer).also { bytesRead = it } != -1) {
                                             output.write(buffer, 0, bytesRead)
                                         }
+                                        output.flush()
                                     }
                                 }
-                                result.success(tempFile.absolutePath)
+                                runOnUiThread {
+                                    result.success(tempFile.absolutePath)
+                                }
                             } catch (e: Exception) {
-                                result.error("COPY_ERROR", e.message, null)
+                                runOnUiThread {
+                                    result.error("COPY_ERROR", e.message, null)
+                                }
                             }
                         }.start()
                     }

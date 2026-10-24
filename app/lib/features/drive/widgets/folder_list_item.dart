@@ -15,6 +15,7 @@ import '../providers/drive_providers.dart';
 import '../../../domain/sync/config_sync_service.dart';
 import 'folder_picker_dialog.dart';
 import 'marquee_text.dart';
+import '../../security/biometric_auth_service.dart';
 import '../../sharing/share_dialog.dart';
 
 class FolderListItem extends ConsumerStatefulWidget {
@@ -71,10 +72,15 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
       onExit: (_) => setState(() => _isHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () {
+        onTap: () async {
           if (isSelectionMode) {
             _toggleSelection();
           } else {
+            if (widget.folder.isVault) {
+              final auth = ref.read(biometricAuthServiceProvider);
+              final ok = await auth.authenticate(localizedReason: 'Authenticate to access Secure Vault');
+              if (!ok) return;
+            }
             final current = ref.read(currentFolderIdProvider);
             ref.read(navigationStackProvider.notifier).update((state) => [...state, current]);
             ref.read(currentFolderIdProvider.notifier).state = widget.folder.id;

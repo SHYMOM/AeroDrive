@@ -17,6 +17,7 @@ class QuickAccessRow extends ConsumerWidget {
 
   final List<QuickAccessCategory> categories = [
     QuickAccessCategory('Favorites', Icons.star, Colors.amber),
+    QuickAccessCategory('Offline', Icons.offline_pin_rounded, Colors.tealAccent),
     QuickAccessCategory('Images', Icons.image, AppColors.fileImage),
     QuickAccessCategory('Videos', Icons.play_circle_fill, AppColors.fileVideo),
     QuickAccessCategory('Documents', Icons.description, AppColors.fileDocument),
@@ -83,7 +84,13 @@ class QuickAccessRow extends ConsumerWidget {
                         if (cat.title == 'Favorites') {
                           ref.read(currentFolderIdProvider.notifier).state = null;
                           ref.read(navigationStackProvider.notifier).state = [];
+                          ref.read(isOfflineOnlyProvider.notifier).state = false;
                           ref.read(isFavoriteOnlyProvider.notifier).state = true;
+                        } else if (cat.title == 'Offline') {
+                          ref.read(currentFolderIdProvider.notifier).state = null;
+                          ref.read(navigationStackProvider.notifier).state = [];
+                          ref.read(isFavoriteOnlyProvider.notifier).state = false;
+                          ref.read(isOfflineOnlyProvider.notifier).state = true;
                         } else if (cat.title == 'Images') {
                           context.push('/media/images');
                         } else if (cat.title == 'Videos') {

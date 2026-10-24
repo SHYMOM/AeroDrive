@@ -40,6 +40,7 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
+import '../scanner/document_scanner_screen.dart';
 import 'widgets/channel_setup_wizard_dialog.dart';
 import '../../widgets/sync_debug_overlay.dart';
 
@@ -510,6 +511,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     final isMobile = MediaQuery.of(context).size.width < AppConstants.mobileBreakpoint;
     final isGridView = ref.watch(isGridViewProvider);
     final isFavoriteOnly = ref.watch(isFavoriteOnlyProvider);
+    final isOfflineOnly = ref.watch(isOfflineOnlyProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -619,6 +621,21 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                                     Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                   ],
                                 )
+                              : isOfflineOnly
+                                  ? Row(
+                                      children: [
+                                        IconButton(
+                                          icon: Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+                                          onPressed: () => ref.read(isOfflineOnlyProvider.notifier).state = false,
+                                          padding: EdgeInsets.zero,
+                                          constraints: const BoxConstraints(),
+                                        ),
+                                        SizedBox(width: 12),
+                                        const Icon(Icons.offline_pin_rounded, color: Colors.tealAccent, size: 20),
+                                        SizedBox(width: 8),
+                                        Text('Available Offline', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                                      ],
+                                    )
                               : isRoot
                                   ? Text(
                                       'My Drive',
@@ -1541,6 +1558,23 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                       await scanner.scanAndQueueDirectory(directoryPath, currentFolderId);
                       ref.invalidate(folderContentsProvider);
                     }
+                  },
+                ),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
+                    child: const Icon(Icons.document_scanner_rounded, color: Colors.tealAccent),
+                  ),
+                  title: Text('Scan Document', style: TextStyle(color: AppColors.onSurface)),
+                  subtitle: Text('Scan multi-page document into encrypted PDF', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => DocumentScannerScreen(targetFolderId: currentFolderId),
+                      ),
+                    );
                   },
                 ),
                 SizedBox(height: 16),

@@ -2,13 +2,16 @@ import 'dart:io';
 
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart' as latlong2;
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../gallery/thumbnail_service.dart';
 import '../preview/preview_router.dart';
+import 'places_service.dart';
 
 class PlaceNode {
   PlaceNode(this.place, this.photoCount);
@@ -23,6 +26,9 @@ class PlaceHierarchy {
 }
 
 final placesHierarchyProvider = FutureProvider<List<PlaceHierarchy>>((ref) async {
+  // Automatically backfill any missing place records from photo EXIF GPS & timeline
+  await ref.read(placesServiceProvider).backfillPlaces();
+
   final db = ref.read(databaseProvider);
   
   final placesRows = await db.select(db.places).get();
@@ -61,6 +67,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
   Place? _selectedPlace;
   List<FileData> _placeFiles = [];
   bool _isLoadingFiles = false;
+  bool _isMapView = false;
 
   Future<void> _loadPlaceFiles(Place place) async {
     setState(() {
@@ -120,6 +127,17 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
           _selectedPlace != null ? (_selectedPlace!.locality ?? 'Unknown Place') : 'Places & Locations',
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
         ),
+        actions: [
+          if (_selectedPlace == null)
+            IconButton(
+              icon: Icon(
+                _isMapView ? Icons.view_list_rounded : Icons.map_rounded,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              tooltip: _isMapView ? 'Switch to List View' : 'Switch to World Map',
+              onPressed: () => setState(() => _isMapView = !_isMapView),
+            ),
+        ],
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(
@@ -136,7 +154,7 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
         ),
         child: _selectedPlace != null
             ? _buildPlaceFilesGrid()
-            : _buildPlacesList(placesAsync),
+            : (_isMapView ? _buildPlacesMap(placesAsync) : _buildPlacesList(placesAsync)),
       ),
     );
   }
@@ -290,6 +308,75 @@ class _PlacesScreenState extends ConsumerState<PlacesScreen> {
       error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
     );
   }
+
+  Widget _buildPlacesMap(AsyncValue<List<PlaceHierarchy>> placesAsync) {
+    return placesAsync.when(
+      data: (hierarchies) {
+        final List<PlaceNode> nodesWithCoords = [];
+        for (final h in hierarchies) {
+          for (final stateList in h.states.values) {
+            for (final node in stateList) {
+              if (node.place.latitude != null && node.place.longitude != null) {
+                nodesWithCoords.add(node);
+              }
+            }
+          }
+        }
+
+        if (nodesWithCoords.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.map_outlined, size: 64, color: Theme.of(context).colorScheme.outlineVariant),
+                const SizedBox(height: 16),
+                Text(
+                  'No GPS coordinates found for places yet.',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final double avgLat = nodesWithCoords.map((n) => n.place.latitude!).reduce((a, b) => a + b) / nodesWithCoords.length;
+        final double avgLng = nodesWithCoords.map((n) => n.place.longitude!).reduce((a, b) => a + b) / nodesWithCoords.length;
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: FlutterMap(
+            options: MapOptions(
+              initialCenter: latlong2.LatLng(avgLat, avgLng),
+              initialZoom: 4.0,
+              minZoom: 2.0,
+              maxZoom: 18.0,
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.aerodrive.aerodrive',
+              ),
+              MarkerLayer(
+                markers: nodesWithCoords.map((node) {
+                  return Marker(
+                    point: latlong2.LatLng(node.place.latitude!, node.place.longitude!),
+                    width: 76,
+                    height: 76,
+                    child: GestureDetector(
+                      onTap: () => _loadPlaceFiles(node.place),
+                      child: _PlaceMarkerBadge(node: node),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+    );
+  }
 }
 
 class _PlaceGridItem extends ConsumerWidget {
@@ -319,5 +406,60 @@ class _PlaceGridItem extends ConsumerWidget {
           );
         },
       );
+}
+
+class _PlaceMarkerBadge extends StatelessWidget {
+  const _PlaceMarkerBadge({required this.node});
+  final PlaceNode node;
+
+  @override
+  Widget build(BuildContext context) {
+    final cityName = node.place.locality ?? 'Place';
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.photo_library, size: 12, color: Colors.white),
+              const SizedBox(width: 4),
+              Text(
+                '${node.photoCount}',
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.75),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            cityName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+          ),
+        ),
+        const Icon(Icons.arrow_drop_down, color: Colors.black87, size: 16),
+      ],
+    );
+  }
 }
 

@@ -12,7 +12,9 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../gallery/thumbnail_service.dart';
+import '../places/places_service.dart';
 import '../preview/preview_router.dart';
+import 'memory_story_screen.dart';
 
 enum MediaTab { photos, albums, explore }
 enum PhotosTimelineView { years, months, days, all }
@@ -22,11 +24,17 @@ final mediaColumnCountProvider = StateProvider<int>((ref) => 4);
 
 final allMediaFilesProvider = FutureProvider<List<FileData>>((ref) async {
   final db = ref.watch(databaseProvider);
-  return (db.select(db.files)
+  final vaultFolders = await (db.select(db.folders)..where((f) => f.isVault.equals(true))).get();
+  final vaultFolderIds = vaultFolders.map((f) => f.id).toSet();
+
+  final files = await (db.select(db.files)
     ..where((f) => (f.mimeType.like('image/%') | f.mimeType.like('video/%')))
     ..where((f) => f.deletedAt.isNull())
     ..orderBy([(t) => drift.OrderingTerm.desc(drift.coalesce([t.photoTakenAt, t.createdAt]))])
   ).get();
+
+  if (vaultFolderIds.isEmpty) return files;
+  return files.where((f) => f.folderId == null || !vaultFolderIds.contains(f.folderId)).toList();
 });
 
 final allMediaFoldersProvider = FutureProvider<List<FolderData>>((ref) async {
@@ -40,8 +48,64 @@ final allMediaFoldersProvider = FutureProvider<List<FolderData>>((ref) async {
   return (db.select(db.folders)..where((f) => f.id.isIn(folderIds))..where((f) => f.deletedAt.isNull())).get();
 });
 
+// Smart Universal Search: Searches across file names, smart tags, places, dates, and people
+final smartSearchProvider = FutureProvider.family<List<FileData>, String>((ref, query) async {
+  final cleanQuery = query.toLowerCase().trim();
+  if (cleanQuery.isEmpty) return [];
+
+  final db = ref.watch(databaseProvider);
+
+  // 1. Tag matching file IDs
+  final matchingTags = await (db.select(db.tags)..where((t) => t.name.lower().like('%$cleanQuery%'))).get();
+  final tagIds = matchingTags.map((t) => t.id).toList();
+  final fileTags = tagIds.isNotEmpty
+      ? await (db.select(db.fileTags)..where((ft) => ft.tagId.isIn(tagIds))).get()
+      : <FileTag>[];
+  final tagFileIds = fileTags.map((ft) => ft.fileId).toSet();
+
+  // 2. Place matching file IDs (locality, country, adminArea)
+  final matchingPlaces = await (db.select(db.places)
+    ..where((p) => p.locality.lower().like('%$cleanQuery%') |
+                   p.country.lower().like('%$cleanQuery%') |
+                   p.adminArea.lower().like('%$cleanQuery%'))
+  ).get();
+  final placeIds = matchingPlaces.map((p) => p.id).toList();
+  final filePlaces = placeIds.isNotEmpty
+      ? await (db.select(db.filePlaces)..where((fp) => fp.placeId.isIn(placeIds))).get()
+      : <FilePlace>[];
+  final placeFileIds = filePlaces.map((fp) => fp.fileId).toSet();
+
+  // 3. Person matching file IDs
+  final matchingClusters = await (db.select(db.faceClusters)..where((fc) => fc.name.lower().like('%$cleanQuery%'))).get();
+  final clusterIds = matchingClusters.map((c) => c.id).toList();
+  final photoFaces = clusterIds.isNotEmpty
+      ? await (db.select(db.photoFaces)..where((pf) => pf.faceClusterId.isIn(clusterIds))).get()
+      : <PhotoFace>[];
+  final personFileIds = photoFaces.map((pf) => pf.fileId).toSet();
+
+  // 4. File name and date matching
+  final allMedia = await ref.watch(allMediaFilesProvider.future);
+  return allMedia.where((f) {
+    if (f.name.toLowerCase().contains(cleanQuery)) return true;
+    if (tagFileIds.contains(f.id)) return true;
+    if (placeFileIds.contains(f.id)) return true;
+    if (personFileIds.contains(f.id)) return true;
+
+    final date = f.photoTakenAt ?? f.createdAt;
+    if (date != null) {
+      if (date.year.toString() == cleanQuery) return true;
+      final fullDate = DateFormat('MMMM d, yyyy EEEE').format(date).toLowerCase();
+      if (fullDate.contains(cleanQuery)) return true;
+    }
+    return false;
+  }).toList();
+});
+
 // Explore Page data provider (using real database statistics where available)
 final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  // Backfill places for any unlinked photos
+  await ref.read(placesServiceProvider).backfillPlaces();
+
   final db = ref.watch(databaseProvider);
   
   // People (unique face clusters)
@@ -111,14 +175,17 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     ]);
   }
   
-  // Memory (Throwback featured older file)
+  // Memory (Throwback featured older files for multi-photo story)
   final allFiles = await (db.select(db.files)
     ..where((f) => f.mimeType.like('image/%') | f.mimeType.like('video/%'))
     ..where((f) => f.deletedAt.isNull())
     ..orderBy([(t) => drift.OrderingTerm.desc(drift.coalesce([t.photoTakenAt, t.createdAt]))])
     ..limit(15)
   ).get();
-  final FileData? memoryFile = allFiles.isNotEmpty ? allFiles.last : null;
+  final List<FileData> memoryFiles = allFiles;
+  final FileData? memoryFile = allFiles.isNotEmpty
+      ? (allFiles.firstWhereOrNull((f) => f.thumbnailPath != null) ?? allFiles.first)
+      : null;
 
   return {
     'peopleCount': peopleCount,
@@ -127,6 +194,7 @@ final exploreDataProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     'placeCoverFiles': placeCoverFiles,
     'smartTags': smartTags,
     'memoryFile': memoryFile,
+    'memoryFiles': memoryFiles,
   };
 });
 
@@ -147,12 +215,13 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
   int? _filterYear;
   String? _filterMonth;
   String? _mediaTypeFilter;
+  bool _showFavoritesOnly = false;
 
   @override
   Widget build(BuildContext context) {
     // Intercept hardware/system back button if an album is selected
     return PopScope(
-      canPop: _selectedAlbum == null && _mediaTypeFilter == null,
+      canPop: _selectedAlbum == null && _mediaTypeFilter == null && !_showFavoritesOnly,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         if (_selectedAlbum != null) {
@@ -165,6 +234,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             _mediaTypeFilter = null;
           });
         }
+        if (_showFavoritesOnly) {
+          setState(() {
+            _showFavoritesOnly = false;
+          });
+        }
       },
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -173,7 +247,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             children: [
               _buildHeader(),
               
-              if (_filterYear != null || _filterMonth != null || _selectedAlbum != null)
+              if (_filterYear != null || _filterMonth != null || _selectedAlbum != null || _showFavoritesOnly)
                 _buildActiveFiltersHeader(),
 
               Expanded(
@@ -207,17 +281,24 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           children: [
             Row(
               children: [
-                if (_mediaTypeFilter != null)
+                if (_mediaTypeFilter != null || _showFavoritesOnly)
                   IconButton(
                     icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
                     onPressed: () {
                       setState(() {
                         _mediaTypeFilter = null;
+                        _showFavoritesOnly = false;
                       });
                     },
                   ),
                 Text(
-                  _mediaTypeFilter == 'image/' ? 'All Images' : _mediaTypeFilter == 'video/' ? 'All Videos' : 'All media',
+                  _showFavoritesOnly
+                      ? 'Favorites'
+                      : (_mediaTypeFilter == 'image/'
+                          ? 'All Images'
+                          : _mediaTypeFilter == 'video/'
+                              ? 'All Videos'
+                              : 'All media'),
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ],
@@ -336,6 +417,19 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         children: [
           Text('Filtered by: ', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12)),
           const SizedBox(width: 8),
+          if (_showFavoritesOnly)
+            Chip(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.15),
+              side: const BorderSide(color: Colors.redAccent),
+              avatar: const Icon(Icons.favorite, size: 14, color: Colors.redAccent),
+              label: const Text('Favorites', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
+              deleteIcon: const Icon(Icons.close, size: 12, color: Colors.redAccent),
+              onDeleted: () {
+                setState(() {
+                  _showFavoritesOnly = false;
+                });
+              },
+            ),
           if (_filterYear != null)
             Chip(
               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
@@ -384,7 +478,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       icon: Icon(Icons.more_vert, color: AppColors.onSurfaceVariant),
       color: AppColors.surfaceElevated,
       onSelected: (value) {
-        if (value == 'sort_newest') {
+        if (value == 'toggle_favorites') {
+          setState(() {
+            _showFavoritesOnly = !_showFavoritesOnly;
+          });
+        } else if (value == 'sort_newest') {
           ref.read(mediaSortProvider.notifier).state = true;
         } else if (value == 'sort_oldest') {
           ref.read(mediaSortProvider.notifier).state = false;
@@ -399,6 +497,24 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         }
       },
       itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'toggle_favorites',
+          child: Row(
+            children: [
+              Icon(
+                _showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
+                color: Colors.redAccent,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _showFavoritesOnly ? 'Show All Photos' : 'Show Favorites Only',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              ),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
         PopupMenuItem(
           value: 'sort_newest',
           child: Row(
@@ -462,6 +578,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
         }
 
         var files = allFiles;
+        if (_showFavoritesOnly) {
+          files = files.where((f) => f.isFavorite).toList();
+        }
         if (_mediaTypeFilter != null) {
           files = files.where((f) => f.mimeType?.startsWith(_mediaTypeFilter!) == true).toList();
         }
@@ -790,10 +909,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     return mediaFilesAsync.when(
       data: (allFiles) => foldersAsync.when(
           data: (folders) {
+            final favorites = allFiles.where((f) => f.isFavorite).toList();
             final images = allFiles.where((f) => f.mimeType?.startsWith('image/') == true).toList();
             final videos = allFiles.where((f) => f.mimeType?.startsWith('video/') == true).toList();
             
             final primaryAlbums = <_AlbumItemData>[
+              if (favorites.isNotEmpty) _AlbumItemData(name: 'Favorites', files: favorites),
               if (images.isNotEmpty) _AlbumItemData(name: 'All Images', files: images),
               if (videos.isNotEmpty) _AlbumItemData(name: 'All Videos', files: videos, isVideosCategory: true),
             ];
@@ -898,7 +1019,13 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     final latestFile = albumFiles.isNotEmpty ? albumFiles.first : null;
     return GestureDetector(
       onTap: () {
-        if (name == 'All Images') {
+        if (name == 'Favorites') {
+          setState(() {
+            _currentTab = MediaTab.photos;
+            _timelineView = PhotosTimelineView.all;
+            _showFavoritesOnly = true;
+          });
+        } else if (name == 'All Images') {
           setState(() {
             _currentTab = MediaTab.photos;
             _timelineView = PhotosTimelineView.all;
@@ -956,19 +1083,25 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
 
   // --- EXPLORE VIEW ---
   Widget _buildExploreTab() {
-    final mediaAsync = ref.watch(allMediaFilesProvider);
     final exploreAsync = ref.watch(exploreDataProvider);
 
-    return mediaAsync.when(
-      data: (allFiles) {
-        var files = allFiles;
-        if (_exploreSearchQuery.isNotEmpty) {
-          files = files.where((f) => f.name.toLowerCase().contains(_exploreSearchQuery.toLowerCase())).toList();
-        }
-
-        if (_exploreSearchQuery.isNotEmpty) {
+    if (_exploreSearchQuery.isNotEmpty) {
+      final searchAsync = ref.watch(smartSearchProvider(_exploreSearchQuery));
+      return searchAsync.when(
+        data: (files) {
           if (files.isEmpty) {
-            return const Center(child: Text('No results matched your search.', style: TextStyle(color: Colors.white54)));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search_off, size: 48, color: Colors.white24),
+                  const SizedBox(height: 12),
+                  Text('No results for "$_exploreSearchQuery"', style: const TextStyle(color: Colors.white54, fontSize: 15)),
+                  const SizedBox(height: 4),
+                  const Text('Try searching by tag (Sky, Nature), place, date, or person', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                ],
+              ),
+            );
           }
           final cols = ref.watch(mediaColumnCountProvider);
           return GridView.builder(
@@ -982,7 +1115,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             itemCount: files.length,
             itemBuilder: (context, index) => _GalleryItem(file: files[index], siblings: files),
           );
-        }
+        },
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        error: (e, _) => Center(child: Text('Search error: $e', style: const TextStyle(color: Colors.white54))),
+      );
+    }
 
         return exploreAsync.when(
           data: (exploreData) {
@@ -1138,17 +1275,33 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      _ThumbnailOrCover(file: memoryFile),
+                GestureDetector(
+                  onTap: () {
+                    final memoryFiles = exploreData['memoryFiles'] as List<FileData>? ?? (memoryFile != null ? [memoryFile] : []);
+                    if (memoryFiles.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MemoryStoryScreen(
+                            title: 'Throwback',
+                            subtitle: 'Relive your special moments',
+                            files: memoryFiles,
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    height: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _ThumbnailOrCover(file: memoryFile),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -1197,6 +1350,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                     ],
                   ),
                 ),
+                ),
                 const SizedBox(height: 32),
               ],
             );
@@ -1204,10 +1358,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-    );
   }
 
   Widget _buildPeoplePlacesCard({

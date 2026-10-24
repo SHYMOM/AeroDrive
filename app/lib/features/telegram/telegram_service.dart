@@ -842,34 +842,17 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     });
   }
 
-  static bool _useWrappedPayload = !kIsWeb && Platform.isWindows;
-
   Map<String, dynamic> _buildDocumentPayload({
     required int chatId,
     required String normalizedPath,
-    required bool wrapped,
     String? caption,
   }) {
-    final Map<String, dynamic> docContent;
-    if (wrapped) {
-      docContent = {
-        "@type": "inputDocument",
-        "document": {
-          "@type": "inputFileLocal",
-          "path": normalizedPath,
-        },
-        "disable_content_type_detection": true,
-      };
-    } else {
-      docContent = {
-        "@type": "inputFileLocal",
-        "path": normalizedPath,
-      };
-    }
-
     final inputContent = <String, dynamic>{
       "@type": "inputMessageDocument",
-      "document": docContent,
+      "document": {
+        "@type": "inputFileLocal",
+        "path": normalizedPath,
+      },
       "disable_content_type_detection": true,
     };
 
@@ -891,28 +874,14 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
   Map<String, dynamic> _buildPhotoPayload({
     required int chatId,
     required String normalizedPath,
-    required bool wrapped,
     String? caption,
   }) {
-    final Map<String, dynamic> photoContent;
-    if (wrapped) {
-      photoContent = {
-        "@type": "inputPhoto",
-        "photo": {
-          "@type": "inputFileLocal",
-          "path": normalizedPath,
-        },
-      };
-    } else {
-      photoContent = {
-        "@type": "inputFileLocal",
-        "path": normalizedPath,
-      };
-    }
-
     final inputContent = <String, dynamic>{
       "@type": "inputMessagePhoto",
-      "photo": photoContent,
+      "photo": {
+        "@type": "inputFileLocal",
+        "path": normalizedPath,
+      },
     };
 
     if (caption != null) {
@@ -930,86 +899,36 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     };
   }
 
-  bool _isPayloadFormatError(dynamic response) {
-    if (response is! Map<String, dynamic> || response['@type'] != 'error') {
-      return false;
-    }
-    final msg = response['message']?.toString() ?? '';
-    return msg.contains('InputFile is not specified') ||
-           msg.contains('Unknown class "inputDocument"') ||
-           msg.contains('Unknown class "inputPhoto"') ||
-           msg.contains('FIELD_NAME_INVALID') ||
-           msg.contains('unsupported');
-  }
-
   Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
     final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
     AppLogger.info('=== TDLib sendMessage (uploadDocument) ===');
-    AppLogger.info('ChatId: $chatId, File: $normalizedPath, HasCaption: ${caption != null}, useWrapped: $_useWrappedPayload');
+    AppLogger.info('ChatId: $chatId, File: $normalizedPath, HasCaption: ${caption != null}');
     if (caption != null) {
       AppLogger.info('Caption length: ${caption.length} chars');
     } else {
       AppLogger.warning('>>> CAPTION IS NULL - Manifest will be MISSING from Telegram message!');
     }
 
-    final primaryPayload = _buildDocumentPayload(
+    final payload = _buildDocumentPayload(
       chatId: chatId,
       normalizedPath: normalizedPath,
-      wrapped: _useWrappedPayload,
       caption: caption,
     );
 
-    var response = await sendRequest(primaryPayload, timeout: const Duration(hours: 6));
-
-    if (_isPayloadFormatError(response)) {
-      AppLogger.warning('Primary uploadDocument failed (${response['message']}), retrying with alternative payload format (useWrapped: ${!_useWrappedPayload})');
-      final fallbackPayload = _buildDocumentPayload(
-        chatId: chatId,
-        normalizedPath: normalizedPath,
-        wrapped: !_useWrappedPayload,
-        caption: caption,
-      );
-      final fallbackResponse = await sendRequest(fallbackPayload, timeout: const Duration(hours: 6));
-      if (fallbackResponse['@type'] != 'error') {
-        _useWrappedPayload = !_useWrappedPayload;
-        AppLogger.info('Alternative uploadDocument payload succeeded! Updated default _useWrappedPayload to $_useWrappedPayload');
-        return fallbackResponse;
-      }
-    }
-
-    return response;
+    return sendRequest(payload, timeout: const Duration(hours: 6));
   }
 
   Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
     final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
-    final primaryPayload = _buildPhotoPayload(
+    final payload = _buildPhotoPayload(
       chatId: chatId,
       normalizedPath: normalizedPath,
-      wrapped: _useWrappedPayload,
       caption: caption,
     );
 
-    var response = await sendRequest(primaryPayload);
-
-    if (_isPayloadFormatError(response)) {
-      AppLogger.warning('Primary uploadPhoto failed (${response['message']}), retrying with alternative payload format (useWrapped: ${!_useWrappedPayload})');
-      final fallbackPayload = _buildPhotoPayload(
-        chatId: chatId,
-        normalizedPath: normalizedPath,
-        wrapped: !_useWrappedPayload,
-        caption: caption,
-      );
-      final fallbackResponse = await sendRequest(fallbackPayload);
-      if (fallbackResponse['@type'] != 'error') {
-        _useWrappedPayload = !_useWrappedPayload;
-        AppLogger.info('Alternative uploadPhoto payload succeeded! Updated default _useWrappedPayload to $_useWrappedPayload');
-        return fallbackResponse;
-      }
-    }
-
-    return response;
+    return sendRequest(payload);
   }
 
   Future<void> addProxy({

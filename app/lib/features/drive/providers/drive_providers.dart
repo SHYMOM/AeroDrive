@@ -5,6 +5,7 @@ import '../../../core/providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/providers/security_providers.dart';
 import '../../../data/db/database.dart';
+import '../../../domain/offline/offline_pin_service.dart';
 
 /// Manages the current folder ID being viewed by the user.
 /// null = Root (Vault)
@@ -12,6 +13,9 @@ final currentFolderIdProvider = StateProvider<String?>((ref) => null);
 
 /// Filter Drive screen to only show favorites
 final isFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
+
+/// Filter Drive screen to only show offline pinned files
+final isOfflineOnlyProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks if we have already checked for a remote config during this session
 final configCheckedProvider = StateProvider<bool>((ref) {
@@ -89,6 +93,7 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
   final folderRepo = ref.watch(folderRepositoryProvider);
   final currentId = ref.watch(currentFolderIdProvider);
   final isFavOnly = ref.watch(isFavoriteOnlyProvider);
+  final isOfflineOnly = ref.watch(isOfflineOnlyProvider);
   
   Map<String, dynamic> contents;
   if (isFavOnly) {
@@ -98,6 +103,16 @@ final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async 
     contents = {
       'folders': favFolders,
       'files': favFiles,
+    };
+  } else if (isOfflineOnly) {
+    final db = ref.read(databaseProvider);
+    final pinnedIds = ref.watch(offlinePinnedIdsProvider);
+    final offlineFiles = pinnedIds.isEmpty
+        ? <FileData>[]
+        : await (db.select(db.files)..where((f) => f.id.isIn(pinnedIds) & f.deletedAt.isNull())).get();
+    contents = {
+      'folders': <FolderData>[],
+      'files': offlineFiles,
     };
   } else {
     contents = await folderRepo.getFolderContents(currentId);
@@ -249,6 +264,7 @@ final quickAccessStatsProvider = FutureProvider<Map<String, int>>((ref) async {
 
   return {
     'Favorites': favFilesCount + favFoldersCount,
+    'Offline': ref.watch(offlinePinnedIdsProvider).length,
     'Images': imageCount,
     'Videos': videoCount,
     'Documents': docCount,

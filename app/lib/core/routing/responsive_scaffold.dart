@@ -78,6 +78,12 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
             return;
           }
 
+          final isOfflineOnly = ref.read(isOfflineOnlyProvider);
+          if (isOfflineOnly) {
+            ref.read(isOfflineOnlyProvider.notifier).state = false;
+            return;
+          }
+
           final navStack = ref.read(navigationStackProvider);
           if (navStack.isNotEmpty) {
             final parentId = navStack.last;

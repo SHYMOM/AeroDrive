@@ -10,7 +10,6 @@ import 'package:uuid/uuid.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../data/db/database.dart';
-import '../drive/media_player_screen.dart';
 import 'archive_viewer.dart';
 import 'audio_player_screen.dart';
 import 'file_decryption_util.dart';
@@ -18,6 +17,35 @@ import 'image_gallery_screen.dart';
 import 'media_gallery_screen.dart';
 import 'universal_file_viewer.dart';
 import 'video_gallery_screen.dart';
+
+class PreviewFavoriteButton extends ConsumerWidget {
+  const PreviewFavoriteButton({super.key, required this.file});
+  final FileData file;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final db = ref.read(databaseProvider);
+    return StreamBuilder<FileData?>(
+      stream: (db.select(db.files)..where((f) => f.id.equals(file.id))).watchSingleOrNull(),
+      initialData: file,
+      builder: (context, snapshot) {
+        final current = snapshot.data ?? file;
+        final isFav = current.isFavorite;
+        return IconButton(
+          icon: Icon(
+            isFav ? Icons.favorite : Icons.favorite_border,
+            color: isFav ? Colors.redAccent : Colors.white,
+          ),
+          tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
+          onPressed: () async {
+            await (db.update(db.files)..where((f) => f.id.equals(file.id)))
+                .write(FilesCompanion(isFavorite: drift.Value(!isFav)));
+          },
+        );
+      },
+    );
+  }
+}
 
 class PreviewDownloadButton extends ConsumerWidget {
   const PreviewDownloadButton({super.key, required this.fileId});

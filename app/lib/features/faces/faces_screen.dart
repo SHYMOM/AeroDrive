@@ -13,6 +13,7 @@ import 'package:collection/collection.dart';
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
+import '../../domain/ai/face_clustering_engine.dart';
 import '../gallery/thumbnail_service.dart';
 import '../preview/preview_router.dart';
 
@@ -33,6 +34,9 @@ class FaceClusterModel {
 final faceClustersProvider = FutureProvider<List<FaceClusterModel>>((ref) async {
   final db = ref.watch(databaseProvider);
   
+  // Automatically group duplicate faces of the same person together
+  await FaceClusteringEngine.clusterExistingFaces(db);
+
   final clusters = await db.select(db.faceClusters).get();
   final mappings = await db.select(db.photoFaces).get();
   
@@ -270,7 +274,21 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                   });
                 },
               ),
-            ] else
+            ] else ...[
+              IconButton(
+                icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                tooltip: 'Auto-Group Similar Faces',
+                onPressed: () async {
+                  final db = ref.read(databaseProvider);
+                  final merged = await FaceClusteringEngine.clusterExistingFaces(db);
+                  ref.invalidate(faceClustersProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(merged > 0 ? 'Grouped $merged face clusters into people!' : 'All faces are already organized!')),
+                    );
+                  }
+                },
+              ),
               IconButton(
                 icon: Icon(Icons.select_all, color: Theme.of(context).colorScheme.onSurface),
                 tooltip: 'Select to Merge',
@@ -280,6 +298,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                   });
                 },
               ),
+            ]
           ] else
             IconButton(
               icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onSurface),

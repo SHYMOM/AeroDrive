@@ -45,3 +45,7 @@ app.*.map.json
 
 # .env contains API credentials — NEVER commit this file
 .env
+
+# --- Graphify caches & timestamped backups ---
+graphify-out/cache/
+graphify-out/[0-9]*/

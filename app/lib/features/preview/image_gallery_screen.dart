@@ -49,6 +49,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          PreviewFavoriteButton(file: currentFile),
           PreviewDownloadButton(fileId: currentFile.id),
         ],
       ),

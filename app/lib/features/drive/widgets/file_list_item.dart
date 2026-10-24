@@ -15,6 +15,7 @@ import '../../preview/preview_router.dart';
 import '../../sharing/share_dialog.dart';
 import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
+import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
@@ -145,6 +146,11 @@ class FileListItem extends ConsumerWidget {
                 padding: const EdgeInsets.only(left: 8),
                 child: Icon(Icons.star_rounded, color: Theme.of(context).colorScheme.primary, size: 16),
               ),
+            if (ref.watch(offlinePinnedIdsProvider).contains(file.id))
+              const Padding(
+                padding: EdgeInsets.only(left: 6),
+                child: Icon(Icons.offline_pin_rounded, color: Colors.tealAccent, size: 16),
+              ),
           ],
         ),
         subtitle: Padding(
@@ -200,6 +206,33 @@ class FileListItem extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Queued ${file.name} for download...')));
           }
+        } else if (value == 'offline') {
+          final pinService = ref.read(offlinePinServiceProvider);
+          final isPinned = ref.read(offlinePinnedIdsProvider).contains(file.id);
+          if (isPinned) {
+            await pinService.unpinFile(file.id);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Removed ${file.name} from offline access')),
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Caching ${file.name} for offline access...')),
+            );
+            final pinned = await pinService.pinFile(file);
+            if (context.mounted) {
+              if (pinned != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('${file.name} is now available offline')),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to cache ${file.name} for offline')),
+                );
+              }
+            }
+          }
         } else if (value == 'share') {
           showDialog(
             context: context,
@@ -221,8 +254,19 @@ class FileListItem extends ConsumerWidget {
       },
       itemBuilder: (context) {
         final theme = Theme.of(context);
+        final isOfflinePinned = ref.watch(offlinePinnedIdsProvider).contains(file.id);
         return [
           PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(
+            value: 'offline',
+            child: Row(
+              children: [
+                Icon(isOfflinePinned ? Icons.offline_pin_outlined : Icons.offline_pin_rounded, color: Colors.tealAccent, size: 18),
+                const SizedBox(width: 10),
+                Text(isOfflinePinned ? 'Remove Offline Access' : 'Available Offline', style: TextStyle(color: theme.colorScheme.onSurface)),
+              ],
+            ),
+          ),
           PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: theme.colorScheme.onSurface))),
           PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: theme.colorScheme.onSurface))),
           PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: theme.colorScheme.onSurface))),

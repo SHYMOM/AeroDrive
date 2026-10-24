@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/logger.dart';
 import '../data/db/database.dart';
+import 'ai/face_clustering_engine.dart';
 
 class SmartAnalyzer {
 
@@ -61,8 +62,8 @@ class SmartAnalyzer {
       double minDistance = double.maxFinite;
 
       for (final city in cities) {
-        final clat = double.tryParse(city['lat'].toString()) ?? 0.0;
-        final clng = double.tryParse(city['lng'].toString()) ?? 0.0;
+        final clat = double.tryParse((city['lat'] ?? city['latitude'])?.toString() ?? '') ?? 0.0;
+        final clng = double.tryParse((city['lon'] ?? city['lng'] ?? city['longitude'])?.toString() ?? '') ?? 0.0;
         
         final dx = clat - lat;
         final dy = clng - lng;
@@ -77,29 +78,29 @@ class SmartAnalyzer {
       if (closestCity != null) {
         final cityName = closestCity['name'] as String;
         final countryName = closestCity['country'] as String;
+        final adminName = closestCity['admin'] as String?;
+        final clat = double.tryParse((closestCity['lat'] ?? closestCity['latitude'])?.toString() ?? '');
+        final clng = double.tryParse((closestCity['lon'] ?? closestCity['lng'] ?? closestCity['longitude'])?.toString() ?? '');
 
-        var place = await (_db.select(_db.places)
-          ..where((p) => p.locality.equals(cityName) & p.country.equals(countryName))
-        ).getSingleOrNull();
-
-        if (place == null) {
-          final placeId = _uuid.v4();
-          await _db.into(_db.places).insert(
-            PlacesCompanion.insert(
-              id: placeId,
-              locality: drift.Value(cityName),
-              country: drift.Value(countryName),
-            )
-          );
-          place = await (_db.select(_db.places)..where((p) => p.id.equals(placeId))).getSingle();
-        }
+        final placeId = '${cityName}_$countryName'.replaceAll(' ', '_').toLowerCase();
+        await _db.into(_db.places).insert(
+          PlacesCompanion.insert(
+            id: placeId,
+            locality: drift.Value(cityName),
+            country: drift.Value(countryName),
+            adminArea: drift.Value(adminName),
+            latitude: drift.Value(clat),
+            longitude: drift.Value(clng),
+          ),
+          mode: drift.InsertMode.insertOrReplace,
+        );
 
         await _db.into(_db.filePlaces).insert(
           FilePlacesCompanion.insert(
             fileId: fileId,
-            placeId: place.id,
+            placeId: placeId,
           ),
-          mode: drift.InsertMode.insertOrIgnore,
+          mode: drift.InsertMode.insertOrReplace,
         );
         AppLogger.info('SmartAnalyzer: Geocoded $fileId to $cityName, $countryName');
         return {'locality': cityName, 'country': countryName};
@@ -107,6 +108,38 @@ class SmartAnalyzer {
     } catch (e) {
       AppLogger.error('SmartAnalyzer: Failed to geocode location', e);
     }
+    return null;
+  }
+
+  /// Timeline-based place inference for photos taken without EXIF GPS tags.
+  /// If a photo was taken within 4 hours of a geocoded photo, link it to the same place.
+  Future<Map<String, String>?> _findNearbyPlace(DateTime takenAt, String fileId) async {
+    try {
+      final start = takenAt.subtract(const Duration(hours: 4));
+      final end = takenAt.add(const Duration(hours: 4));
+      final nearby = await (_db.customSelect(
+        'SELECT p.id, p.locality, p.country FROM file_places fp '
+        'JOIN places p ON fp.place_id = p.id '
+        'JOIN files f ON fp.file_id = f.id '
+        'WHERE f.photo_taken_at BETWEEN ? AND ? '
+        'LIMIT 1',
+        variables: [drift.Variable<DateTime>(start), drift.Variable<DateTime>(end)],
+      )).getSingleOrNull();
+
+      if (nearby != null) {
+        final placeId = nearby.read<String>('id');
+        final loc = nearby.read<String?>('locality');
+        final cnt = nearby.read<String?>('country');
+        if (loc != null && cnt != null) {
+          await _db.into(_db.filePlaces).insert(
+            FilePlacesCompanion.insert(fileId: fileId, placeId: placeId),
+            mode: drift.InsertMode.insertOrIgnore,
+          );
+          AppLogger.info('SmartAnalyzer: Inferred place for $fileId via timeline -> $loc, $cnt');
+          return {'locality': loc, 'country': cnt};
+        }
+      }
+    } catch (_) {}
     return null;
   }
 
@@ -155,6 +188,8 @@ class SmartAnalyzer {
 
       if (latitude != null && longitude != null && latitude.isFinite && longitude.isFinite) {
         await _geocodeLocation(fileId, latitude, longitude);
+      } else if (photoTakenAt != null) {
+        await _findNearbyPlace(photoTakenAt, fileId);
       }
 
       // 2. Machine Learning labels and face detection
@@ -300,6 +335,12 @@ class SmartAnalyzer {
           locality = geocodeResult['locality'];
           country = geocodeResult['country'];
         }
+      } else if (photoTakenAt != null) {
+        final nearby = await _findNearbyPlace(photoTakenAt, fileId);
+        if (nearby != null) {
+          locality = nearby['locality'];
+          country = nearby['country'];
+        }
       }
 
       // 2. Machine Learning labels and face detection
@@ -384,12 +425,32 @@ class SmartAnalyzer {
         continue;
       }
 
-      final clusterId = _uuid.v4();
-      await _db.into(_db.faceClusters).insert(
-        FaceClustersCompanion.insert(
-          id: clusterId,
-        )
-      );
+      img.Image? croppedFace;
+      if (decodedImage != null) {
+        final int x = rect.left.toInt().clamp(0, decodedImage.width);
+        final int y = rect.top.toInt().clamp(0, decodedImage.height);
+        final int w = rect.width.toInt().clamp(1, decodedImage.width - x);
+        final int h = rect.height.toInt().clamp(1, decodedImage.height - y);
+
+        if (w > 0 && h > 0) {
+          croppedFace = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
+        }
+      }
+
+      String clusterId;
+      if (croppedFace != null) {
+        final embedding = FaceClusteringEngine.extractFaceEmbedding(croppedFace);
+        clusterId = await FaceClusteringEngine.findOrCreateCluster(
+          db: _db,
+          newEmbedding: embedding,
+        );
+      } else {
+        clusterId = _uuid.v4();
+        await _db.into(_db.faceClusters).insert(
+          FaceClustersCompanion.insert(id: clusterId),
+          mode: drift.InsertMode.insertOrIgnore,
+        );
+      }
 
       final mappingId = _uuid.v4();
       await _db.into(_db.photoFaces).insert(
@@ -401,7 +462,8 @@ class SmartAnalyzer {
           boxTop: drift.Value(normTop),
           boxWidth: drift.Value(normWidth),
           boxHeight: drift.Value(normHeight),
-        )
+        ),
+        mode: drift.InsertMode.insertOrReplace,
       );
 
       facesResult.add({
@@ -413,25 +475,17 @@ class SmartAnalyzer {
       });
 
       // Crop and save face to cache for UI
-      try {
-        if (decodedImage != null) {
-          final int x = rect.left.toInt().clamp(0, decodedImage.width);
-          final int y = rect.top.toInt().clamp(0, decodedImage.height);
-          final int w = rect.width.toInt().clamp(1, decodedImage.width - x);
-          final int h = rect.height.toInt().clamp(1, decodedImage.height - y);
+      if (croppedFace != null) {
+        try {
+          final cacheDir = await getApplicationSupportDirectory();
+          final facesDir = Directory('${cacheDir.path}/faces');
+          if (!await facesDir.exists()) await facesDir.create(recursive: true);
 
-          if (w > 0 && h > 0) {
-            final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
-            final cacheDir = await getApplicationSupportDirectory();
-            final facesDir = Directory('${cacheDir.path}/faces');
-            if (!await facesDir.exists()) await facesDir.create(recursive: true);
-
-            final faceFile = File('${facesDir.path}/${clusterId}_${_uuid.v4()}.png');
-            await faceFile.writeAsBytes(img.encodePng(cropped));
-          }
+          final faceFile = File('${facesDir.path}/${clusterId}_${_uuid.v4()}.png');
+          await faceFile.writeAsBytes(img.encodePng(croppedFace));
+        } catch (e) {
+          AppLogger.error('Failed to crop face', e);
         }
-      } catch (e) {
-        AppLogger.error('Failed to crop face', e);
       }
     }
     return facesResult;
@@ -453,18 +507,41 @@ class SmartAnalyzer {
     final double hOrig = decodedImage?.height.toDouble() ?? 1.0;
 
     for (final rect in faceRects) {
-      // Create a mock cluster for each face
-      final clusterId = _uuid.v4();
-      await _db.into(_db.faceClusters).insert(
-        FaceClustersCompanion.insert(
-          id: clusterId,
-        )
-      );
-
       final double normLeft = rect.left / wOrig;
       final double normTop = rect.top / hOrig;
       final double normWidth = rect.width / wOrig;
       final double normHeight = rect.height / hOrig;
+
+      if (!normLeft.isFinite || !normTop.isFinite || !normWidth.isFinite || !normHeight.isFinite) {
+        continue;
+      }
+
+      img.Image? croppedFace;
+      if (decodedImage != null) {
+        final int x = rect.left.toInt().clamp(0, decodedImage.width);
+        final int y = rect.top.toInt().clamp(0, decodedImage.height);
+        final int w = rect.width.toInt().clamp(1, decodedImage.width - x);
+        final int h = rect.height.toInt().clamp(1, decodedImage.height - y);
+
+        if (w > 0 && h > 0) {
+          croppedFace = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
+        }
+      }
+
+      String clusterId;
+      if (croppedFace != null) {
+        final embedding = FaceClusteringEngine.extractFaceEmbedding(croppedFace);
+        clusterId = await FaceClusteringEngine.findOrCreateCluster(
+          db: _db,
+          newEmbedding: embedding,
+        );
+      } else {
+        clusterId = _uuid.v4();
+        await _db.into(_db.faceClusters).insert(
+          FaceClustersCompanion.insert(id: clusterId),
+          mode: drift.InsertMode.insertOrIgnore,
+        );
+      }
 
       // Link to file
       final mappingId = _uuid.v4();
@@ -477,30 +554,22 @@ class SmartAnalyzer {
           boxTop: drift.Value(normTop),
           boxWidth: drift.Value(normWidth),
           boxHeight: drift.Value(normHeight),
-        )
+        ),
+        mode: drift.InsertMode.insertOrReplace,
       );
 
       // Crop and save face to cache for UI
-      try {
-        if (decodedImage != null) {
-          // Clamp rect to image bounds
-          final int x = rect.left.toInt().clamp(0, decodedImage.width);
-          final int y = rect.top.toInt().clamp(0, decodedImage.height);
-          final int w = rect.width.toInt().clamp(1, decodedImage.width - x);
-          final int h = rect.height.toInt().clamp(1, decodedImage.height - y);
+      if (croppedFace != null) {
+        try {
+          final cacheDir = await getApplicationSupportDirectory();
+          final facesDir = Directory('${cacheDir.path}/faces');
+          if (!await facesDir.exists()) await facesDir.create(recursive: true);
 
-          if (w > 0 && h > 0) {
-            final cropped = img.copyCrop(decodedImage, x: x, y: y, width: w, height: h);
-            final cacheDir = await getApplicationSupportDirectory();
-            final facesDir = Directory('${cacheDir.path}/faces');
-            if (!await facesDir.exists()) await facesDir.create(recursive: true);
-
-            final faceFile = File('${facesDir.path}/${clusterId}_${_uuid.v4()}.png');
-            await faceFile.writeAsBytes(img.encodePng(cropped));
-          }
+          final faceFile = File('${facesDir.path}/${clusterId}_${_uuid.v4()}.png');
+          await faceFile.writeAsBytes(img.encodePng(croppedFace));
+        } catch (e) {
+          AppLogger.error('Failed to crop face for $fileId', e);
         }
-      } catch (e) {
-        AppLogger.error('Failed to crop face for $fileId', e);
       }
     }
   }

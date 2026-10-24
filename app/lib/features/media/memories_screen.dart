@@ -7,8 +7,8 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../gallery/thumbnail_service.dart';
-import '../preview/preview_router.dart';
 import 'media_screen.dart';
+import 'memory_story_screen.dart';
 
 class MemoriesScreen extends ConsumerWidget {
   const MemoriesScreen({super.key});
@@ -69,7 +69,19 @@ class MemoriesScreen extends ConsumerWidget {
                     : 'Relive this moment';
 
                 return GestureDetector(
-                  onTap: () => PreviewRouter.openPreview(context, file),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MemoryStoryScreen(
+                          title: memoryTitle,
+                          subtitle: dateStr,
+                          files: olderFiles,
+                          initialIndex: index,
+                        ),
+                      ),
+                    );
+                  },
                   child: Container(
                     height: 200,
                     margin: const EdgeInsets.only(bottom: 16),
