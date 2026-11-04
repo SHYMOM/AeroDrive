@@ -25,7 +25,7 @@
 
 AeroDrive turns unlimited Telegram channels into a **private, high-performance, self-hosted cloud drive** — with no monthly fees and no server to maintain. Every file is **client-side encrypted** before it leaves your device using AES-256-GCM and Argon2id key derivation. Telegram never sees plaintext — not your filenames, not your photos, not your documents. You hold the only key.
 
-It's a full-featured cross-platform app: a smart media gallery with on-device face clustering, 4K seekable video streaming, a document scanner, WebDAV mount, and instant zero-knowledge share links — all backed by an architecture that lets you recover your entire drive from scratch with a 12-word BIP-39 phrase.
+It's a full-featured cross-platform app: a smart media gallery with on-device face clustering, 4K seekable video streaming, a document scanner, and instant zero-knowledge share links — with WebDAV network drive mounting planned on the active roadmap. All backed by an architecture that lets you recover your entire drive from scratch with a 24-word BIP-39 phrase.
 
 ---
 
@@ -64,7 +64,7 @@ It's a full-featured cross-platform app: a smart media gallery with on-device fa
 - **AES-256-CTR** for streaming media — counter arithmetic enables instant seeking at any position in a 20 GB video
 - **Argon2id Key Derivation** — Memory-hard, GPU/ASIC-resistant master key from your passphrase
 - **HKDF-HMAC-SHA256 per-file subkey derivation** — unique 96-bit nonce per file, zero cryptographic reuse
-- **BIP-39 12-word recovery phrase** — lose your device, not your files
+- **BIP-39 24-word recovery phrase** — lose your device, not your files
 - **Zero telemetry** — no third-party trackers, analytics, or crash reporters
 
 ### ⚡ Infinite Storage & Resilient Transfers
@@ -75,12 +75,12 @@ It's a full-featured cross-platform app: a smart media gallery with on-device fa
 - **Zero-DB Disaster Recovery** — encrypted manifest channel lets you rebuild your entire drive index on a fresh device using only your passphrase
 
 ### 🧠 On-Device AI & Media Intelligence
-- **Local face clustering** — TensorFlow Lite face detection + agglomerative cosine-distance clustering, no cloud calls ever
+- **Local face clustering** — Google ML Kit face detection + agglomerative cosine-distance clustering, no cloud calls ever (pet clustering planned on roadmap)
 - **Interactive Places & Offline Geocoding** — embedded global city index (`cities.json`) for reverse geocoding; browse media by city, country, and geographic hotspots
 - **Memories & Story Carousel** — "On this day", "Recent Adventures", and milestone albums, all generated on-device
 
 ### 📑 Productivity & Power Tools
-- **Document scanner** — multi-page capture, perspective correction, B&W/Grayscale/Color Enhanced filters, PDF export
+- **Document scanner** — multi-page camera capture, B&W / Grayscale / Color Enhanced contrast filters, native PDF export (automatic perspective warping planned)
 - **Storage Health & Duplicate Cleaner** — large-file analysis (>50 MB, >100 MB), content duplicate detection, one-tap cache trimmer
 - **Google Takeout Importer** — ZIP archive importer for Google Photos/Drive; parses embedded JSON metadata (timestamps, EXIF, geo-coordinates) and recreates original folder trees
 
@@ -90,9 +90,9 @@ It's a full-featured cross-platform app: a smart media gallery with on-device fa
 - **Biometric & App Lock** — fingerprint/face unlock (`local_auth`) or PIN, with configurable auto-lock timers and OS-level privacy shield (blurs previews in task switcher)
 
 ### 🌐 WebDAV & Cross-Platform Ecosystem
-- **WebDAV mount** — Go companion server lets you mount AeroDrive as `Z:\` in Windows Explorer, macOS Finder, or Linux Nautilus
+- **WebDAV mount** `[Roadmap / In Development]` — Planned companion daemon to mount AeroDrive as `Z:\` in Windows Explorer, macOS Finder, or Linux Nautilus
 - **Secure share links** — password-protected, expiry-limited, burn-after-reading (self-destructs after first download)
-- **Cloudflare Tunnel / Tailscale compatible** — remote WebDAV access without opening firewall ports
+- **Cloudflare Tunnel / Tailscale compatible** — remote sharing & planned WebDAV access without opening firewall ports
 
 ---
 
@@ -177,7 +177,7 @@ If you lose your device or your local database is corrupted, **you lose nothing*
 2. Enable **Install from Unknown Sources** in your Android settings.
 3. Install the APK (Android 8.0+ required).
 4. Launch AeroDrive and sign in with your Telegram phone number and 2FA password.
-5. Create a **Master Passphrase** to initialize your encrypted drive. Write down your 12-word BIP-39 recovery phrase and store it somewhere safe.
+5. Create a **Master Passphrase** to initialize your encrypted drive. Write down your 24-word BIP-39 recovery phrase and store it somewhere safe.
 
 </details>
 
@@ -193,9 +193,11 @@ If you lose your device or your local database is corrupted, **you lose nothing*
 </details>
 
 <details>
-<summary><strong>🌐 Go WebDAV Companion Server — Mount as Z:\ drive</strong></summary>
+<summary><strong>🌐 Go WebDAV Companion Server — Mount as Z:\ drive [Roadmap / In Development]</strong></summary>
 
-Build and run the optional Go backend to mount AeroDrive as a standard network drive:
+> **Note:** The WebDAV network drive integration is currently under active development and not yet available in the stable release builds.
+
+Once released, you will be able to build and run the companion backend to mount AeroDrive as a standard network drive:
 
 ```bash
 cd backend
@@ -312,14 +314,14 @@ AeroDrive/
 |---|---|
 | **UI Framework** | Flutter 3.22+ / Dart 3 |
 | **Telegram Transport** | TDLib C++ via `dart:ffi` (`tdjson.dll` / `libtdjson.so`) |
-| **Backend Server** | Go 1.22+ · chi router · WebDAV |
+| **Backend Server** | Go 1.22+ · chi router · WebDAV *(In Development)* |
 | **Local Database** | Drift SQLite · Schema v5 · FTS5 full-text search |
 | **State Management** | Riverpod |
 | **Navigation** | go_router |
 | **Cryptography** | `cryptography` package — AES-256-GCM/CTR, Argon2id, HKDF |
 | **Secure Storage** | `flutter_secure_storage` — Android Keystore / Windows DPAPI |
 | **Video Playback** | MediaKit (libmpv) |
-| **On-Device AI** | `google_mlkit_face_detection` + TensorFlow Lite |
+| **On-Device AI** | Google ML Kit (`google_mlkit_face_detection`, `google_mlkit_image_labeling`) |
 
 ---
 
