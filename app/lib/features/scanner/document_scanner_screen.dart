@@ -137,8 +137,8 @@ class _DocumentScannerScreenState extends ConsumerState<DocumentScannerScreen> {
           if (_processedPages.isNotEmpty)
             TextButton.icon(
               onPressed: _isProcessing ? null : _saveAndUpload,
-              icon: const Icon(Icons.check, color: AppColors.primary),
-              label: const Text('Save PDF', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              icon: Icon(Icons.check, color: AppColors.primary),
+              label: Text('Save PDF', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -154,7 +154,7 @@ class _DocumentScannerScreenState extends ConsumerState<DocumentScannerScreen> {
                       shape: BoxShape.circle,
                       color: AppColors.primary.withValues(alpha: 0.15),
                     ),
-                    child: const Icon(Icons.document_scanner_outlined, size: 40, color: AppColors.primary),
+                    child: Icon(Icons.document_scanner_outlined, size: 40, color: AppColors.primary),
                   ),
                   const SizedBox(height: 20),
                   const Text('No Document Pages Added', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -180,7 +180,7 @@ class _DocumentScannerScreenState extends ConsumerState<DocumentScannerScreen> {
                       labelText: 'Document Name',
                       labelStyle: const TextStyle(color: Colors.white70),
                       suffixText: '.pdf',
-                      suffixStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      suffixStyle: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),

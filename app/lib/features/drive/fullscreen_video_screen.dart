@@ -32,6 +32,10 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
   Timer? _hideControlsTimer;
   double _playbackSpeed = 1;
 
+  // M3: Scrubber seek throttling
+  bool _isScrubbing = false;
+  Duration _scrubPosition = Duration.zero;
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +43,21 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _initStream();
     _startHideControlsTimer();
+  }
+
+  @override
+  void dispose() {
+    _hideControlsTimer?.cancel();
+    ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    player?.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
   }
 
   void _startHideControlsTimer() {
@@ -85,7 +104,7 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
       });
 
       player!.stream.position.listen((pos) {
-        if (mounted) setState(() => _position = pos);
+        if (mounted && !_isScrubbing) setState(() => _position = pos);
       });
 
       player!.stream.duration.listen((dur) {
@@ -132,8 +151,12 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
 
   void _seekRelative(int seconds) {
     if (player == null) return;
-    final newPos = _position + Duration(seconds: seconds);
-    player!.seek(newPos < Duration.zero ? Duration.zero : newPos);
+    final current = _isScrubbing ? _scrubPosition : _position;
+    var newPos = current + Duration(seconds: seconds);
+    if (newPos < Duration.zero) newPos = Duration.zero;
+    if (_duration > Duration.zero && newPos > _duration) newPos = _duration;
+    player!.seek(newPos);
+    setState(() => _position = newPos);
     _startHideControlsTimer();
   }
 
@@ -162,20 +185,6 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
       return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
     }
     return "$twoDigitMinutes:$twoDigitSeconds";
-  }
-
-  @override
-  void dispose() {
-    _hideControlsTimer?.cancel();
-    player?.dispose();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    super.dispose();
   }
 
   @override
@@ -312,7 +321,10 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                         child: Row(
                           children: [
-                            Text(_formatDuration(_position), style: const TextStyle(color: Colors.white)),
+                            Text(
+                              _formatDuration(_isScrubbing ? _scrubPosition : _position),
+                              style: const TextStyle(color: Colors.white),
+                            ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: SliderTheme(
@@ -324,12 +336,40 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
                                   inactiveTrackColor: Colors.white24,
                                   thumbColor: Colors.blueAccent,
                                 ),
-                                child: Slider(
-                                  value: _position.inMilliseconds.toDouble(),
-                                  max: _duration.inMilliseconds.toDouble() > 0 ? _duration.inMilliseconds.toDouble() : 1.0,
-                                  onChanged: (val) {
-                                    player?.seek(Duration(milliseconds: val.toInt()));
-                                    _startHideControlsTimer();
+                                child: Builder(
+                                  builder: (context) {
+                                    final maxMs = _duration.inMilliseconds.toDouble() > 0
+                                        ? _duration.inMilliseconds.toDouble()
+                                        : 1.0;
+                                    final currentMs = (_isScrubbing ? _scrubPosition : _position)
+                                        .inMilliseconds
+                                        .toDouble()
+                                        .clamp(0.0, maxMs);
+                                    return Slider(
+                                      value: currentMs,
+                                      max: maxMs,
+                                      onChangeStart: (val) {
+                                        _hideControlsTimer?.cancel();
+                                        setState(() {
+                                          _isScrubbing = true;
+                                          _scrubPosition = Duration(milliseconds: val.toInt());
+                                        });
+                                      },
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _scrubPosition = Duration(milliseconds: val.toInt());
+                                        });
+                                      },
+                                      onChangeEnd: (val) {
+                                        final target = Duration(milliseconds: val.toInt());
+                                        player?.seek(target);
+                                        setState(() {
+                                          _isScrubbing = false;
+                                          _position = target;
+                                        });
+                                        _startHideControlsTimer();
+                                      },
+                                    );
                                   },
                                 ),
                               ),

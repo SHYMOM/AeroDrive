@@ -70,6 +70,7 @@ dependencies:
   flutter_widget_from_html: ^0.17.2
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
+  fc_native_video_thumbnail: ^4.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

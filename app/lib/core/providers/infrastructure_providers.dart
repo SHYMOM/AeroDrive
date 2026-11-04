@@ -87,3 +87,8 @@ final ensureInfrastructureProvider =
     allAccounts: allAccounts,
   );
 });
+
+/// Indicates whether infrastructure provisioning or discovery is currently active.
+/// Used to coordinate between AuthNotifier and DriveScreen to eliminate race conditions.
+final provisioningActiveProvider = StateProvider<bool>((ref) => false);
+

@@ -201,7 +201,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                               child: LinearProgressIndicator(
                                 value: _progress > 0 ? _progress : null,
                                 backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
-                                valueColor: const AlwaysStoppedAnimation<Color>(
+                                valueColor: AlwaysStoppedAnimation<Color>(
                                   AppColors.primary,
                                 ),
                               ),

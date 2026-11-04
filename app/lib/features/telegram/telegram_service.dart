@@ -842,17 +842,34 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     });
   }
 
+  Future<void> cancelDownloadFile(int fileId, [bool onlyIfPending = false]) async {
+    await sendRequest({
+      "@type": "cancelDownloadFile",
+      "file_id": fileId,
+      "only_if_pending": onlyIfPending,
+    });
+  }
+
   Map<String, dynamic> _buildDocumentPayload({
     required int chatId,
-    required String normalizedPath,
+    required Map<String, dynamic> inputFile,
     String? caption,
+    bool useModernWrapper = true,
   }) {
+    // In TDLib 1.8.65+ (Windows/desktop binaries), inputMessageDocument wraps
+    // the InputFile inside an intermediate 'inputDocument' container.
+    // In earlier TDLib builds, inputMessageDocument takes InputFile directly.
+    final dynamic documentObj = useModernWrapper
+        ? <String, dynamic>{
+            "@type": "inputDocument",
+            "document": inputFile,
+            "disable_content_type_detection": true,
+          }
+        : inputFile;
+
     final inputContent = <String, dynamic>{
       "@type": "inputMessageDocument",
-      "document": {
-        "@type": "inputFileLocal",
-        "path": normalizedPath,
-      },
+      "document": documentObj,
       "disable_content_type_detection": true,
     };
 
@@ -875,13 +892,25 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     required int chatId,
     required String normalizedPath,
     String? caption,
+    bool useModernWrapper = true,
   }) {
+    // In TDLib 1.8.65+, inputMessagePhoto wraps the InputFile inside 'inputPhoto'.
+    final dynamic photoObj = useModernWrapper
+        ? <String, dynamic>{
+            "@type": "inputPhoto",
+            "photo": {
+              "@type": "inputFileLocal",
+              "path": normalizedPath,
+            },
+          }
+        : <String, dynamic>{
+            "@type": "inputFileLocal",
+            "path": normalizedPath,
+          };
+
     final inputContent = <String, dynamic>{
       "@type": "inputMessagePhoto",
-      "photo": {
-        "@type": "inputFileLocal",
-        "path": normalizedPath,
-      },
+      "photo": photoObj,
     };
 
     if (caption != null) {
@@ -910,25 +939,91 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       AppLogger.warning('>>> CAPTION IS NULL - Manifest will be MISSING from Telegram message!');
     }
 
-    final payload = _buildDocumentPayload(
+    final inputFile = <String, dynamic>{
+      "@type": "inputFileLocal",
+      "path": normalizedPath,
+    };
+
+    final modernPayload = _buildDocumentPayload(
       chatId: chatId,
-      normalizedPath: normalizedPath,
+      inputFile: inputFile,
       caption: caption,
+      useModernWrapper: true,
     );
 
-    return sendRequest(payload, timeout: const Duration(hours: 6));
+    try {
+      return await sendRequest(modernPayload, timeout: const Duration(hours: 6));
+    } catch (e) {
+      // If modern inputDocument wrapper is rejected by an older TDLib build, fallback to direct inputFileLocal
+      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+        AppLogger.warning('Modern inputDocument payload rejected ($e), retrying with legacy schema');
+        final fallbackPayload = _buildDocumentPayload(
+          chatId: chatId,
+          inputFile: inputFile,
+          caption: caption,
+          useModernWrapper: false,
+        );
+        return await sendRequest(fallbackPayload, timeout: const Duration(hours: 6));
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> sendRemoteDocument(int chatId, String remoteFileId, {String? caption}) async {
+    final inputFile = <String, dynamic>{
+      "@type": "inputFileRemote",
+      "id": remoteFileId,
+    };
+
+    final modernPayload = _buildDocumentPayload(
+      chatId: chatId,
+      inputFile: inputFile,
+      caption: caption,
+      useModernWrapper: true,
+    );
+
+    try {
+      return await sendRequest(modernPayload);
+    } catch (e) {
+      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+        AppLogger.warning('Modern inputDocument payload rejected ($e), retrying with legacy schema');
+        final fallbackPayload = _buildDocumentPayload(
+          chatId: chatId,
+          inputFile: inputFile,
+          caption: caption,
+          useModernWrapper: false,
+        );
+        return await sendRequest(fallbackPayload);
+      }
+      rethrow;
+    }
   }
 
   Future<Map<String, dynamic>> uploadPhoto(int chatId, String localFilePath, {String? caption}) async {
     final normalizedPath = localFilePath.replaceAll(r'\', '/');
 
-    final payload = _buildPhotoPayload(
+    final modernPayload = _buildPhotoPayload(
       chatId: chatId,
       normalizedPath: normalizedPath,
       caption: caption,
+      useModernWrapper: true,
     );
 
-    return sendRequest(payload);
+    try {
+      return await sendRequest(modernPayload);
+    } catch (e) {
+      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+        AppLogger.warning('Modern inputPhoto payload rejected ($e), retrying with legacy schema');
+        final fallbackPayload = _buildPhotoPayload(
+          chatId: chatId,
+          normalizedPath: normalizedPath,
+          caption: caption,
+          useModernWrapper: false,
+        );
+        return await sendRequest(fallbackPayload);
+      }
+      rethrow;
+    }
   }
 
   Future<void> addProxy({

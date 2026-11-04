@@ -680,9 +680,9 @@ class _ChannelsScreenState extends ConsumerState<ChannelsScreen> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.fromLTRB(24, 24, 24, 8),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
                       child: Text(
                         'Active Storage Channels',
                         style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, letterSpacing: 1.2),

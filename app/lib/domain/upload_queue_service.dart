@@ -216,8 +216,11 @@ class UploadQueueService {
     }
   }
 
-  Future<String> _calculateFileHash(File file) async {
-    return UploadOrchestrator.computeFileHash(file);
+  Future<String> _calculateFileHash(
+    File file, {
+    void Function(int bytesRead, int totalBytes)? onProgress,
+  }) async {
+    return UploadOrchestrator.computeFileHash(file, onProgress: onProgress);
   }
 
 
@@ -743,7 +746,7 @@ class UploadQueueService {
     );
 
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
-      .write(const TransferQueueCompanion(status: drift.Value('PROCESSING')));
+      .write(const TransferQueueCompanion(status: drift.Value('ENCRYPTING')));
 
     final parts = item.fileId?.split('|');
     if (parts == null || parts.length < 2) {
@@ -766,12 +769,41 @@ class UploadQueueService {
 
     final fileLength = await sourceFile.length();
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
-        .write(TransferQueueCompanion(totalBytes: drift.Value(fileLength)));
+        .write(TransferQueueCompanion(
+          totalBytes: drift.Value(fileLength),
+          status: const drift.Value('ENCRYPTING'),
+          bytesTransferred: const drift.Value(0),
+        ));
     final fileName = sourceFile.path.contains('/') ? sourceFile.path.split('/').last : sourceFile.path.split('\\').last;
     final mimeType = _getMimeType(fileName);
     final isStreamable = mimeType.startsWith('video/') || mimeType.startsWith('audio/');
 
-    final hashStr = await UploadOrchestrator.computeFileHash(sourceFile);
+    DateTime lastHashUpdate = DateTime.fromMillisecondsSinceEpoch(0);
+    final hashStr = await UploadOrchestrator.computeFileHash(
+      sourceFile,
+      onProgress: (bytesRead, totalBytes) {
+        final now = DateTime.now();
+        if (bytesRead == totalBytes || now.difference(lastHashUpdate).inMilliseconds >= 200) {
+          lastHashUpdate = now;
+          _db.update(_db.transferQueue)
+            ..where((q) => q.id.equals(item.id))
+            ..write(TransferQueueCompanion(
+              bytesTransferred: drift.Value(bytesRead),
+              totalBytes: drift.Value(totalBytes),
+              status: const drift.Value('ENCRYPTING'),
+            ));
+
+          if (totalBytes > 0) {
+            NotificationService.instance.showUploadProgress(
+              NotificationService.instance.getSafeNotificationId(item.id),
+              'Hashing $fileName',
+              bytesRead,
+              totalBytes,
+            );
+          }
+        }
+      },
+    );
     final masterKey = _ref.read(masterKeyProvider);
 
     final List<int> dekBytes;
@@ -1058,7 +1090,15 @@ class UploadQueueService {
           continue;
         }
 
-        UploadFileLogger.instance.logStage('Encrypting chunk $i/$totalChunks');
+        UploadFileLogger.instance.logStage('Encrypting chunk ${i + 1}/$totalChunks');
+        if (fileLength > 0) {
+          NotificationService.instance.showUploadProgress(
+            NotificationService.instance.getSafeNotificationId(item.id),
+            'Encrypting chunk ${i + 1}/$totalChunks: $fileName',
+            (i * chunkSize).clamp(0, fileLength),
+            fileLength,
+          );
+        }
         await _orchestrator.processSingleChunkForUpload(
           sourceFile: sourceFile,
           outputFilePath: chunkOutputPath,
@@ -1228,6 +1268,14 @@ class UploadQueueService {
     Completer<void>? chunkCompleter,
   }) async {
     AppLogger.info('_uploadChunkWithTracking: chunk=$chunkIndex/$totalChunks fileId=$fileId captionPresent=${caption != null} captionLen=${caption?.length ?? 0}');
+
+    // Transition status from ENCRYPTING to PROCESSING when network transmission begins
+    await (_db.update(_db.transferQueue)
+      ..where((q) => q.id.equals(queueId) & q.status.equals('ENCRYPTING'))
+    ).write(const TransferQueueCompanion(
+      status: drift.Value('PROCESSING'),
+      bytesTransferred: drift.Value(0),
+    ));
 
     if (_abortedFileIds.contains(fileId)) {
       throw Exception('Upload aborted for file $fileId');

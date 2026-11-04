@@ -197,19 +197,19 @@ class TrashScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.delete_outline, size: 64, color: Colors.white24),
+                  Icon(Icons.delete_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                   const SizedBox(height: 16),
-                  const Text('Trash is empty', style: TextStyle(color: Colors.white54)),
+                  Text('Trash is empty', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
-                  const Text('Items in trash will be permanently deleted after 30 days', style: TextStyle(color: Colors.white30, fontSize: 12)),
+                  Text('Items in trash will be permanently deleted after 30 days', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7), fontSize: 12)),
                   const SizedBox(height: 24),
                   OutlinedButton.icon(
                     onPressed: () => context.go('/drive'),
                     icon: const Icon(Icons.folder_outlined, size: 18),
                     label: const Text('Back to My Drive'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.cyanAccent,
-                      side: BorderSide(color: Colors.cyanAccent.withValues(alpha: 0.4)),
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)),
                     ),
                   ),
                 ],

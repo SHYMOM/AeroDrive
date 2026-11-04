@@ -142,7 +142,9 @@ class BackupService {
     
     final writtenSize = await file.length();
     if (writtenSize == 0) {
-      await file.delete().catchError((_) => null);
+      try {
+        await file.delete();
+      } catch (_) {}
       throw Exception('Failed to write backup file: file is empty.');
     }
 

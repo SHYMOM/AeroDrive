@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" fill="none">
+  <defs>
+    <linearGradient id="driveBg" x1="0" y1="0" x2="800" y2="500" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="cyanBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00D2FF"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Container -->
+  <rect width="800" height="500" rx="16" fill="url(#driveBg)" stroke="#1E293B" stroke-width="2"/>
+  
+  <!-- Breadcrumb and controls -->
+  <rect x="25" y="25" width="750" height="45" rx="8" fill="#1E293B" fill-opacity="0.5" stroke="#334155" stroke-width="1"/>
+  <text x="45" y="53" font-family="'Inter', sans-serif" font-size="14" font-weight="600" fill="#38BDF8">Home <tspan fill="#64748B">/</tspan> Projects <tspan fill="#64748B">/</tspan> Drone_4K_Footage</text>
+  <rect x="670" y="33" width="90" height="28" rx="6" fill="#3B82F6"/>
+  <text x="715" y="52" font-family="'Inter', sans-serif" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">Select All</text>
+
+  <!-- File Table List -->
+  <!-- Header -->
+  <rect x="25" y="85" width="750" height="32" rx="4" fill="#090D16"/>
+  <text x="45" y="106" font-family="'Inter', sans-serif" font-size="11" font-weight="700" fill="#94A3B8">NAME</text>
+  <text x="380" y="106" font-family="'Inter', sans-serif" font-size="11" font-weight="700" fill="#94A3B8">SIZE</text>
+  <text x="490" y="106" font-family="'Inter', sans-serif" font-size="11" font-weight="700" fill="#94A3B8">ENCRYPTION</text>
+  <text x="630" y="106" font-family="'Inter', sans-serif" font-size="11" font-weight="700" fill="#94A3B8">CHANNELS</text>
+
+  <!-- Row 1 Selected -->
+  <rect x="25" y="125" width="750" height="55" rx="8" fill="#1E3A8A" fill-opacity="0.3" stroke="#38BDF8" stroke-width="1.5"/>
+  <text x="45" y="157" font-size="18">🎥</text>
+  <text x="75" y="150" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Alps_Summit_Flight_4K.mov</text>
+  <text x="75" y="167" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">Modified: Today, 3:14 PM</text>
+  <text x="380" y="157" font-family="'Inter', sans-serif" font-size="12" fill="#E2E8F0">4.2 GB</text>
+  <rect x="490" y="142" width="105" height="22" rx="11" fill="#064E3B"/>
+  <text x="542" y="157" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#34D399" text-anchor="middle">AES-256-CTR</text>
+  <text x="630" y="157" font-family="'Inter', sans-serif" font-size="12" fill="#38BDF8">Channels 1, 2, 3</text>
+
+  <!-- Row 2 -->
+  <rect x="25" y="188" width="750" height="55" rx="8" fill="#1E293B" fill-opacity="0.4"/>
+  <text x="45" y="220" font-size="18">📄</text>
+  <text x="75" y="213" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Flight_Permit_2026.pdf</text>
+  <text x="75" y="230" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">Modified: Yesterday</text>
+  <text x="380" y="220" font-family="'Inter', sans-serif" font-size="12" fill="#E2E8F0">3.8 MB</text>
+  <rect x="490" y="205" width="105" height="22" rx="11" fill="#172554"/>
+  <text x="542" y="220" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#60A5FA" text-anchor="middle">AES-256-GCM</text>
+  <text x="630" y="220" font-family="'Inter', sans-serif" font-size="12" fill="#94A3B8">Channel 1</text>
+
+  <!-- Row 3 -->
+  <rect x="25" y="251" width="750" height="55" rx="8" fill="#1E293B" fill-opacity="0.4"/>
+  <text x="45" y="283" font-size="18">📸</text>
+  <text x="75" y="276" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Glacier_Panorama_HDR.dng</text>
+  <text x="75" y="293" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">Modified: Oct 28</text>
+  <text x="380" y="283" font-family="'Inter', sans-serif" font-size="12" fill="#E2E8F0">68.4 MB</text>
+  <rect x="490" y="268" width="105" height="22" rx="11" fill="#172554"/>
+  <text x="542" y="283" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#60A5FA" text-anchor="middle">AES-256-GCM</text>
+  <text x="630" y="283" font-family="'Inter', sans-serif" font-size="12" fill="#94A3B8">Channels 2, 3</text>
+
+  <!-- Floating File Inspector Popover -->
+  <g transform="translate(380, 290)">
+    <rect width="380" height="185" rx="12" fill="#0A0E1A" stroke="#00D2FF" stroke-width="1.5" filter="drop-shadow(0 15px 25px rgba(0,0,0,0.7))"/>
+    <text x="20" y="32" font-family="'Inter', sans-serif" font-size="13" font-weight="700" fill="#F8FAFC">File Properties & Cryptographic Proof</text>
+    <line x1="20" y1="45" x2="360" y2="45" stroke="#1E293B" stroke-width="1"/>
+    <text x="20" y="68" font-family="'Inter', sans-serif" font-size="11" fill="#94A3B8">SHA-256 Hash:</text>
+    <rect x="20" y="76" width="340" height="24" rx="4" fill="#1E293B"/>
+    <text x="26" y="92" font-family="'JetBrains Mono', monospace" font-size="10" fill="#38BDF8">e3b0c44298fc1c149afbf4c8996fb92427ae41e4...</text>
+    
+    <text x="20" y="122" font-family="'Inter', sans-serif" font-size="11" fill="#94A3B8">Chunk Count: <tspan fill="#F1F5F9" font-weight="600">84 Chunks (50MB/ea)</tspan></text>
+    <text x="20" y="142" font-family="'Inter', sans-serif" font-size="11" fill="#94A3B8">Cipher Algorithm: <tspan fill="#10B981" font-weight="600">AES-256-CTR (Stream-Seekable)</tspan></text>
+    <text x="20" y="162" font-family="'Inter', sans-serif" font-size="11" fill="#94A3B8">Storage Redundancy: <tspan fill="#38BDF8" font-weight="600">3 Stripped Telegram Channels</tspan></text>
+  </g>
+</svg>

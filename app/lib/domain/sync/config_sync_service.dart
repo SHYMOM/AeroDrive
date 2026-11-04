@@ -221,6 +221,10 @@ class ConfigSyncService {
         }
       }
 
+      // Re-archive and mute config channel immediately after message/pin
+      // to counteract TDLib's automatic unarchive behavior
+      await _archiveAndMute(telegramService, configChatId);
+
       AppLogger.info('ConfigSyncService: Config successfully synced to channel.');
       await syncTelegramFolder();
     } catch (e, s) {
@@ -645,8 +649,18 @@ class ConfigSyncService {
       chatIds.add(configChannelId);
     }
 
+    // Guarantee Telegram folder is created and updated
+    await telegramService.updateTelegramFolder(chatIds.toList());
+
     if (chatIds.isNotEmpty) {
-      await telegramService.updateTelegramFolder(chatIds.toList());
+      // Guarantee all storage, config, and shared channels remain archived in chatListArchive and muted
+      for (final chatId in chatIds) {
+        try {
+          await _archiveAndMute(telegramService, chatId);
+        } catch (e) {
+          AppLogger.warning('syncTelegramFolder: Failed to archive/mute channel $chatId: $e');
+        }
+      }
     }
   }
 }

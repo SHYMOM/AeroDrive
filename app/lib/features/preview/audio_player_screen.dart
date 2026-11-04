@@ -306,9 +306,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Playback Speed',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 16),
             Wrap(
@@ -322,7 +322,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                   selectedColor: AppColors.primary,
                   backgroundColor: AppColors.surface,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+                    color: isSelected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                   onSelected: (selected) {
@@ -372,10 +372,10 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                 children: [
                   Text(
                     'Queue (${_playlist.length} tracks)',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   IconButton(
@@ -423,7 +423,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isCurrent ? AppColors.primaryLight : Colors.white,
+                        color: isCurrent ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
                         fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
@@ -441,7 +441,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                               color: AppColors.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Playing',
                               style: TextStyle(
                                 fontSize: 11,
@@ -528,7 +528,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 32, color: Colors.white),
+            icon: Icon(Icons.keyboard_arrow_down_rounded, size: 32, color: Theme.of(context).colorScheme.onSurface),
             tooltip: 'Minimize',
             onPressed: () => Navigator.pop(context),
           ),
@@ -546,16 +546,16 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
               const SizedBox(height: 2),
               Text(
                 '${_currentIndex + 1} of ${_playlist.length}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white70,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
           IconButton(
-            icon: const Icon(Icons.queue_music_rounded, color: Colors.white),
+            icon: Icon(Icons.queue_music_rounded, color: Theme.of(context).colorScheme.onSurface),
             tooltip: 'Queue',
             onPressed: _showPlaylistDrawer,
           ),
@@ -789,10 +789,10 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                 currentFile.name,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   letterSpacing: -0.4,
                 ),
               ),
@@ -808,7 +808,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                     ),
                     child: Text(
                       ext,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: AppColors.primaryLight,
@@ -855,9 +855,9 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
             trackHeight: 4,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-            activeTrackColor: AppColors.primary,
-            inactiveTrackColor: AppColors.surfaceElevated,
-            thumbColor: Colors.white,
+            activeTrackColor: Theme.of(context).colorScheme.primary,
+            inactiveTrackColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            thumbColor: Theme.of(context).colorScheme.primary,
             overlayColor: AppColors.primary.withValues(alpha: 0.3),
           ),
           child: Slider(
@@ -913,14 +913,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
 
         // Skip Previous
         IconButton(
-          icon: const Icon(Icons.skip_previous_rounded, size: 36, color: Colors.white),
+          icon: Icon(Icons.skip_previous_rounded, size: 36, color: Theme.of(context).colorScheme.onSurface),
           tooltip: 'Previous Track',
           onPressed: _skipPrevious,
         ),
 
         // -10s
         IconButton(
-          icon: const Icon(Icons.replay_10_rounded, size: 28, color: Colors.white70),
+          icon: Icon(Icons.replay_10_rounded, size: 28, color: Theme.of(context).colorScheme.onSurfaceVariant),
           tooltip: '-10s',
           onPressed: () => _seekRelative(-10),
         ),
@@ -946,15 +946,15 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
           ),
           child: IconButton(
             icon: _isLoading
-                ? const SizedBox(
+                ? SizedBox(
                     width: 26,
                     height: 26,
-                    child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+                    child: CircularProgressIndicator(strokeWidth: 3, color: AppColors.onPrimary),
                   )
                 : Icon(
                     _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
                     size: 38,
-                    color: Colors.white,
+                    color: AppColors.onPrimary,
                   ),
             onPressed: _isLoading ? null : _togglePlayPause,
           ),
@@ -962,14 +962,14 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
 
         // +10s
         IconButton(
-          icon: const Icon(Icons.forward_10_rounded, size: 28, color: Colors.white70),
+          icon: Icon(Icons.forward_10_rounded, size: 28, color: Theme.of(context).colorScheme.onSurfaceVariant),
           tooltip: '+10s',
           onPressed: () => _seekRelative(10),
         ),
 
         // Skip Next
         IconButton(
-          icon: const Icon(Icons.skip_next_rounded, size: 36, color: Colors.white),
+          icon: Icon(Icons.skip_next_rounded, size: 36, color: Theme.of(context).colorScheme.onSurface),
           tooltip: 'Next Track',
           onPressed: _skipNext,
         ),
@@ -985,7 +985,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
                 size: 24,
               ),
               if (_loopMode == AudioLoopMode.one)
-                const Positioned(
+                Positioned(
                   bottom: 0,
                   right: 0,
                   child: Text(

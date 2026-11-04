@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#070C18"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="640" rx="16" fill="url(#bgGrad)" stroke="#334155" stroke-width="1"/>
+
+  <!-- Header -->
+  <g transform="translate(30, 25)">
+    <text x="0" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="700" fill="#F8FAFC">AeroDrive Cryptographic Shield &amp; Vault</text>
+    <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">Zero-Knowledge Architecture • Argon2id Key Derivation • Ephemeral Salt Shuffling • MTProto Oblivious Striping</text>
+  </g>
+
+  <!-- Left Column: Key Derivation & Master Key -->
+  <g transform="translate(30, 80)">
+    <rect width="450" height="520" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" filter="url(#shadow)"/>
+    
+    <!-- Shield Icon & Status -->
+    <g transform="translate(25, 25)">
+      <circle cx="28" cy="28" r="26" fill="url(#shieldGrad)" fill-opacity="0.2"/>
+      <path d="M28 14l12 5v10c0 9-6 16-12 19-6-3-12-10-12-19V19l12-5z" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M24 28l3 3 7-7" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+      <text x="68" y="22" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="700" fill="#F8FAFC">Master Vault: Locked &amp; Sealed</text>
+      <text x="68" y="40" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#34D399">Military-Grade AES-256-GCM + Argon2id</text>
+    </g>
+
+    <!-- Key Derivation Visual -->
+    <g transform="translate(25, 95)">
+      <rect width="400" height="85" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+      <text x="15" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#94A3B8">KEY DERIVATION FUNCTION (KDF)</text>
+      <text x="15" y="48" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">Algorithm: <tspan fill="#38BDF8" font-weight="600">Argon2id (m=64MB, t=4 passes, p=4)</tspan></text>
+      <text x="15" y="68" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">Brute-Force Resistance: <tspan fill="#34D399" font-weight="600">&gt; 10^18 GPU iterations/sec required</tspan></text>
+    </g>
+
+    <!-- Recovery Phrase Box -->
+    <g transform="translate(25, 200)">
+      <rect width="400" height="150" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+      <g transform="translate(15, 15)">
+        <text x="0" y="10" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#F59E0B">BIP-39 COMPLIANT RECOVERY PHRASE (12 WORDS)</text>
+        
+        <!-- Word pills -->
+        <g transform="translate(0, 25)">
+          <rect width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="8" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">1. nexus</text>
+
+          <rect x="95" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="103" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">2. orbit</text>
+
+          <rect x="190" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="198" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">3. quantum</text>
+
+          <rect x="285" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="293" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">4. cipher</text>
+        </g>
+        <g transform="translate(0, 60)">
+          <rect width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="8" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">5. velocity</text>
+
+          <rect x="95" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="103" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">6. shadow</text>
+
+          <rect x="190" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="198" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">7. pulsar</text>
+
+          <rect x="285" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="293" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">8. falcon</text>
+        </g>
+        <g transform="translate(0, 95)">
+          <rect width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="8" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">9. stealth</text>
+
+          <rect x="95" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="103" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">10. matrix</text>
+
+          <rect x="190" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="198" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">11. zenith</text>
+
+          <rect x="285" width="85" height="26" rx="4" fill="#1E293B"/>
+          <text x="293" y="17" font-family="monospace" font-size="11" fill="#E2E8F0">12. shield</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Biometric & PIN lock indicator -->
+    <g transform="translate(25, 370)">
+      <rect width="400" height="120" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+      <g transform="translate(20, 20)">
+        <text x="0" y="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="700" fill="#F8FAFC">Hardware Keystore / Keyring Protected</text>
+        <text x="0" y="32" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#94A3B8">Windows Hello / Android BiometricPrompt hardware enclave encryption prevents memory dumping.</text>
+        <g transform="translate(0, 48)">
+          <rect width="180" height="28" rx="6" fill="#10B981" fill-opacity="0.15" stroke="#10B981" stroke-width="1"/>
+          <text x="90" y="18" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="600" fill="#34D399" text-anchor="middle">✓ Windows Hello Ready</text>
+          
+          <rect x="195" width="165" height="28" rx="6" fill="#3B82F6" fill-opacity="0.15" stroke="#3B82F6" stroke-width="1"/>
+          <text x="277" y="18" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="600" fill="#60A5FA" text-anchor="middle">✓ Android StrongBox</text>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Right Column: MTProto Oblivious Channel Striping Architecture -->
+  <g transform="translate(510, 80)">
+    <rect width="460" height="520" rx="14" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" filter="url(#shadow)"/>
+    
+    <g transform="translate(25, 25)">
+      <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="700" fill="#F8FAFC">Oblivious Telegram Channel Striping</text>
+      <text x="0" y="36" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">Neither Telegram, ISPs, nor governments can read or reconstruct your files.</text>
+    </g>
+
+    <!-- Visual Striping Diagram -->
+    <g transform="translate(25, 90)">
+      <!-- File Block -->
+      <rect x="135" y="0" width="140" height="42" rx="6" fill="#3B82F6"/>
+      <text x="205" y="20" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="700" fill="#FFF" text-anchor="middle">Original User File</text>
+      <text x="205" y="34" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#E0F2FE" text-anchor="middle">Tax_Documents.pdf (15 MB)</text>
+
+      <!-- Arrow down -->
+      <line x1="205" y1="45" x2="205" y2="70" stroke="#38BDF8" stroke-width="2" stroke-dasharray="3 3"/>
+
+      <!-- Encryption Box -->
+      <rect x="95" y="72" width="220" height="38" rx="6" fill="#0F172A" stroke="#8B5CF6" stroke-width="1.5"/>
+      <text x="205" y="88" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#A78BFA" text-anchor="middle">Client AES-256-CTR &amp; Chunker</text>
+      <text x="205" y="102" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="9" fill="#94A3B8" text-anchor="middle">Salt + Nonce + Blind Hash</text>
+
+      <!-- Arrows spreading out -->
+      <path d="M140 115 L60 150" stroke="#334155" stroke-width="2"/>
+      <path d="M205 115 L205 150" stroke="#334155" stroke-width="2"/>
+      <path d="M270 115 L350 150" stroke="#334155" stroke-width="2"/>
+
+      <!-- 3 Telegram Channels -->
+      <!-- Channel 1 -->
+      <g transform="translate(0, 155)">
+        <rect width="125" height="100" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+        <text x="62" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#38BDF8" text-anchor="middle">Storage Channel A</text>
+        <rect x="15" y="38" width="95" height="22" rx="4" fill="#1E293B"/>
+        <text x="62" y="52" font-family="monospace" font-size="9" fill="#94A3B8" text-anchor="middle">Chunk 0 (4.8MB)</text>
+        <text x="62" y="82" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="9" fill="#64748B" text-anchor="middle">Blob: 0x8a7f1e...</text>
+      </g>
+
+      <!-- Channel 2 -->
+      <g transform="translate(142, 155)">
+        <rect width="125" height="100" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+        <text x="62" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#38BDF8" text-anchor="middle">Storage Channel B</text>
+        <rect x="15" y="38" width="95" height="22" rx="4" fill="#1E293B"/>
+        <text x="62" y="52" font-family="monospace" font-size="9" fill="#94A3B8" text-anchor="middle">Chunk 1 (4.8MB)</text>
+        <text x="62" y="82" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="9" fill="#64748B" text-anchor="middle">Blob: 0x3d02b9...</text>
+      </g>
+
+      <!-- Channel 3 -->
+      <g transform="translate(285, 155)">
+        <rect width="125" height="100" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+        <text x="62" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#38BDF8" text-anchor="middle">Storage Channel C</text>
+        <rect x="15" y="38" width="95" height="22" rx="4" fill="#1E293B"/>
+        <text x="62" y="52" font-family="monospace" font-size="9" fill="#94A3B8" text-anchor="middle">Chunk 2 (5.4MB)</text>
+        <text x="62" y="82" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="9" fill="#64748B" text-anchor="middle">Blob: 0xfa2901...</text>
+      </g>
+    </g>
+
+    <!-- Security Guarantee Points -->
+    <g transform="translate(25, 375)">
+      <rect width="410" height="115" rx="8" fill="#0B1120" stroke="#1E293B" stroke-width="1"/>
+      <g transform="translate(15, 18)">
+        <text x="0" y="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="700" fill="#10B981">✓ ZERO-KNOWLEDGE AUDITABLE</text>
+        <text x="0" y="30" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#94A3B8">• Telegram servers only see random high-entropy ciphertext bytes.</text>
+        <text x="0" y="48" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#94A3B8">• Filenames, MIME types, folders &amp; sizes are encrypted locally.</text>
+        <text x="0" y="66" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#94A3B8">• Open source Rust, Go &amp; Dart implementations verify no backdoors.</text>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AeroDrive — Sovereign, Unlimited, Zero-Knowledge Cloud Storage</title>
+  <meta name="description" content="AeroDrive turns Telegram's infinite cloud infrastructure into a military-grade, zero-knowledge encrypted personal cloud drive with 4K streaming and AI photo clustering.">
+  <link rel="icon" type="image/svg+xml" href="assets/images/logo.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <header class="navbar">
+    <div class="container nav-inner">
+      <a href="#" class="brand">
+        <!-- IMAGE PLACEHOLDER: Official AeroDrive Logo (48x48) -->
+        <img id="nav-logo" src="assets/images/logo.svg" alt="AeroDrive Logo">
+        <span class="brand-text">AeroDrive</span>
+        <span class="brand-badge">PRO</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features" class="nav-link">Features</a></li>
+        <li><a href="#architecture" class="nav-link">Architecture</a></li>
+        <li><a href="#security" class="nav-link">Security Vault</a></li>
+        <li><a href="#calculator" class="nav-link">Savings Calculator</a></li>
+        <li><a href="#faq" class="nav-link">FAQ</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/shymom123/AeroDrive" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="#download" class="btn btn-primary btn-glow open-download-modal">
+          Download Free
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="container">
+      <div class="hero-pill">
+        <span class="hero-pill-dot"></span>
+        Zero-Knowledge • Unlimited Cloud Storage • Open-Source
+      </div>
+
+      <h1 class="hero-title">
+        Infinite Cloud Storage.<br>
+        <span class="text-gradient">Zero Monthly Subscription.</span>
+      </h1>
+
+      <p class="hero-subtitle">
+        AeroDrive turns Telegram's global MTProto infrastructure into a sovereign, client-side encrypted cloud drive. Enjoy unmetered storage, 3-channel striping, 4K streaming, and on-device AI gallery without paying big tech.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#download" class="btn btn-primary btn-glow open-download-modal">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Get AeroDrive for Desktop &amp; Mobile
+        </a>
+        <a href="#features" class="btn btn-secondary">
+          Explore Features ↓
+        </a>
+      </div>
+
+      <div class="hero-metrics">
+        <div class="metric-item">
+          <span class="metric-value text-cyan">∞ Unlimited</span>
+          <span class="metric-label">Storage Capacity</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value text-emerald">AES-256-GCM</span>
+          <span class="metric-label">End-to-End Encryption</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value text-purple">3× Striped</span>
+          <span class="metric-label">Parallel Throughput</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value">$0 / month</span>
+          <span class="metric-label">Lifetime Cost</span>
+        </div>
+      </div>
+
+      <!-- Hero Application Mockup Showcase -->
+      <div class="hero-mockup-wrapper">
+        <div class="hero-mockup-inner">
+          <!-- IMAGE PLACEHOLDER: Hero Main Application Screenshot (Recommended: 1200x750) -->
+          <!-- Replace 'assets/images/hero-preview.svg' with your actual screenshot -->
+          <img id="hero-img" src="assets/images/hero-preview.svg" alt="AeroDrive Desktop Application Screenshot" loading="lazy">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Features Section -->
+  <section id="features" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Interactive Feature Showcase</div>
+        <h2 class="section-title">Built Like a Native OS Drive</h2>
+        <p class="section-desc">Explore how AeroDrive combines the elegance of modern desktop file managers with revolutionary decentralized cryptographic storage.</p>
+      </div>
+
+      <!-- Feature Selection Tabs -->
+      <div class="tab-container">
+        <button class="tab-btn active" data-tab="tab-drive">
+          📁 Cloud Drive &amp; Striping
+        </button>
+        <button class="tab-btn" data-tab="tab-gallery">
+          🖼️ AI Smart Gallery
+        </button>
+        <button class="tab-btn" data-tab="tab-stream">
+          ▶️ Instant 4K Streamer
+        </button>
+        <button class="tab-btn" data-tab="tab-vault">
+          🔒 Zero-Knowledge Vault
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Cloud Drive -->
+      <div id="tab-drive" class="tab-content active">
+        <div class="feature-showcase-grid">
+          <div class="feature-mockup-slot">
+            <!-- IMAGE PLACEHOLDER: File Manager & Striping Explorer (Recommended: 1000x640) -->
+            <!-- Replace 'assets/images/drive-preview.svg' with your actual screenshot -->
+            <img id="drive-img" src="assets/images/drive-preview.svg" alt="AeroDrive File Manager Interface" loading="lazy">
+          </div>
+          <div class="feature-info">
+            <span class="feature-badge cyan">Parallel Cloud Engine</span>
+            <h3 class="feature-title">Multi-Channel Striping &amp; Unlimited Capacity</h3>
+            <ul class="feature-bullets">
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Multi-Channel Striping:</strong> Large files are automatically split and distributed across three independent Telegram channels for accelerated parallel speeds and redundancy.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>SQLite Drift &amp; FTS5:</strong> Instant full-text file search and offline caching with zero latency.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>WebDAV Network Drive:</strong> Mount your encrypted AeroDrive as an actual drive letter (<code>Z:\</code>) in Windows File Explorer.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Smart Storage Cleaner:</strong> Deduplicates identical chunks with content-addressed SHA-256 hashes.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: AI Smart Gallery -->
+      <div id="tab-gallery" class="tab-content">
+        <div class="feature-showcase-grid">
+          <div class="feature-mockup-slot">
+            <!-- IMAGE PLACEHOLDER: AI Smart Gallery Screenshot (Recommended: 1000x640) -->
+            <!-- Replace 'assets/images/gallery-preview.svg' with your actual screenshot -->
+            <img id="gallery-img" src="assets/images/gallery-preview.svg" alt="AeroDrive AI Smart Gallery" loading="lazy">
+          </div>
+          <div class="feature-info">
+            <span class="feature-badge purple">Private On-Device AI</span>
+            <h3 class="feature-title">Memories &amp; Face Recognition Without Cloud Spying</h3>
+            <ul class="feature-bullets">
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>100% Local Inference:</strong> Face embeddings and semantic photo scene tags run strictly on your device using TensorFlow Lite.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Smart People &amp; Pet Clusters:</strong> Automatically group memories of family, friends, and pets without leaking raw photos to any corporate server.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Lossless RAW &amp; EXIF Security:</strong> Back up camera RAWs at 100% original quality with encrypted metadata and automatic EXIF privacy stripping.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: 4K Streaming -->
+      <div id="tab-stream" class="tab-content">
+        <div class="feature-showcase-grid">
+          <div class="feature-mockup-slot">
+            <!-- IMAGE PLACEHOLDER: 4K Video Streamer Screenshot (Recommended: 1000x640) -->
+            <!-- Replace 'assets/images/stream-preview.svg' with your actual screenshot -->
+            <img id="stream-img" src="assets/images/stream-preview.svg" alt="AeroDrive Instant 4K Media Streamer" loading="lazy">
+          </div>
+          <div class="feature-info">
+            <span class="feature-badge cyan">Cryptographic Stream Engine</span>
+            <h3 class="feature-title">Instant Scrubbing in Multi-Gigabyte Encrypted Videos</h3>
+            <ul class="feature-bullets">
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Sub-Chunk Decryption:</strong> AeroDrive streams encrypted video files directly from Telegram channels using 2MB sliding-window range requests.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>AES-CTR Counter Arithmetic:</strong> Scrub anywhere in a 20GB 4K file in under 50ms without downloading the full video first.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Random Frame Thumbnail Generator:</strong> Native video decoders automatically extract representative preview frames for every clip.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 4: Security Vault -->
+      <div id="tab-vault" class="tab-content">
+        <div class="feature-showcase-grid">
+          <div class="feature-mockup-slot">
+            <!-- IMAGE PLACEHOLDER: Security Vault Screenshot (Recommended: 1000x640) -->
+            <!-- Replace 'assets/images/vault-preview.svg' with your actual screenshot -->
+            <img id="vault-img" src="assets/images/vault-preview.svg" alt="AeroDrive Security and Cryptography Vault" loading="lazy">
+          </div>
+          <div class="feature-info">
+            <span class="feature-badge emerald">Zero-Knowledge Security</span>
+            <h3 class="feature-title">Mathematical Privacy Telegram Cannot Penetrate</h3>
+            <ul class="feature-bullets">
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Argon2id Memory-Hard KDF:</strong> Your master encryption keys are derived with high-memory parameters immune to specialized GPU brute-force attacks.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>BIP-39 12-Word Recovery Phrase:</strong> Never lose your data. Recover your entire sovereign vault on any device using standard cryptographic mnemonics.</span>
+              </li>
+              <li>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span><strong>Oblivious Telegram Backend:</strong> Telegram only stores blind binary chunks named with cryptographic hashes. No file names, timestamps, or folder hierarchies are visible to Telegram.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Encryption Flow Pipeline -->
+  <section id="architecture" class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Zero-Knowledge Pipeline</div>
+        <h2 class="section-title">How AeroDrive Protects Every Byte</h2>
+        <p class="section-desc">Click through the 5 cryptographic lifecycle steps that happen before any byte touches the network.</p>
+      </div>
+
+      <div class="flow-container">
+        <div class="flow-step-card active">
+          <span class="flow-step-num">Step 1</span>
+          <h4 class="flow-step-title">Local File Chunking</h4>
+          <p class="flow-step-desc">Files are split locally into optimized 50MB chunks in RAM. Original file names and MIME types are isolated.</p>
+        </div>
+
+        <div class="flow-step-card">
+          <span class="flow-step-num">Step 2</span>
+          <h4 class="flow-step-title">Argon2id &amp; HKDF Derivation</h4>
+          <p class="flow-step-desc">A unique ephemeral initialization vector and chunk encryption key are derived from your master vault seed.</p>
+        </div>
+
+        <div class="flow-step-card">
+          <span class="flow-step-num">Step 3</span>
+          <h4 class="flow-step-title">AES-256-CTR / GCM Encrypt</h4>
+          <p class="flow-step-desc">Each chunk is encrypted client-side. The resulting payload is completely indistinguishable from random noise.</p>
+        </div>
+
+        <div class="flow-step-card">
+          <span class="flow-step-num">Step 4</span>
+          <h4 class="flow-step-title">3-Channel Striping</h4>
+          <p class="flow-step-desc">Encrypted slices are dispatched across separate Telegram storage channels in parallel streams.</p>
+        </div>
+
+        <div class="flow-step-card">
+          <span class="flow-step-num">Step 5</span>
+          <h4 class="flow-step-title">On-Demand Sub-Chunk Stream</h4>
+          <p class="flow-step-desc">When playing or downloading, the app requests only the 2MB sub-range needed, decrypting directly in memory.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Storage Savings Calculator -->
+  <section id="calculator" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Cost Comparison</div>
+        <h2 class="section-title">Stop Paying Cloud Rents</h2>
+        <p class="section-desc">Slide to compare what commercial cloud providers charge per year versus AeroDrive's permanent $0 cost.</p>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-slider-wrapper">
+          <div class="calc-slider-header">
+            <h4>Estimated Cloud Storage Need:</h4>
+            <span id="storage-display" class="calc-storage-value">2 TB</span>
+          </div>
+          <input type="range" id="storage-slider" class="custom-range" min="100" max="10000" step="100" value="2000">
+        </div>
+
+        <div class="calc-comparison-grid">
+          <div class="calc-col">
+            <div class="calc-col-name">Google One</div>
+            <div id="gdrive-cost" class="calc-col-cost">$100</div>
+            <div class="calc-col-period">per year</div>
+          </div>
+          <div class="calc-col">
+            <div class="calc-col-name">Dropbox Plus</div>
+            <div id="dropbox-cost" class="calc-col-cost">$120</div>
+            <div class="calc-col-period">per year</div>
+          </div>
+          <div class="calc-col">
+            <div class="calc-col-name">Apple iCloud+</div>
+            <div id="icloud-cost" class="calc-col-cost">$120</div>
+            <div class="calc-col-period">per year</div>
+          </div>
+          <div class="calc-col aerodrive">
+            <div class="calc-col-name" style="color: var(--accent-emerald);">AeroDrive PRO</div>
+            <div class="calc-col-cost">$0</div>
+            <div class="calc-col-period">Free forever &amp; unmetered</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Technical Specs Grid -->
+  <section id="security" class="section" style="background: var(--bg-secondary);">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Under The Hood</div>
+        <h2 class="section-title">Built for Performance &amp; Privacy</h2>
+        <p class="section-desc">Engineered with Flutter, C++ TDLib FFI, Go, and SQLite for cross-platform speed and zero dependencies.</p>
+      </div>
+
+      <div class="specs-grid">
+        <div class="spec-card">
+          <div class="spec-icon">⚡</div>
+          <h4 class="spec-title">C++ TDLib FFI Core</h4>
+          <p class="spec-desc">Direct native bindings to Telegram's official TDLib library with custom InputFile wrappers, ensuring ultra-reliable downloads and uploads.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-icon">🛡️</div>
+          <h4 class="spec-title">Hardware Keystore / Keyring</h4>
+          <p class="spec-desc">Master keys are locked behind Windows Hello and Android StrongBox biometrics, preventing memory extraction even if your device is compromised.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-icon">🌐</div>
+          <h4 class="spec-title">Go WebDAV Companion</h4>
+          <p class="spec-desc">High-concurrency Go daemon translates local WebDAV file system calls into encrypted Telegram MTProto streaming calls transparently.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-icon">📸</div>
+          <h4 class="spec-title">Smart Document Scanner</h4>
+          <p class="spec-desc">Integrated camera scanner with automatic perspective perspective correction, contrast enhancement, and multi-page PDF generation.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-icon">🔍</div>
+          <h4 class="spec-title">Drift SQLite Database</h4>
+          <p class="spec-desc">Fully reactive Drift persistence layer with FTS5 tokenization, asynchronous batch inserts, and background integrity verification.</p>
+        </div>
+
+        <div class="spec-card">
+          <div class="spec-icon">🚀</div>
+          <h4 class="spec-title">Native Thumbnail Engine</h4>
+          <p class="spec-desc">Dynamic frame seekers generate crisp video thumbnails at 10%-50% offsets using hardware-accelerated video decoders.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Accordion -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Common Inquiries</div>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-desc">Everything you need to know about AeroDrive's architecture, security, and setup.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item open">
+          <button class="faq-question">
+            <span>Is AeroDrive really free and unlimited?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Yes. AeroDrive uses Telegram's MTProto API as an oblivious cloud storage layer. Telegram permits arbitrary file storage without account quotas. AeroDrive stripes your files across private storage channels that you control.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Can Telegram read or delete my stored files?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>No. Telegram only receives ciphertext encrypted with AES-256-CTR and AES-256-GCM before leaving your device. Your file names, extensions, folder structures, and thumbnails are never transmitted to Telegram unencrypted.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>What happens if I lose my device?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>When you set up AeroDrive, you are given a 12-word BIP-39 mnemonic recovery phrase. On any new computer or phone, simply log in to Telegram and enter your 12-word phrase to immediately restore your entire vault and file hierarchy.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How does large video streaming work without full download?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>AeroDrive implements an on-demand sub-chunk stream server. When you play a 10GB video, the player requests only 2MB slices as needed, decodes them on-the-fly with AES-CTR counter arithmetic, and streams them with zero buffering delay.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How do I host this website on GitHub Pages?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>This repository is fully configured for GitHub Pages! In your GitHub repository settings, navigate to <strong>Pages</strong>, select the <code>main</code> branch, set the folder to <code>/docs</code> (or run the included GitHub Actions workflow), and your site will be live instantly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download & Install Modal -->
+  <div id="download-modal" class="modal-overlay">
+    <div class="modal-box">
+      <button id="modal-close" class="modal-close">&times;</button>
+      <h3 style="font-size: 1.5rem; margin-bottom: 8px;">Download AeroDrive</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">Select your platform to download the latest release build or clone the open-source repository.</p>
+
+      <div class="download-platforms">
+        <a href="https://github.com/shymom123/AeroDrive/releases" target="_blank" rel="noopener noreferrer" class="platform-card">
+          <span class="platform-icon">🪟</span>
+          <span class="platform-name">Windows 10 / 11</span>
+          <span class="platform-meta">Native x64 (.exe / .zip)</span>
+        </a>
+
+        <a href="https://github.com/shymom123/AeroDrive/releases" target="_blank" rel="noopener noreferrer" class="platform-card">
+          <span class="platform-icon">🤖</span>
+          <span class="platform-name">Android</span>
+          <span class="platform-meta">ARM64 APK (Android 9+)</span>
+        </a>
+
+        <a href="https://github.com/shymom123/AeroDrive" target="_blank" rel="noopener noreferrer" class="platform-card">
+          <span class="platform-icon">🐧</span>
+          <span class="platform-name">Linux / Docker</span>
+          <span class="platform-meta">Build from Source</span>
+        </a>
+
+        <a href="https://github.com/shymom123/AeroDrive" target="_blank" rel="noopener noreferrer" class="platform-card">
+          <span class="platform-icon">⚙️</span>
+          <span class="platform-name">Source Code</span>
+          <span class="platform-meta">GitHub Repository</span>
+        </a>
+      </div>
+
+      <div style="margin-top: 24px; padding: 14px; background: rgba(0, 210, 255, 0.08); border-radius: var(--radius-sm); border: 1px solid rgba(0, 210, 255, 0.2); font-size: 0.85rem; color: var(--text-muted);">
+        💡 <strong>Quick Build:</strong> Run <code>flutter pub get</code> and <code>flutter run -d windows</code> from the <code>app/</code> folder.
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a href="#" class="brand">
+            <!-- IMAGE PLACEHOLDER: Footer Logo -->
+            <img id="footer-logo" src="assets/images/logo.svg" alt="AeroDrive Logo">
+            <span class="brand-text">AeroDrive</span>
+          </a>
+          <p class="footer-brand-desc">
+            Sovereign, unmetered, zero-knowledge encrypted personal cloud storage powered by Telegram MTProto.
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Product</h5>
+          <ul class="footer-links">
+            <li><a href="#features">Cloud Drive</a></li>
+            <li><a href="#features">AI Gallery</a></li>
+            <li><a href="#features">4K Video Streamer</a></li>
+            <li><a href="#security">Security Vault</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Resources</h5>
+          <ul class="footer-links">
+            <li><a href="https://github.com/shymom123/AeroDrive" target="_blank" rel="noopener noreferrer">GitHub Repo</a></li>
+            <li><a href="https://github.com/shymom123/AeroDrive/releases" target="_blank" rel="noopener noreferrer">Releases</a></li>
+            <li><a href="#calculator">Savings Calculator</a></li>
+            <li><a href="#faq">Architecture FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Integrations</h5>
+          <ul class="footer-links">
+            <li><a href="#">TDLib MTProto Core</a></li>
+            <li><a href="#">WebDAV Windows Drive</a></li>
+            <li><a href="#">Argon2id KDF</a></li>
+            <li><a href="#">TensorFlow Lite AI</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>&copy; 2026 AeroDrive. Open-source under the MIT License.</div>
+        <div style="display: flex; gap: 20px;">
+          <a href="https://github.com/shymom123/AeroDrive" target="_blank" rel="noopener noreferrer" style="color: var(--text-muted); text-decoration: none;">GitHub</a>
+          <a href="#faq" style="color: var(--text-muted); text-decoration: none;">Privacy &amp; Security</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

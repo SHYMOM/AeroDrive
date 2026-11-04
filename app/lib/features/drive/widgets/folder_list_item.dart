@@ -47,6 +47,9 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final folderColor = _getFolderColor();
 
     final isSelectionMode = ref.watch(isSelectionModeProvider);
@@ -109,40 +112,54 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.16),
-                      const Color(0xFF101826),
+                      colorScheme.primary.withValues(alpha: 0.16),
+                      isDark ? const Color(0xFF101826) : colorScheme.primaryContainer.withValues(alpha: 0.25),
                     ],
                   )
                 : _isHovered
                     ? LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          folderColor.withValues(alpha: 0.12),
-                          const Color(0xFF151925),
-                        ],
+                        colors: isDark
+                            ? [
+                                folderColor.withValues(alpha: 0.12),
+                                const Color(0xFF151925),
+                              ]
+                            : [
+                                folderColor.withValues(alpha: 0.12),
+                                colorScheme.surfaceContainerHigh,
+                                colorScheme.surfaceContainer,
+                              ],
                       )
-                    : const LinearGradient(
+                    : LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF141926),
-                          Color(0xFF0F131E),
-                        ],
+                        colors: isDark
+                            ? const [
+                                Color(0xFF141926),
+                                Color(0xFF0F131E),
+                              ]
+                            : [
+                                folderColor.withValues(alpha: 0.12),
+                                colorScheme.surface,
+                                colorScheme.surfaceContainer,
+                              ],
                       ),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary
+                  ? colorScheme.primary
                   : _isHovered
                       ? folderColor.withValues(alpha: 0.40)
-                      : Colors.white.withValues(alpha: 0.07),
+                      : isDark
+                          ? Colors.white.withValues(alpha: 0.07)
+                          : colorScheme.outlineVariant.withValues(alpha: 0.5),
               width: isSelected ? 1.5 : 1.0,
             ),
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.20),
+                  color: colorScheme.primary.withValues(alpha: 0.20),
                   blurRadius: 12,
                   offset: const Offset(0, 2),
                 )
@@ -154,7 +171,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                 )
               else
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
+                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -267,15 +284,15 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                   width: 22,
                   height: 22,
                   decoration: BoxDecoration(
-                    color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                    color: isSelected ? colorScheme.primary : Colors.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Theme.of(context).colorScheme.primary : Colors.white38,
+                      color: isSelected ? colorScheme.primary : colorScheme.outline,
                       width: 1.5,
                     ),
                   ),
                   child: isSelected
-                      ? Icon(Icons.check, size: 14, color: Theme.of(context).colorScheme.surface)
+                      ? Icon(Icons.check, size: 14, color: colorScheme.onPrimary)
                       : null,
                 )
               else
@@ -290,10 +307,10 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
   Widget _buildOptionsMenu(BuildContext context) => Theme(
         data: Theme.of(context).copyWith(
           popupMenuTheme: PopupMenuThemeData(
-            color: AppColors.surfaceElevated,
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
             ),
           ),
         ),
@@ -303,7 +320,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
             height: 28,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _isHovered ? Colors.white.withValues(alpha: 0.08) : Colors.transparent,
+              color: _isHovered ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08) : Colors.transparent,
             ),
             child: Icon(
               Icons.more_vert_rounded,
@@ -423,9 +440,9 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                 value: 'delete',
                 child: Row(
                   children: [
-                    const Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
+                    Icon(Icons.delete_outline_rounded, size: 16, color: AppColors.error),
                     const SizedBox(width: 10),
-                    const Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 13)),
+                    Text('Delete', style: TextStyle(color: AppColors.error, fontSize: 13)),
                   ],
                 ),
               ),
@@ -450,7 +467,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.palette_outlined, color: AppColors.primary, size: 20),
+                child: Icon(Icons.palette_outlined, color: AppColors.primary, size: 20),
               ),
               const SizedBox(width: 10),
               Text('Folder Color', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
@@ -582,7 +599,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
             hintText: 'Folder Name',
             hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15))),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
           ),
         ),
         actions: [
@@ -592,7 +609,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Rename', style: TextStyle(color: AppColors.primary)),
+            child: Text('Rename', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -622,7 +639,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -752,7 +769,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                 color: AppColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+              child: Icon(Icons.info_outline, color: AppColors.primary, size: 20),
             ),
             const SizedBox(width: 10),
             Text('Folder Details', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
@@ -772,7 +789,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close', style: TextStyle(color: AppColors.primary)),
+            child: Text('Close', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),

@@ -211,5 +211,53 @@ class ChannelDiscoveryService {
       '${result.configChannelId != null ? 1 : 0} config, '
       '${result.sharedChannelId != null ? 1 : 0} shared channels to settings',
     );
+
+    // Enforce archival and folder placement on all restored channels
+    try {
+      final telegramService = _ref.read(telegramServiceProvider.notifier);
+      final allChannelIds = [
+        ...result.storageChannelIds,
+        if (result.configChannelId != null) result.configChannelId!,
+        if (result.sharedChannelId != null) result.sharedChannelId!,
+      ];
+
+      for (final chatId in allChannelIds) {
+        await _archiveAndMuteChannel(telegramService, chatId);
+      }
+      if (allChannelIds.isNotEmpty) {
+        await telegramService.updateTelegramFolder(allChannelIds);
+      }
+    } catch (e) {
+      AppLogger.warning('Discovery: Failed to archive/mute discovered channels: $e');
+    }
+  }
+
+  Future<void> _archiveAndMuteChannel(TelegramService telegramService, int chatId) async {
+    try {
+      await telegramService.sendRequest({
+        '@type': 'addChatToList',
+        'chat_id': chatId,
+        'chat_list': {'@type': 'chatListArchive'},
+      });
+      await telegramService.sendRequest({
+        '@type': 'setChatNotificationSettings',
+        'chat_id': chatId,
+        'notification_settings': {
+          '@type': 'chatNotificationSettings',
+          'use_default_mute_for': false,
+          'mute_for': 2147483647,
+          'use_default_sound': false,
+          'sound_id': 0,
+          'use_default_show_preview': false,
+          'show_preview': false,
+          'use_default_disable_pinned_message_notifications': false,
+          'disable_pinned_message_notifications': true,
+          'use_default_disable_mention_notifications': false,
+          'disable_mention_notifications': true,
+        },
+      });
+    } catch (e) {
+      AppLogger.warning('Discovery: Failed to archive/mute channel $chatId: $e');
+    }
   }
 }

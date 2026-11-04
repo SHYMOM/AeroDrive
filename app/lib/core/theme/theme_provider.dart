@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../logger.dart';
 import '../providers/repository_providers.dart';
+import 'aerodrive_theme.dart';
 import 'app_colors.dart';
 
 class AeroThemeState {
@@ -65,22 +66,38 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
   )) {
     _updateAppColors(ThemeMode.dark);
     _loadTheme();
-    PlatformDispatcher.instance.onPlatformBrightnessChanged = () {
+    final dispatcher = WidgetsBinding.instance.platformDispatcher;
+    void handlePlatformBrightnessChanged() {
       if (state.themeMode == ThemeMode.system) {
         _updateAppColors(ThemeMode.system);
         state = state.copyWith();
       }
-    };
+    }
+    dispatcher.onPlatformBrightnessChanged = handlePlatformBrightnessChanged;
+    if (dispatcher != PlatformDispatcher.instance) {
+      PlatformDispatcher.instance.onPlatformBrightnessChanged = handlePlatformBrightnessChanged;
+    }
   }
   final Ref _ref;
 
   void _updateAppColors(ThemeMode mode) {
+    final bool isDark;
     if (mode == ThemeMode.system) {
-      final brightness = PlatformDispatcher.instance.platformBrightness;
-      AppColors.isDark = brightness == Brightness.dark;
+      final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+      isDark = brightness == Brightness.dark;
     } else {
-      AppColors.isDark = mode == ThemeMode.dark;
+      isDark = mode == ThemeMode.dark;
     }
+
+    final preset = AeroDriveTheme.presetFromAccentValue(state.accentColorValue);
+    final primary = Color(state.accentColorValue != 0 ? state.accentColorValue : 0xFF1A73E8);
+    final secondary = preset?.secondary ?? const Color(0xFF4285F4);
+
+    AppColors.update(
+      isDark: isDark,
+      primary: primary,
+      secondary: secondary,
+    );
   }
 
   Future<void> _loadTheme() async {
@@ -92,6 +109,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
       ThemeMode mode = ThemeMode.dark; // default to dark for professional look
       if (themeStr == 'light') mode = ThemeMode.light;
       if (themeStr == 'dark') mode = ThemeMode.dark;
+      if (themeStr == 'system') mode = ThemeMode.system;
 
       // Load Accent
       final accentStr = await settings.getSetting('app_accent_color');
@@ -138,6 +156,7 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   Future<void> setAccentColor(Color color) async {
     state = state.copyWith(accentColorValue: color.toARGB32());
+    _updateAppColors(state.themeMode);
     await _ref.read(settingsRepositoryProvider).setSetting('app_accent_color', color.toARGB32().toString());
   }
 

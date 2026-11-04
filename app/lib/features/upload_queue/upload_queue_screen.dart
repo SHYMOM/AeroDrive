@@ -80,6 +80,9 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
               Color statusColor;
               String statusText;
               switch (status) {
+                case 'ENCRYPTING':
+                  statusColor = Colors.amber;
+                  statusText = 'ENCRYPTING';
                 case 'PROCESSING':
                   statusColor = Colors.blueAccent;
                   statusText = 'UPLOADING';
@@ -112,8 +115,12 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                       Row(
                         children: [
                           CircleAvatar(
-                            backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
-                            child: Icon(Icons.cloud_upload, color: AppColors.primaryLight, size: 20),
+                            backgroundColor: (status == 'ENCRYPTING' ? Colors.amber : AppColors.primaryLight).withValues(alpha: 0.1),
+                            child: Icon(
+                              status == 'ENCRYPTING' ? Icons.enhanced_encryption_outlined : Icons.cloud_upload,
+                              color: status == 'ENCRYPTING' ? Colors.amber : AppColors.primaryLight,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -148,14 +155,16 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                           ),
                         ],
                       ),
-                      if (status == 'PROCESSING') ...[
+                      if (status == 'PROCESSING' || status == 'ENCRYPTING') ...[
                         const SizedBox(height: 12),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: progress,
+                            value: (status == 'ENCRYPTING' && progress == 0.0) ? null : progress,
                             backgroundColor: Colors.white10,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              status == 'ENCRYPTING' ? Colors.amber : AppColors.primary,
+                            ),
                             minHeight: 4,
                           ),
                         ),
@@ -164,12 +173,22 @@ class _UploadQueueScreenState extends ConsumerState<UploadQueueScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}',
+                              status == 'ENCRYPTING'
+                                  ? (progress > 0
+                                      ? 'Preparing: ${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}'
+                                      : 'Preparing & encrypting file...')
+                                  : '${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}',
                               style: const TextStyle(fontSize: 11, color: Colors.white54),
                             ),
                             Text(
-                              '${(progress * 100).toStringAsFixed(0)}%',
-                              style: const TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.bold),
+                              status == 'ENCRYPTING' && progress == 0.0
+                                  ? 'Preparing...'
+                                  : '${(progress * 100).toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: status == 'ENCRYPTING' ? Colors.amber : Colors.white54,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ],
                         ),

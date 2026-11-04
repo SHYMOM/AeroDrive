@@ -13,18 +13,20 @@ class TransferProgressBar extends ConsumerWidget {
     return transfersAsync.when(
       data: (items) {
         final active = items.where((i) =>
-          (i.transfer.status == 'PROCESSING' || i.transfer.status == 'PENDING') &&
+          (i.transfer.status == 'PROCESSING' || i.transfer.status == 'PENDING' || i.transfer.status == 'ENCRYPTING') &&
           (i.transfer.type == 'UPLOAD_FILE' || i.transfer.type == 'DOWNLOAD_FILE')
         ).toList();
 
-        final processing = active.where((i) => i.transfer.status == 'PROCESSING').toList();
+        final working = active.where((i) => i.transfer.status == 'PROCESSING' || i.transfer.status == 'ENCRYPTING').toList();
+        final encrypting = active.where((i) => i.transfer.status == 'ENCRYPTING').toList();
 
-        if (processing.isEmpty && active.isEmpty) return const SizedBox.shrink();
+        if (working.isEmpty && active.isEmpty) return const SizedBox.shrink();
 
-        final hasProgress = processing.isNotEmpty;
-        final totalProgress = hasProgress ? _calculateAggregateProgress(processing) : 0.0;
-        final totalUploaded = _sumBytes(processing);
-        final pendingCount = active.length - processing.length;
+        final hasWorking = working.isNotEmpty;
+        final totalProgress = hasWorking ? _calculateAggregateProgress(working) : 0.0;
+        final totalUploaded = _sumBytes(working);
+        final pendingCount = active.length - working.length;
+        final isIndeterminate = hasWorking && totalProgress == 0.0 && encrypting.isNotEmpty;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -32,9 +34,9 @@ class TransferProgressBar extends ConsumerWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(0),
               child: LinearProgressIndicator(
-                value: hasProgress ? totalProgress : null,
+                value: isIndeterminate ? null : (hasWorking ? totalProgress : null),
                 backgroundColor: AppColors.outline.withValues(alpha: 0.15),
-                valueColor: AlwaysStoppedAnimation<Color>(_getBarColor(processing)),
+                valueColor: AlwaysStoppedAnimation<Color>(_getBarColor(working)),
                 minHeight: 3,
               ),
             ),
@@ -51,11 +53,11 @@ class TransferProgressBar extends ConsumerWidget {
               ),
               child: Row(
                 children: [
-                  _buildIcon(processing.isNotEmpty ? processing : active),
+                  _buildIcon(working.isNotEmpty ? working : active),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _formatSummary(processing, pendingCount),
+                      _formatSummary(working, pendingCount),
                       style: TextStyle(
                         fontSize: 11,
                         color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
@@ -64,23 +66,34 @@ class TransferProgressBar extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (hasProgress) ...[
-                    Text(
-                      _formatBytes(totalUploaded),
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                  if (hasWorking) ...[
+                    if (totalProgress > 0) ...[
+                      Text(
+                        _formatBytes(totalUploaded),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.onSurfaceVariant.withValues(alpha: 0.5),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${(totalProgress * 100).toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${(totalProgress * 100).toStringAsFixed(0)}%',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.onSurfaceVariant.withValues(alpha: 0.8),
+                        ),
                       ),
-                    ),
+                    ] else if (encrypting.isNotEmpty) ...[
+                      const Text(
+                        'Preparing...',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ],
                   ],
                 ],
               ),
@@ -94,8 +107,12 @@ class TransferProgressBar extends ConsumerWidget {
   }
 
   Widget _buildIcon(List<TransferItem> items) {
+    final hasEncrypting = items.any((i) => i.transfer.status == 'ENCRYPTING');
     final hasUpload = items.any((i) => i.transfer.type == 'UPLOAD_FILE');
     final hasDownload = items.any((i) => i.transfer.type == 'DOWNLOAD_FILE');
+    if (hasEncrypting && !hasDownload) {
+      return const Icon(Icons.enhanced_encryption_outlined, size: 14, color: Colors.amber);
+    }
     if (hasUpload && hasDownload) {
       return Icon(Icons.sync, size: 14, color: AppColors.onSurfaceVariant.withValues(alpha: 0.7));
     } else if (hasUpload) {
@@ -106,8 +123,10 @@ class TransferProgressBar extends ConsumerWidget {
   }
 
   Color _getBarColor(List<TransferItem> items) {
+    final hasEncrypting = items.any((i) => i.transfer.status == 'ENCRYPTING');
     final hasUpload = items.any((i) => i.transfer.type == 'UPLOAD_FILE');
     final hasDownload = items.any((i) => i.transfer.type == 'DOWNLOAD_FILE');
+    if (hasEncrypting && !hasDownload) return Colors.amber;
     if (hasUpload && hasDownload) return AppColors.primary;
     if (hasUpload) return AppColors.primaryLight;
     return AppColors.secondaryLight;
@@ -131,20 +150,26 @@ class TransferProgressBar extends ConsumerWidget {
   int _sumBytes(List<TransferItem> items) => items.fold<int>(0, (sum, item) => sum + item.transfer.bytesTransferred);
 
   String _formatSummary(List<TransferItem> items, int pendingCount) {
+    var encrypting = 0;
     var uploads = 0;
     var downloads = 0;
     for (final item in items) {
-      if (item.transfer.type == 'UPLOAD_FILE') {
+      if (item.transfer.status == 'ENCRYPTING') {
+        encrypting++;
+      } else if (item.transfer.type == 'UPLOAD_FILE') {
         uploads++;
       } else {
         downloads++;
       }
     }
     final parts = <String>[];
+    if (encrypting > 0) {
+      parts.add(encrypting == 1 ? 'Preparing & encrypting file...' : '$encrypting preparing');
+    }
     if (uploads > 0) parts.add('$uploads uploading');
     if (downloads > 0) parts.add('$downloads downloading');
     if (pendingCount > 0) parts.add('$pendingCount queued');
-    return parts.join(' · ');
+    return parts.isEmpty ? 'Transferring...' : parts.join(' · ');
   }
 
   String _formatBytes(int bytes) {

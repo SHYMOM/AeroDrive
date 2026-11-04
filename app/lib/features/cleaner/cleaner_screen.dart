@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../../domain/cleaner/duplicate_cleaner_service.dart';
 import '../gallery/thumbnail_service.dart';
@@ -99,16 +98,16 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
     final screenshotsAsync = ref.watch(cleanerScreenshotsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Storage Cleaner', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: Colors.white60,
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
           tabs: const [
             Tab(text: 'Duplicates'),
             Tab(text: 'Large Files'),
@@ -119,14 +118,14 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
       bottomNavigationBar: _selectedFilesToDelete.isNotEmpty
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              color: AppColors.surfaceElevated,
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               child: SafeArea(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       '${_selectedFilesToDelete.length} files selected',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
                     ),
                     FilledButton.icon(
                       style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
@@ -154,7 +153,7 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
                 itemBuilder: (context, idx) {
                   final group = groups[idx];
                   return Card(
-                    color: AppColors.surfaceElevated.withValues(alpha: 0.6),
+                    color: Theme.of(context).colorScheme.surfaceContainer,
                     margin: const EdgeInsets.only(bottom: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     child: Padding(
@@ -182,7 +181,7 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
                               ),
                             ],
                           ),
-                          const Divider(height: 12, color: Colors.white10),
+                          Divider(height: 12, color: Theme.of(context).colorScheme.outlineVariant),
                           ...group.files.map((file) {
                             final isSelected = _selectedFilesToDelete.contains(file.id);
                             return CheckboxListTile(
@@ -192,7 +191,7 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
                               title: Text(file.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
                               subtitle: Text(
                                 '${_formatBytes(file.size ?? 0)} • ${file.createdAt != null ? DateFormat.yMMMd().format(file.createdAt!) : ""}',
-                                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                                style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                               ),
                               onChanged: (val) {
                                 setState(() {
@@ -229,7 +228,7 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
                   final file = files[idx];
                   final isSelected = _selectedFilesToDelete.contains(file.id);
                   return Card(
-                    color: AppColors.surfaceElevated.withValues(alpha: 0.6),
+                    color: Theme.of(context).colorScheme.surfaceContainer,
                     margin: const EdgeInsets.only(bottom: 8),
                     child: CheckboxListTile(
                       value: isSelected,
@@ -315,9 +314,9 @@ class _CleanerScreenState extends ConsumerState<CleanerScreen> with SingleTicker
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Colors.white24),
+            Icon(icon, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60, fontSize: 14)),
+            Text(message, textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
           ],
         ),
       ),
@@ -342,10 +341,10 @@ class _CleanerThumbnail extends ConsumerWidget {
         }
         return Container(
           decoration: BoxDecoration(
-            color: Colors.white10,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: const Icon(Icons.image, color: Colors.white30),
+          child: Icon(Icons.image, color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
         );
       },
     );

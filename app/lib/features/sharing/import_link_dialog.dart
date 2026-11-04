@@ -162,7 +162,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.surfaceElevated,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: _buildTitle(),
       content: _buildContent(),
@@ -173,21 +173,21 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   Widget _buildTitle() {
     switch (_currentStep) {
       case _ImportStep.input:
-        return Text('Import Shared Link', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold));
+        return Text('Import Shared Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold));
       case _ImportStep.passwordPrompt:
-        return const Row(
+        return Row(
           children: [
-            Icon(Icons.lock_outline, color: Colors.amberAccent, size: 22),
-            SizedBox(width: 8),
-            Text('Password Protected', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            const Icon(Icons.lock_outline, color: Colors.amberAccent, size: 22),
+            const SizedBox(width: 8),
+            Text('Password Protected', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold)),
           ],
         );
       case _ImportStep.fetchingMetadata:
-        return const Text('Fetching Metadata', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+        return Text('Fetching Metadata', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold));
       case _ImportStep.confirm:
-        return const Text('Confirm Import', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+        return Text('Confirm Import', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold));
       case _ImportStep.importing:
-        return const Text('Importing Data', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold));
+        return Text('Importing Data', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold));
       case _ImportStep.error:
         return const Row(
           children: [
@@ -200,6 +200,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   }
 
   Widget _buildContent() {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (_currentStep) {
       case _ImportStep.input:
         return Column(
@@ -208,12 +209,12 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
           children: [
             TextField(
               controller: _urlController,
-              style: TextStyle(color: AppColors.onSurface),
+              style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'aerodrive://share?...',
-                hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
+                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant),
                 filled: true,
-                fillColor: AppColors.surfaceVariant,
+                fillColor: colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
@@ -223,13 +224,13 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
               children: [
                 Text(
                   'Import to:',
-                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                 ),
                 TextButton.icon(
-                  icon: Icon(Icons.folder_open, size: 16, color: AppColors.primary),
+                  icon: Icon(Icons.folder_open, size: 16, color: colorScheme.primary),
                   label: Text(
                     _targetFolderName,
-                    style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.bold),
+                    style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () async {
                     final pickedId = await showDialog<String>(
@@ -261,20 +262,20 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'This link is password-protected. Enter the password set by the sender to decrypt the metadata.',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,
               obscureText: true,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Enter password',
-                hintStyle: const TextStyle(color: Colors.white30),
+                hintStyle: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 filled: true,
-                fillColor: AppColors.surfaceVariant,
+                fillColor: colorScheme.surfaceContainerHighest,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
@@ -282,20 +283,20 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
         );
 
       case _ImportStep.fetchingMetadata:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   'Measuring internet speed and fetching metadata...',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 13),
                 ),
               ),
             ],
@@ -315,9 +316,9 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Importing this shared item will download and re-encrypt the data to your storage channel.',
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
             ),
             const SizedBox(height: 14),
             _buildDetailRow('Total Size:', sizeStr),
@@ -328,20 +329,20 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
         );
 
       case _ImportStep.importing:
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
           child: Row(
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2.5),
               ),
-              SizedBox(width: 16),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   'Importing share and re-encrypting chunks to your storage...',
-                  style: TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 13),
                 ),
               ),
             ],
@@ -355,7 +356,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
           children: [
             Text(
               _errorMessage ?? 'An unexpected error occurred during import.',
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
             ),
           ],
         );
@@ -363,20 +364,21 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   }
 
   List<Widget> _buildActions() {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (_currentStep) {
       case _ImportStep.input:
         return [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: colorScheme.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: _startImportFlow,
-            child: const Text('Import', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: Text('Import', style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold)),
           ),
         ];
 
@@ -388,15 +390,15 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                 _currentStep = _ImportStep.input;
               });
             },
-            child: const Text('Back', style: TextStyle(color: Colors.white54)),
+            child: Text('Back', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: colorScheme.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => _executeImport(_urlController.text.trim()),
-            child: const Text('Decrypt & Import', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: Text('Decrypt & Import', style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold)),
           ),
         ];
 
@@ -404,7 +406,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
         return [
           TextButton(
             onPressed: _onCancelImport,
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
         ];
 
@@ -412,15 +414,15 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
         return [
           TextButton(
             onPressed: _onCancelImport,
-            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            child: Text('Cancel', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: colorScheme.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: _onProceedConfirmed,
-            child: const Text('Proceed', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: Text('Proceed', style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold)),
           ),
         ];
 
@@ -431,11 +433,11 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
         return [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Colors.white54)),
+            child: Text('Close', style: TextStyle(color: colorScheme.onSurfaceVariant)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: colorScheme.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () {
@@ -444,7 +446,7 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
                 _errorMessage = null;
               });
             },
-            child: const Text('Try Again', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: Text('Try Again', style: TextStyle(color: colorScheme.onPrimary, fontWeight: FontWeight.bold)),
           ),
         ];
     }
@@ -458,14 +460,15 @@ class _ImportLinkDialogState extends ConsumerState<ImportLinkDialog> {
   }
 
   Widget _buildDetailRow(String label, String value) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500)),
+          Text(label, style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold))),
+          Expanded(child: Text(value, style: TextStyle(color: colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.bold))),
         ],
       ),
     );

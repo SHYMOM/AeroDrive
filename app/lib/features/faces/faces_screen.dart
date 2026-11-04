@@ -276,7 +276,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
               ),
             ] else ...[
               IconButton(
-                icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                icon: Icon(Icons.auto_awesome, color: AppColors.primary),
                 tooltip: 'Auto-Group Similar Faces',
                 onPressed: () async {
                   final db = ref.read(databaseProvider);
@@ -431,7 +431,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                       right: 6,
                       child: Container(
                         padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           color: AppColors.primary,
                           shape: BoxShape.circle,
                         ),

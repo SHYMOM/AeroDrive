@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080D1A"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="playerGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0A0F1D"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#00D2FF"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000" flood-opacity="0.7"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="640" rx="16" fill="url(#bgGrad)" stroke="#334155" stroke-width="1"/>
+
+  <!-- Main Player Canvas -->
+  <g transform="translate(30, 25)">
+    <!-- Video Player Frame -->
+    <rect width="940" height="440" rx="12" fill="url(#playerGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadow)"/>
+    
+    <!-- Video Header overlay -->
+    <rect width="940" height="55" rx="12 12 0 0" fill="#000" fill-opacity="0.45"/>
+    <circle cx="30" cy="28" r="6" fill="#EF4444"/>
+    <text x="45" y="33" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="600" fill="#F8FAFC">Interstellar Space Walk [4K HDR Dolby Vision].mkv</text>
+    <rect x="760" y="16" width="70" height="24" rx="4" fill="#3B82F6" fill-opacity="0.3" stroke="#3B82F6" stroke-width="1"/>
+    <text x="795" y="32" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#60A5FA" text-anchor="middle">4K 60FPS</text>
+    <rect x="840" y="16" width="80" height="24" rx="4" fill="#10B981" fill-opacity="0.2" stroke="#10B981" stroke-width="1"/>
+    <text x="880" y="32" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="600" fill="#34D399" text-anchor="middle">AES-CTR OK</text>
+
+    <!-- Center Play/Buffer Animation Graphic -->
+    <g transform="translate(470, 210)">
+      <circle cx="0" cy="0" r="48" fill="#0F172A" fill-opacity="0.8" stroke="url(#glowGrad)" stroke-width="2.5"/>
+      <polygon points="-8,-16 16,0 -8,16" fill="#38BDF8"/>
+      <circle cx="0" cy="0" r="60" fill="none" stroke="#38BDF8" stroke-width="1" stroke-dasharray="4 6" opacity="0.6"/>
+    </g>
+
+    <!-- Floating Live Metric HUD -->
+    <g transform="translate(30, 80)">
+      <rect width="260" height="130" rx="8" fill="#0A0F1D" fill-opacity="0.85" stroke="#334155" stroke-width="1"/>
+      <text x="14" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#94A3B8" letter-spacing="0.5">SUB-CHUNK STREAM ENGINE</text>
+      
+      <text x="14" y="48" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">Instant Seek Latency: <tspan fill="#34D399" font-weight="700">18 ms</tspan></text>
+      <text x="14" y="68" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">Decryption Mode: <tspan fill="#38BDF8" font-weight="700">AES-256-CTR / IV-Seek</tspan></text>
+      <text x="14" y="88" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">Paged Buffer: <tspan fill="#A78BFA" font-weight="700">2.0 MB sliding window</tspan></text>
+      <text x="14" y="108" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#E2E8F0">File Size: <tspan fill="#F8FAFC" font-weight="700">14.8 GB (74 chunks striped)</tspan></text>
+    </g>
+
+    <!-- Bottom Video Controls Overlay -->
+    <g transform="translate(0, 350)">
+      <rect width="940" height="90" rx="0 0 12 12" fill="#0F172A" fill-opacity="0.95"/>
+      
+      <!-- Timeline Scrub Bar -->
+      <g transform="translate(30, 20)">
+        <!-- Total bar -->
+        <rect width="880" height="6" rx="3" fill="#334155"/>
+        <!-- Buffered segments (striping visualization) -->
+        <rect x="0" width="480" height="6" rx="3" fill="#1E293B"/>
+        <rect x="180" width="220" height="6" fill="#0EA5E9" fill-opacity="0.4"/>
+        <rect x="0" width="280" height="6" rx="3" fill="url(#glowGrad)"/>
+        <!-- Scrubber handle -->
+        <circle cx="280" cy="3" r="8" fill="#FFF" filter="url(#shadow)"/>
+        <circle cx="280" cy="3" r="4" fill="#0284C7"/>
+      </g>
+
+      <!-- Player Buttons and Time -->
+      <g transform="translate(30, 50)">
+        <!-- Play / Pause -->
+        <polygon points="0,0 0,16 12,8" fill="#F8FAFC"/>
+        <!-- Skip 10s -->
+        <circle cx="45" cy="8" r="10" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+        <text x="45" y="11" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="8" font-weight="700" fill="#94A3B8" text-anchor="middle">+10</text>
+        
+        <!-- Timestamp -->
+        <text x="80" y="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#F8FAFC">01:14:22 <tspan fill="#64748B">/ 02:49:15</tspan></text>
+
+        <!-- Right Side Player Actions -->
+        <g transform="translate(740, 0)">
+          <text x="0" y="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">Subtitles [EN]</text>
+          <text x="95" y="12" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">Audio 5.1</text>
+          <!-- Fullscreen icon -->
+          <rect x="160" y="0" width="14" height="14" rx="2" fill="none" stroke="#94A3B8" stroke-width="1.5"/>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <!-- Bottom Technical Striping Pipeline explanation -->
+  <g transform="translate(30, 490)">
+    <rect width="940" height="125" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    
+    <g transform="translate(25, 20)">
+      <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="13" font-weight="700" fill="#38BDF8">NO WAITING FOR MULTI-GIGABYTE DOWNLOADS</text>
+      <text x="0" y="36" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">AeroDrive uses range-request streaming over TDLib. When you scrub through a 50GB 4K file, only the necessary 2MB cryptographic slice is fetched and decrypted in memory via AES-CTR counter arithmetic.</text>
+      
+      <!-- Progress visual -->
+      <g transform="translate(0, 52)">
+        <rect width="210" height="30" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="15" y="19" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#34D399">Channel Striping: 3× Parallel</text>
+
+        <rect x="230" width="220" height="30" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="245" y="19" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#60A5FA">RAM Ring Buffer: 128 MB Cap</text>
+
+        <rect x="470" width="230" height="30" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="485" y="19" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#F472B6">Zero Temp Disk Writes</text>
+
+        <rect x="720" width="170" height="30" rx="6" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="735" y="19" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#FBBF24">Hardware Acceleration</text>
+      </g>
+    </g>
+  </g>
+</svg>

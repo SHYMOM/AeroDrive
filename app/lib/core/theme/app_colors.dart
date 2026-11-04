@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 abstract final class AppColors {
-  static bool isDark = true;
+  static bool _isDark = true;
+  static bool get isDark => _isDark;
+  static set isDark(bool value) {
+    _isDark = value;
+    if (_primary.toARGB32() == 0xFF00E5FF) {
+      _primaryContainer = value ? const Color(0xFF0D3B4D) : const Color(0xFFE0F7FA);
+    }
+  }
 
   // ── Background & Surface ────────────────────
   static Color get background => isDark ? const Color(0xFF040609) : const Color(0xFFF8FAFC); // Deep space dark vs slate 50
@@ -10,16 +17,25 @@ abstract final class AppColors {
   static Color get surfaceVariant => isDark ? const Color(0xFF161F2E) : const Color(0xFFF1F5F9); // Dark slate vs slate 100
   static Color get surfaceContainerHighest => isDark ? const Color(0xFF192436) : const Color(0xFFE2E8F0); // Deep slate container vs slate 200
 
-  // ── Primary — Electric Cyan (AeroDrive brand) ──────────────────────
-  static const Color primary = Color(0xFF00E5FF); // neonCyan
-  static const Color primaryLight = Color(0xFF67E8F9); 
-  static const Color primaryDark = Color(0xFF0891B2);
-  static const Color primaryContainer = Color(0xFF0D3B4D); // Deep cyan tint
+  // ── Primary — Dynamic Token Bridge ─────────────────────────────────
+  static Color _primary = const Color(0xFF00E5FF); // neonCyan
+  static Color _primaryLight = const Color(0xFF67E8F9); 
+  static Color _primaryDark = const Color(0xFF0891B2);
+  static Color _primaryContainer = const Color(0xFF0D3B4D); // Deep cyan tint
 
-  // ── Secondary — Deep Violet (For contrasts) ────────────────────────
-  static const Color secondary = Color(0xFF7C3AED); // neonViolet
-  static const Color secondaryLight = Color(0xFF8B5CF6);
-  static const Color secondaryDark = Color(0xFF5B21B6);
+  static Color get primary => _primary;
+  static Color get primaryLight => _primaryLight;
+  static Color get primaryDark => _primaryDark;
+  static Color get primaryContainer => _primaryContainer;
+
+  // ── Secondary — Dynamic Token Bridge ───────────────────────────────
+  static Color _secondary = const Color(0xFF7C3AED); // neonViolet
+  static Color _secondaryLight = const Color(0xFF8B5CF6);
+  static Color _secondaryDark = const Color(0xFF5B21B6);
+
+  static Color get secondary => _secondary;
+  static Color get secondaryLight => _secondaryLight;
+  static Color get secondaryDark => _secondaryDark;
 
   // ── Semantic ──────────────────────────────────────────────────────
   static const Color tertiary = Color(0xFFF472B6);
@@ -31,8 +47,8 @@ abstract final class AppColors {
   static Color get onBackground => isDark ? const Color(0xFFFFFFFF) : const Color(0xFF0F172A); // White text vs Slate 900
   static Color get onSurface => isDark ? const Color(0xFFFFFFFF) : const Color(0xFF0F172A);
   static Color get onSurfaceVariant => isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B); // Slate subtitle vs Slate 500
-  static const Color onPrimary = Color(0xFF000000);
-  static const Color onSecondary = Color(0xFFFFFFFF);
+  static Color get onPrimary => _primary.computeLuminance() > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
+  static Color get onSecondary => _secondary.computeLuminance() > 0.5 ? const Color(0xFF000000) : const Color(0xFFFFFFFF);
 
   // ── Borders & Dividers ────────────────────────────────────────────
   static Color get outline => isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0); // Subtle borders
@@ -44,9 +60,54 @@ abstract final class AppColors {
   static Color get glassBgDark => isDark ? const Color(0x730B1018) : const Color(0x73FFFFFF); 
 
   // ── Glow (Shadows) ────────────────────────────────────────────────
-  static const Color glowCyan = Color(0x6600E5FF); 
+  static Color get glowCyan => _primary.withValues(alpha: 0.4); 
   static const Color shadow = Color(0x80000000);
   static const Color scrim = Color(0xCC000000);
+
+  // ── Dynamic Theme Update Hook ─────────────────────────────────────
+  static void update({
+    required bool isDark,
+    Color? primary,
+    Color? secondary,
+  }) {
+    _isDark = isDark;
+    if (primary != null) {
+      _primary = primary;
+      if (primary.toARGB32() == 0xFF00E5FF) {
+        _primaryLight = const Color(0xFF67E8F9);
+        _primaryDark = const Color(0xFF0891B2);
+        _primaryContainer = isDark ? const Color(0xFF0D3B4D) : const Color(0xFFE0F7FA);
+      } else {
+        final hsl = HSLColor.fromColor(primary);
+        _primaryLight = hsl.withLightness((hsl.lightness + 0.15).clamp(0.0, 1.0)).toColor();
+        _primaryDark = hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+        _primaryContainer = isDark
+            ? hsl.withLightness((hsl.lightness * 0.4).clamp(0.0, 1.0)).withSaturation((hsl.saturation * 0.8).clamp(0.0, 1.0)).toColor()
+            : hsl.withLightness((hsl.lightness + 0.35).clamp(0.0, 1.0)).withSaturation((hsl.saturation * 0.5).clamp(0.0, 1.0)).toColor();
+      }
+    } else {
+      if (_primary.toARGB32() == 0xFF00E5FF) {
+        _primaryContainer = isDark ? const Color(0xFF0D3B4D) : const Color(0xFFE0F7FA);
+      } else {
+        final hsl = HSLColor.fromColor(_primary);
+        _primaryContainer = isDark
+            ? hsl.withLightness((hsl.lightness * 0.4).clamp(0.0, 1.0)).withSaturation((hsl.saturation * 0.8).clamp(0.0, 1.0)).toColor()
+            : hsl.withLightness((hsl.lightness + 0.35).clamp(0.0, 1.0)).withSaturation((hsl.saturation * 0.5).clamp(0.0, 1.0)).toColor();
+      }
+    }
+
+    if (secondary != null) {
+      _secondary = secondary;
+      if (secondary.toARGB32() == 0xFF7C3AED) {
+        _secondaryLight = const Color(0xFF8B5CF6);
+        _secondaryDark = const Color(0xFF5B21B6);
+      } else {
+        final hslSec = HSLColor.fromColor(secondary);
+        _secondaryLight = hslSec.withLightness((hslSec.lightness + 0.15).clamp(0.0, 1.0)).toColor();
+        _secondaryDark = hslSec.withLightness((hslSec.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+      }
+    }
+  }
 
   // ── Multi-Color Folder References ──────────────────
   static const Map<String, Color> folderColors = {

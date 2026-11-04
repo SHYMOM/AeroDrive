@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="cloudGrad" x1="15" y1="20" x2="105" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#00D2FF"/>
+      <stop offset="50%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="wingGrad" x1="10" y1="60" x2="110" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#6366F1"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Glowing background ring -->
+  <circle cx="60" cy="60" r="54" fill="#0A101D" stroke="url(#cloudGrad)" stroke-width="2.5" opacity="0.9"/>
+  <circle cx="60" cy="60" r="46" fill="#0F172A" opacity="0.8"/>
+
+  <!-- Aero Wing Left -->
+  <path d="M22 62C32 54 44 56 52 64C42 66 32 68 22 62Z" fill="url(#wingGrad)" opacity="0.85"/>
+  <!-- Aero Wing Right -->
+  <path d="M98 62C88 54 76 56 68 64C78 66 88 68 98 62Z" fill="url(#wingGrad)" opacity="0.85"/>
+
+  <!-- Cloud Base -->
+  <path d="M42 74H78C84.6274 74 90 68.6274 90 62C90 55.6707 85.1009 50.4851 78.8926 50.0416C77.4478 42.1039 70.4777 36 62 36C54.6738 36 48.4343 40.5982 46.0469 47.1691C44.7578 46.7358 43.3768 46.5 41.9444 46.5C35.3477 46.5 30 51.8477 30 58.4444C30 65.0411 35.3477 70.3889 41.9444 70.3889H42" 
+        stroke="url(#cloudGrad)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+
+  <!-- Telegram / Aero Arrow in Center -->
+  <path d="M52 58L60 50L68 58M60 51V68" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+

@@ -1,7 +1,6 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -45,6 +44,11 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
 
+  // M3: Scrubber seek throttling & lazy stream guards
+  bool _isScrubbing = false;
+  Duration _scrubPosition = Duration.zero;
+  bool _isInitializingStream = false;
+
   String _folderName = 'Top Level';
   int _folderItemCount = 0;
 
@@ -64,7 +68,11 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
         });
       }
     });
-    _initStream();
+
+    // M3: Only initialize stream eagerly if this page is currently active
+    if (widget.isActive) {
+      _initStream();
+    }
     _loadFolderInfo();
   }
 
@@ -73,11 +81,23 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
     super.didUpdateWidget(oldWidget);
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
-        player?.play();
+        // M3: Lazily initialize stream when becoming active, or resume playback
+        if (player == null && !_isInitializingStream) {
+          _initStream();
+        } else {
+          player?.play();
+        }
       } else {
         player?.pause();
       }
     }
+  }
+
+  @override
+  void dispose() {
+    ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    player?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFolderInfo() async {
@@ -106,6 +126,9 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
   }
 
   Future<void> _initStream() async {
+    if (_isInitializingStream || player != null) return;
+    _isInitializingStream = true;
+
     try {
       final kekBytes = ref.read(masterKeyProvider);
       if (kekBytes == null) {
@@ -126,26 +149,29 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
       }
       final url = 'http://127.0.0.1:${streamingServer.port}/stream?id=${widget.file.id}';
       
-      player = Player();
-      controller = VideoController(player!);
+      final newPlayer = Player();
+      final newController = VideoController(newPlayer);
+      player = newPlayer;
+      controller = newController;
       
-      player!.stream.playing.listen((playing) {
+      newPlayer.stream.playing.listen((playing) {
         if (mounted) setState(() => _isPlaying = playing);
       });
       
-      player!.stream.position.listen((pos) {
-        if (mounted) setState(() => _position = pos);
+      // M3: Suppress position updates during active user scrubbing to eliminate UI jitter
+      newPlayer.stream.position.listen((pos) {
+        if (mounted && !_isScrubbing) setState(() => _position = pos);
       });
       
-      player!.stream.duration.listen((dur) {
+      newPlayer.stream.duration.listen((dur) {
         if (mounted) setState(() => _duration = dur);
       });
 
-      player!.stream.completed.listen((completed) {
+      newPlayer.stream.completed.listen((completed) {
         if (completed) {
           if (_isLooping) {
-            player?.seek(Duration.zero);
-            player?.play();
+            newPlayer.seek(Duration.zero);
+            newPlayer.play();
           } else {
             widget.onNext?.call();
           }
@@ -153,14 +179,14 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
       });
 
       try {
-        await player!.open(Media(url), play: widget.isActive);
-        await player!.setPlaylistMode(PlaylistMode.none); // Handle looping manually
+        await newPlayer.open(Media(url), play: widget.isActive);
+        await newPlayer.setPlaylistMode(PlaylistMode.none); // Handle looping manually
 
         if (mounted) {
           setState(() => _isLoading = false);
         }
       } catch (e) {
-        player?.dispose();
+        newPlayer.dispose();
         player = null;
         controller = null;
         rethrow;
@@ -173,6 +199,8 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
           _isLoading = false;
         });
       }
+    } finally {
+      _isInitializingStream = false;
     }
   }
 
@@ -295,12 +323,6 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
       return "${twoDigits(d.inHours)}:$twoDigitMinutes:$twoDigitSeconds";
     }
     return "$twoDigitMinutes:$twoDigitSeconds";
-  }
-
-  @override
-  void dispose() {
-    player?.dispose();
-    super.dispose();
   }
 
   @override
@@ -501,10 +523,13 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 16),
-                  // Custom Progress Bar
+                  // Custom Progress Bar with Throttled Seeking
                   Row(
                     children: [
-                      Text(_formatDuration(_position), style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      Text(
+                        _formatDuration(_isScrubbing ? _scrubPosition : _position),
+                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: SliderTheme(
@@ -516,11 +541,38 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
                             inactiveTrackColor: Colors.white24,
                             thumbColor: Colors.white,
                           ),
-                          child: Slider(
-                            value: _position.inMilliseconds.toDouble(),
-                            max: _duration.inMilliseconds.toDouble() > 0 ? _duration.inMilliseconds.toDouble() : 1.0,
-                            onChanged: (val) {
-                              player?.seek(Duration(milliseconds: val.toInt()));
+                          child: Builder(
+                            builder: (context) {
+                              final maxMs = _duration.inMilliseconds.toDouble() > 0
+                                  ? _duration.inMilliseconds.toDouble()
+                                  : 1.0;
+                              final currentMs = (_isScrubbing ? _scrubPosition : _position)
+                                  .inMilliseconds
+                                  .toDouble()
+                                  .clamp(0.0, maxMs);
+                              return Slider(
+                                value: currentMs,
+                                max: maxMs,
+                                onChangeStart: (val) {
+                                  setState(() {
+                                    _isScrubbing = true;
+                                    _scrubPosition = Duration(milliseconds: val.toInt());
+                                  });
+                                },
+                                onChanged: (val) {
+                                  setState(() {
+                                    _scrubPosition = Duration(milliseconds: val.toInt());
+                                  });
+                                },
+                                onChangeEnd: (val) {
+                                  final target = Duration(milliseconds: val.toInt());
+                                  player?.seek(target);
+                                  setState(() {
+                                    _isScrubbing = false;
+                                    _position = target;
+                                  });
+                                },
+                              );
                             },
                           ),
                         ),

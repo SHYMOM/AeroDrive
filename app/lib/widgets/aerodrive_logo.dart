@@ -107,7 +107,7 @@ class _AeroDriveLogoState extends State<AeroDriveLogo>
               fontSize: dim * 0.4,
               letterSpacing: -0.5,
               foreground: Paint()
-                ..shader = const LinearGradient(
+                ..shader = LinearGradient(
                   colors: [AppColors.primaryLight, AppColors.secondaryLight],
                 ).createShader(
                   Rect.fromLTWH(0, 0, dim * 3, dim * 0.5),

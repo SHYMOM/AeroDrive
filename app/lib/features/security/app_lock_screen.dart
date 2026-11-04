@@ -68,7 +68,7 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
                   color: AppColors.primary.withValues(alpha: 0.15),
                   border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.lock_rounded,
                   size: 44,
                   color: AppColors.primary,

@@ -36,7 +36,7 @@ class InfrastructureResult {
 
 /// Creates the initial AeroDrive channel infrastructure during first-time
 /// registration:
-///   - 2 Storage channels ("AeroDrive Storage 1", "AeroDrive Storage 2")
+///   - 3 Storage channels ("AeroDrive Storage 1", "AeroDrive Storage 2", "AeroDrive Storage 3")
 ///   - 1 Config channel ("AeroDrive Config")
 ///   - 1 Shared channel ("AeroDrive Shared")
 ///
@@ -47,6 +47,12 @@ class InfrastructureProvisioningService {
   InfrastructureProvisioningService(this._ref);
 
   final Ref _ref;
+
+  static Future<InfrastructureResult>? _activeProvisioningFuture;
+
+  /// Exposes whether provisioning is actively running.
+  static bool get isProvisioning => _activeProvisioningFuture != null;
+  static Future<InfrastructureResult>? get activeProvisioningFuture => _activeProvisioningFuture;
 
   /// Checks whether infrastructure already exists (via settings), runs
   /// provisioning if not. Idempotent — safe to call multiple times.
@@ -97,6 +103,35 @@ class InfrastructureProvisioningService {
     required List<TelegramService> allAccounts,
     ProvisioningProgressCallback? onProgress,
   }) async {
+    // Prevent duplicate simultaneous provisioning runs across the application
+    if (_activeProvisioningFuture != null) {
+      AppLogger.info('Provisioning: Channel creation already in progress. Coalescing call.');
+      return await _activeProvisioningFuture!;
+    }
+
+    final future = _executeProvisionInitialInfrastructure(
+      telegramService: telegramService,
+      masterKey: masterKey,
+      masterKeySalt: masterKeySalt,
+      allAccounts: allAccounts,
+      onProgress: onProgress,
+    );
+
+    _activeProvisioningFuture = future;
+    try {
+      return await future;
+    } finally {
+      _activeProvisioningFuture = null;
+    }
+  }
+
+  Future<InfrastructureResult> _executeProvisionInitialInfrastructure({
+    required TelegramService telegramService,
+    required SecretKey masterKey,
+    required String masterKeySalt,
+    required List<TelegramService> allAccounts,
+    ProvisioningProgressCallback? onProgress,
+  }) async {
     final settingsRepo = _ref.read(settingsRepositoryProvider);
     final List<int> storageChannelIds = [];
     int? configChannelId;
@@ -107,7 +142,7 @@ class InfrastructureProvisioningService {
       // ── 1. Create ALL channels FIRST (without archiving) ──────────
       for (var i = 0; i < ChannelConstants.defaultStorageChannelCount; i++) {
         final title = '${ChannelConstants.storageChannelBaseName} ${i + 1}';
-        final progressFrac = 0.1 + (i * 0.18);
+        final progressFrac = 0.08 + (i * 0.12);
         onProgress?.call('Creating $title...', progressFrac);
         AppLogger.info('Provisioning: Creating storage channel "$title"');
 
@@ -308,9 +343,9 @@ class InfrastructureProvisioningService {
     }
   }
 
-  /// Configures four existing Telegram channels chosen by the user into the
+  /// Configures five existing Telegram channels chosen by the user into the
   /// AeroDrive infrastructure:
-  /// - 2 storage channels (renamed to "AeroDrive Storage 1" and "AeroDrive Storage 2")
+  /// - 3 storage channels (renamed to "AeroDrive Storage 1", "AeroDrive Storage 2", and "AeroDrive Storage 3")
   /// - 1 config channel (renamed to "AeroDrive Config")
   /// - 1 shared channel (renamed to "AeroDrive Shared")
   /// Sets descriptions, application icons, invite links, folder, and settings.
@@ -318,6 +353,7 @@ class InfrastructureProvisioningService {
     required TelegramService telegramService,
     required int storageChannel1Id,
     required int storageChannel2Id,
+    required int storageChannel3Id,
     required int configChannelId,
     required int sharedChannelId,
     required SecretKey masterKey,
@@ -326,11 +362,11 @@ class InfrastructureProvisioningService {
     ProvisioningProgressCallback? onProgress,
   }) async {
     final settingsRepo = _ref.read(settingsRepositoryProvider);
-    final storageChannelIds = [storageChannel1Id, storageChannel2Id];
+    final storageChannelIds = [storageChannel1Id, storageChannel2Id, storageChannel3Id];
 
     try {
       // 1. Rename and configure Storage Channel 1
-      onProgress?.call('Configuring AeroDrive Storage 1...', 0.15);
+      onProgress?.call('Configuring AeroDrive Storage 1...', 0.10);
       final title1 = '${ChannelConstants.storageChannelBaseName} 1';
       try {
         await telegramService.setChatTitle(storageChannel1Id, title1);
@@ -349,7 +385,7 @@ class InfrastructureProvisioningService {
       );
 
       // 2. Rename and configure Storage Channel 2
-      onProgress?.call('Configuring AeroDrive Storage 2...', 0.35);
+      onProgress?.call('Configuring AeroDrive Storage 2...', 0.25);
       final title2 = '${ChannelConstants.storageChannelBaseName} 2';
       try {
         await telegramService.setChatTitle(storageChannel2Id, title2);
@@ -367,7 +403,26 @@ class InfrastructureProvisioningService {
         totalStorageChannels: storageChannelIds.length,
       );
 
-      // 3. Rename and configure Config Channel
+      // 3. Rename and configure Storage Channel 3
+      onProgress?.call('Configuring AeroDrive Storage 3...', 0.40);
+      final title3 = '${ChannelConstants.storageChannelBaseName} 3';
+      try {
+        await telegramService.setChatTitle(storageChannel3Id, title3);
+      } catch (e) {
+        AppLogger.warning('Failed to rename storage channel 3: $e');
+      }
+      await _setChannelPhoto(telegramService, storageChannel3Id);
+      await _setChannelDescription(
+        telegramService,
+        storageChannel3Id,
+        purpose: ChannelConstants.descriptionPurposeStorage,
+        masterKey: masterKey,
+        keySalt: masterKeySalt,
+        channelIndex: 2,
+        totalStorageChannels: storageChannelIds.length,
+      );
+
+      // 4. Rename and configure Config Channel
       onProgress?.call('Configuring AeroDrive Config...', 0.55);
       try {
         await telegramService.setChatTitle(configChannelId, ChannelConstants.configChannelName);
@@ -385,7 +440,7 @@ class InfrastructureProvisioningService {
         totalStorageChannels: storageChannelIds.length,
       );
 
-      // 4. Rename and configure Shared Channel
+      // 5. Rename and configure Shared Channel
       onProgress?.call('Configuring AeroDrive Shared...', 0.70);
       try {
         await telegramService.setChatTitle(sharedChannelId, ChannelConstants.sharedChannelName);

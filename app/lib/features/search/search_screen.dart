@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
-import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../drive/widgets/file_list_item.dart';
 import '../drive/widgets/folder_grid_item.dart';
@@ -151,13 +150,13 @@ class SearchScreen extends ConsumerWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
           tooltip: 'Back to Drive',
           onPressed: () {
             if (context.canPop()) {
@@ -174,7 +173,7 @@ class SearchScreen extends ConsumerWidget {
             hintText: 'Search files, folders or #tags...',
             hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
             border: InputBorder.none,
-            icon: Icon(Icons.search, color: AppColors.primary),
+            icon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
           ),
           onChanged: (val) {
             ref.read(searchQueryProvider.notifier).state = val;
@@ -182,9 +181,9 @@ class SearchScreen extends ConsumerWidget {
         ),
         actions: [
           PopupMenuButton<SearchSortBy>(
-            icon: Icon(Icons.sort, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.sort, color: Theme.of(context).colorScheme.onSurfaceVariant),
             tooltip: 'Sort',
-            color: AppColors.surfaceElevated,
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             onSelected: (value) {
               ref.read(searchSortByProvider.notifier).state = value;
             },
@@ -215,9 +214,9 @@ class SearchScreen extends ConsumerWidget {
             },
           ),
           PopupMenuButton<SearchFilterType>(
-            icon: Icon(Icons.filter_list, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.filter_list, color: Theme.of(context).colorScheme.onSurfaceVariant),
             tooltip: 'Filter',
-            color: AppColors.surfaceElevated,
+            color: Theme.of(context).colorScheme.surfaceContainerHigh,
             onSelected: (value) {
               ref.read(searchFilterTypeProvider.notifier).state = value;
             },
@@ -277,8 +276,8 @@ class SearchScreen extends ConsumerWidget {
             colors: [
               Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
               Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-              AppColors.background,
-              AppColors.background,
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
           ),
         ),
@@ -291,16 +290,16 @@ class SearchScreen extends ConsumerWidget {
                   children: [
                     Text(
                       'Sort: ${sortBy.name}',
-                      style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
                     ),
                     const SizedBox(width: 8),
                     if (filterType != SearchFilterType.all)
                       Chip(
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        labelStyle: TextStyle(color: AppColors.primary, fontSize: 11),
-                        side: BorderSide(color: AppColors.primary),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        labelStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11),
+                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
                         label: Text(filterType.name),
-                        deleteIcon: Icon(Icons.close, size: 14, color: AppColors.primary),
+                        deleteIcon: Icon(Icons.close, size: 14, color: Theme.of(context).colorScheme.primary),
                         onDeleted: () => ref.read(searchFilterTypeProvider.notifier).state = SearchFilterType.all,
                       ),
                   ],
@@ -375,7 +374,7 @@ class SearchScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Folders',
-                                style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
@@ -414,7 +413,7 @@ class SearchScreen extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               child: Text(
                                 'Files',
-                                style: TextStyle(color: AppColors.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
+                                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),

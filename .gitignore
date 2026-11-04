@@ -105,6 +105,10 @@ $RECYCLE.BIN/
 coverage/
 lcov.info
 
+# --- Tests & Challenger Suites ---
+app/test/
+test/
+
 # --- Build outputs ---
 *.log
 *.tmp
@@ -113,3 +117,17 @@ AeroDrive_Windows_Portable.zip
 AeroDrive_Android_Release.apk
 AeroDrive_Backend.exe
 go-bin/
+brag-output/
+
+# --- Website & Documentation (Explicitly Tracked for GitHub Pages) ---
+!website/
+!docs/
+
+# --- Agent & Teamwork artifacts ---
+.agents/
+skills-lock.json
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md
+
+

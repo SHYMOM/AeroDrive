@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 640" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090D16"/>
+      <stop offset="50%" stop-color="#0E172A"/>
+      <stop offset="100%" stop-color="#0B1120"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="photoGrad1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#EC4899"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <linearGradient id="photoGrad2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#06B6D4"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="photoGrad3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="photoGrad4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#EF4444"/>
+    </linearGradient>
+    <linearGradient id="accentGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="1000" height="640" rx="16" fill="url(#bgGrad)" stroke="#334155" stroke-width="1"/>
+
+  <!-- Top bar -->
+  <g transform="translate(30, 25)">
+    <text x="0" y="24" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="700" fill="#F8FAFC">AI Smart Memories &amp; Gallery</text>
+    <text x="0" y="44" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">On-Device TensorFlow Face Clustering • Semantic Search • Zero-Knowledge EXIF Stripping</text>
+    
+    <g transform="translate(680, 5)">
+      <rect width="260" height="36" rx="8" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+      <circle cx="20" cy="18" r="6" fill="none" stroke="#94A3B8" stroke-width="2"/>
+      <line x1="25" y1="23" x2="31" y2="29" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/>
+      <text x="42" y="23" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#64748B">Search "Sunset in Switzerland"...</text>
+    </g>
+  </g>
+
+  <!-- People & Faces Row -->
+  <g transform="translate(30, 95)">
+    <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="600" fill="#E2E8F0">PEOPLE &amp; PETS (LOCAL CLUSTERING)</text>
+    
+    <!-- Face 1 -->
+    <g transform="translate(0, 30)">
+      <circle cx="36" cy="36" r="34" fill="none" stroke="url(#accentGlow)" stroke-width="2.5"/>
+      <circle cx="36" cy="36" r="30" fill="#3B82F6"/>
+      <text x="36" y="42" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" font-weight="700" fill="#FFF" text-anchor="middle">SJ</text>
+      <text x="36" y="85" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC" text-anchor="middle">Sarah</text>
+      <text x="36" y="100" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">482 photos</text>
+    </g>
+
+    <!-- Face 2 -->
+    <g transform="translate(100, 30)">
+      <circle cx="36" cy="36" r="34" fill="none" stroke="#334155" stroke-width="2"/>
+      <circle cx="36" cy="36" r="30" fill="#10B981"/>
+      <text x="36" y="42" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" font-weight="700" fill="#FFF" text-anchor="middle">AL</text>
+      <text x="36" y="85" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC" text-anchor="middle">Alex</text>
+      <text x="36" y="100" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">319 photos</text>
+    </g>
+
+    <!-- Face 3 -->
+    <g transform="translate(200, 30)">
+      <circle cx="36" cy="36" r="34" fill="none" stroke="#334155" stroke-width="2"/>
+      <circle cx="36" cy="36" r="30" fill="#F59E0B"/>
+      <text x="36" y="42" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" font-weight="700" fill="#FFF" text-anchor="middle">MI</text>
+      <text x="36" y="85" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC" text-anchor="middle">Milo 🐕</text>
+      <text x="36" y="100" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">184 photos</text>
+    </g>
+
+    <!-- Face 4 -->
+    <g transform="translate(300, 30)">
+      <circle cx="36" cy="36" r="34" fill="none" stroke="#334155" stroke-width="2"/>
+      <circle cx="36" cy="36" r="30" fill="#8B5CF6"/>
+      <text x="36" y="42" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="18" font-weight="700" fill="#FFF" text-anchor="middle">EK</text>
+      <text x="36" y="85" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#F8FAFC" text-anchor="middle">Elena</text>
+      <text x="36" y="100" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#64748B" text-anchor="middle">245 photos</text>
+    </g>
+
+    <!-- Story Spotlight Card -->
+    <g transform="translate(420, 10)">
+      <rect width="520" height="115" rx="12" fill="url(#cardGrad)" stroke="#334155" stroke-width="1" filter="url(#shadow)"/>
+      <rect x="15" y="15" width="85" height="85" rx="8" fill="url(#photoGrad4)"/>
+      <text x="115" y="40" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" font-weight="700" fill="#EC4899" letter-spacing="0.5">MEMORY REWIND</text>
+      <text x="115" y="62" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="700" fill="#F8FAFC">Alpine Road Trip • Exactly 1 Year Ago</text>
+      <text x="115" y="82" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">64 encrypted RAW photos &amp; 4K clips auto-curated and enhanced</text>
+      <rect x="420" y="40" width="85" height="34" rx="6" fill="#3B82F6"/>
+      <text x="462" y="62" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#FFF" text-anchor="middle">Play Reel ▶</text>
+    </g>
+  </g>
+
+  <!-- Photo Grid -->
+  <g transform="translate(30, 245)">
+    <text x="0" y="16" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="600" fill="#E2E8F0">ALL MEDIA (ENCRYPTED CLIENT-SIDE)</text>
+    
+    <!-- Photo 1 -->
+    <g transform="translate(0, 32)">
+      <rect width="220" height="160" rx="10" fill="url(#photoGrad1)" filter="url(#shadow)"/>
+      <rect x="0" y="115" width="220" height="45" rx="0 0 10 10" fill="#0F172A" fill-opacity="0.85"/>
+      <text x="12" y="135" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#FFF">Fjord Sunset.RAW</text>
+      <text x="12" y="150" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#38BDF8">48.2 MB • AES-256-CTR</text>
+    </g>
+
+    <!-- Photo 2 -->
+    <g transform="translate(240, 32)">
+      <rect width="220" height="160" rx="10" fill="url(#photoGrad2)" filter="url(#shadow)"/>
+      <circle cx="110" cy="70" r="24" fill="#000" fill-opacity="0.4"/>
+      <polygon points="105,60 120,70 105,80" fill="#FFF"/>
+      <rect x="0" y="115" width="220" height="45" rx="0 0 10 10" fill="#0F172A" fill-opacity="0.85"/>
+      <text x="12" y="135" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#FFF">Glacier Trekking 4K.mp4</text>
+      <text x="12" y="150" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#34D399">1.8 GB • 60 FPS • Multi-chunk</text>
+    </g>
+
+    <!-- Photo 3 -->
+    <g transform="translate(480, 32)">
+      <rect width="220" height="160" rx="10" fill="url(#photoGrad3)" filter="url(#shadow)"/>
+      <rect x="0" y="115" width="220" height="45" rx="0 0 10 10" fill="#0F172A" fill-opacity="0.85"/>
+      <text x="12" y="135" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#FFF">Dolomites Camp.jpg</text>
+      <text x="12" y="150" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#38BDF8">14.1 MB • AES-256-CTR</text>
+    </g>
+
+    <!-- Photo 4 -->
+    <g transform="translate(720, 32)">
+      <rect width="220" height="160" rx="10" fill="url(#photoGrad4)" filter="url(#shadow)"/>
+      <rect x="0" y="115" width="220" height="45" rx="0 0 10 10" fill="#0F172A" fill-opacity="0.85"/>
+      <text x="12" y="135" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" font-weight="600" fill="#FFF">Campfire Night.dng</text>
+      <text x="12" y="150" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="10" fill="#38BDF8">56.7 MB • EXIF Protected</text>
+    </g>
+  </g>
+
+  <!-- Bottom Privacy Banner -->
+  <g transform="translate(30, 480)">
+    <rect width="940" height="130" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <g transform="translate(24, 25)">
+      <circle cx="20" cy="20" r="18" fill="#10B981" fill-opacity="0.15"/>
+      <path d="M12 20l5 5 11-11" fill="none" stroke="#10B981" stroke-width="2.5" stroke-linecap="round"/>
+      <text x="50" y="18" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="15" font-weight="700" fill="#F8FAFC">100% On-Device Neural Processing</text>
+      <text x="50" y="38" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="12" fill="#94A3B8">Your faces, locations, tags, and embeddings never leave this device unencrypted. No cloud AI scans your private life.</text>
+      
+      <!-- Feature Pills -->
+      <g transform="translate(50, 52)">
+        <rect width="135" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="67" y="17" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#38BDF8" text-anchor="middle">⚡ Zero Latency EXIF</text>
+
+        <rect x="145" width="145" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="217" y="17" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#A78BFA" text-anchor="middle">🔒 Client Key Derivation</text>
+
+        <rect x="300" width="165" height="26" rx="13" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+        <text x="382" y="17" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" font-size="11" fill="#34D399" text-anchor="middle">🛡️ Unlimited Original RAWs</text>
+      </g>
+    </g>
+  </g>
+</svg>

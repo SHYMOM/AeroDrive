@@ -170,7 +170,7 @@ class _MemoryStoryScreenState extends ConsumerState<MemoryStoryScreen>
                             width: double.infinity,
                             height: double.infinity,
                           )
-                        : const CircularProgressIndicator(color: AppColors.primary),
+                        : CircularProgressIndicator(color: AppColors.primary),
                   ),
                 );
               },

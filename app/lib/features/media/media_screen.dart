@@ -1116,7 +1116,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             itemBuilder: (context, index) => _GalleryItem(file: files[index], siblings: files),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+        loading: () => Center(child: CircularProgressIndicator(color: AppColors.primary)),
         error: (e, _) => Center(child: Text('Search error: $e', style: const TextStyle(color: Colors.white54))),
       );
     }
@@ -1182,10 +1182,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                       onTap: () {
                         context.push('/media/smart-tags');
                       },
-                      child: const Row(
+                      child: Row(
                         children: [
                           Text('View All', style: TextStyle(color: AppColors.primary, fontSize: 13)),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
                         ],
                       ),
@@ -1264,10 +1264,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                       onTap: () {
                         context.push('/media/memories');
                       },
-                      child: const Row(
+                      child: Row(
                         children: [
                           Text('View All', style: TextStyle(color: AppColors.primary, fontSize: 13)),
-                          SizedBox(width: 4),
+                          const SizedBox(width: 4),
                           Icon(Icons.chevron_right, color: AppColors.primary, size: 16),
                         ],
                       ),
@@ -1504,19 +1504,19 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
             _selectedAlbum = null;
           });
         },
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.image_outlined),
+            icon: const Icon(Icons.image_outlined),
             activeIcon: Icon(Icons.image, color: AppColors.primary),
             label: 'All media',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.photo_album_outlined),
+            icon: const Icon(Icons.photo_album_outlined),
             activeIcon: Icon(Icons.photo_album, color: AppColors.primary),
             label: 'Albums',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.explore_outlined),
+            icon: const Icon(Icons.explore_outlined),
             activeIcon: Icon(Icons.explore, color: AppColors.primary),
             label: 'Explore',
           ),

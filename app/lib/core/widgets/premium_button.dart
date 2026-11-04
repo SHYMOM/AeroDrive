@@ -52,7 +52,12 @@ class _PremiumButtonState extends State<PremiumButton>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final effective = widget.onPressed != null && !widget.isLoading;
+    final contentColor = widget.textColor ??
+        (effective
+            ? (widget.gradient.first.computeLuminance() > 0.5 ? const Color(0xFF1A1A1A) : Colors.white)
+            : colorScheme.onSurfaceVariant);
 
     return AnimatedBuilder(
       animation: _pulseAnimation,
@@ -66,9 +71,9 @@ class _PremiumButtonState extends State<PremiumButton>
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: widget.onPressed != null && !widget.isLoading
+              colors: effective
                   ? widget.gradient
-                  : [Colors.white12, Colors.white12],
+                  : [colorScheme.surfaceContainerHighest, colorScheme.surfaceContainerHighest],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -87,7 +92,7 @@ class _PremiumButtonState extends State<PremiumButton>
             child: InkWell(
               onTap: effective ? widget.onPressed : null,
               borderRadius: BorderRadius.circular(14),
-              splashColor: Colors.white.withValues(alpha: 0.15),
+              splashColor: colorScheme.primary.withValues(alpha: 0.15),
               highlightColor: Colors.transparent,
               child: Center(
                 child: widget.isLoading
@@ -98,7 +103,7 @@ class _PremiumButtonState extends State<PremiumButton>
                           if (widget.icon != null) ...[
                             Icon(
                               widget.icon,
-                              color: widget.textColor ?? Colors.white,
+                              color: contentColor,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -106,7 +111,7 @@ class _PremiumButtonState extends State<PremiumButton>
                           Text(
                             widget.label,
                             style: TextStyle(
-                              color: widget.textColor ?? Colors.white,
+                              color: contentColor,
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.5,
@@ -178,14 +183,16 @@ class PremiumSwitch extends StatelessWidget {
   final String? label;
 
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (label != null) ...[
           Text(
             label!,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: colorScheme.onSurface,
               fontSize: 14,
             ),
           ),
@@ -201,7 +208,7 @@ class PremiumSwitch extends StatelessWidget {
                     colors: [Color(0xFFFFAE00), Color(0xFFFF8C00)],
                   )
                 : null,
-            color: value ? null : Colors.white.withValues(alpha: 0.1),
+            color: value ? null : colorScheme.surfaceContainerHighest,
           ),
           child: Material(
             color: Colors.transparent,
@@ -219,7 +226,7 @@ class PremiumSwitch extends StatelessWidget {
                     height: 22,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: value ? Colors.white : Colors.white38,
+                      color: value ? Colors.white : colorScheme.outlineVariant,
                       boxShadow: value
                           ? [
                               BoxShadow(
@@ -237,6 +244,7 @@ class PremiumSwitch extends StatelessWidget {
         ),
       ],
     );
+  }
 }
 
 class PremiumTextField extends StatelessWidget {
@@ -266,7 +274,9 @@ class PremiumTextField extends StatelessWidget {
   final String? Function(String?)? validator;
 
   @override
-  Widget build(BuildContext context) => TextFormField(
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
@@ -274,33 +284,33 @@ class PremiumTextField extends StatelessWidget {
       onFieldSubmitted: onSubmitted,
       validator: validator,
       style: TextStyle(
-        color: Colors.white.withValues(alpha: 0.9),
+        color: colorScheme.onSurface,
         fontSize: 16,
       ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         labelStyle: TextStyle(
-          color: Colors.white.withValues(alpha: 0.5),
+          color: colorScheme.onSurfaceVariant,
           fontSize: 14,
         ),
         hintStyle: TextStyle(
-          color: Colors.white.withValues(alpha: 0.25),
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
         ),
         prefixIcon: prefixIcon != null
             ? Icon(prefixIcon, color: const Color(0xFFFFAE00), size: 20)
             : null,
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.05),
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          borderSide: BorderSide(color: colorScheme.outlineVariant),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -308,8 +318,9 @@ class PremiumTextField extends StatelessWidget {
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent),
+          borderSide: BorderSide(color: colorScheme.error),
         ),
       ),
     );
+  }
 }

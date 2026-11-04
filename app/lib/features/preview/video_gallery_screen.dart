@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db/database.dart';
+import '../../domain/streaming/streaming_server.dart';
 import '../drive/media_player_screen.dart';
 
-class VideoGalleryScreen extends StatefulWidget {
+class VideoGalleryScreen extends ConsumerStatefulWidget {
 
   const VideoGalleryScreen({
     super.key,
@@ -13,10 +15,10 @@ class VideoGalleryScreen extends StatefulWidget {
   final int initialIndex;
 
   @override
-  State<VideoGalleryScreen> createState() => _VideoGalleryScreenState();
+  ConsumerState<VideoGalleryScreen> createState() => _VideoGalleryScreenState();
 }
 
-class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
+class _VideoGalleryScreenState extends ConsumerState<VideoGalleryScreen> {
   late PageController _pageController;
   late int _currentIndex;
 
@@ -30,6 +32,9 @@ class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    for (final file in widget.files) {
+      ref.read(streamingServerProvider).cancelStreamsForFile(file.id);
+    }
     super.dispose();
   }
 
@@ -46,9 +51,11 @@ class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
           });
         },
         itemBuilder: (context, index) {
+          final file = widget.files[index];
           final isActive = index == _currentIndex;
           return MediaPlayerScreen(
-            file: widget.files[index],
+            key: ValueKey(file.id),
+            file: file,
             isActive: isActive,
             onNext: () {
               if (index < widget.files.length - 1) {

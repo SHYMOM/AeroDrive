@@ -1987,20 +1987,11 @@ class ShareService {
 
         if (remoteFileId == null) continue;
 
-        final sent = await telegram.sendRequest({
-          "@type": "sendMessage",
-          "chat_id": targetChatId,
-          "input_message_content": {
-            "@type": "inputMessageDocument",
-            "document": {
-              "@type": "inputFileRemote",
-              "id": remoteFileId,
-            },
-            "caption": chunks[i].hash != null
-                ? {"@type": "formattedText", "text": chunks[i].hash!, "entities": []}
-                : null,
-          },
-        });
+        final sent = await telegram.sendRemoteDocument(
+          targetChatId,
+          remoteFileId.toString(),
+          caption: chunks[i].hash,
+        );
         if (sent['@type'] != 'error' && sent['id'] != null) {
           newIds.add(sent['id'] as int);
         }

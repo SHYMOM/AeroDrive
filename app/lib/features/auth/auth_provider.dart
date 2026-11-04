@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/logger.dart';
 import '../../core/providers/infrastructure_providers.dart';
+import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
+import '../drive/providers/drive_providers.dart';
 import '../../features/telegram/telegram_service.dart';
 
 enum AuthState { initial, loading, unauthenticated, authenticated }
@@ -43,6 +45,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } else if (next == TelegramAuthState.error || next == TelegramAuthState.closed) {
         if (!_hasBeenAuthenticated) {
           state = AuthState.unauthenticated;
+        } else {
+          state = AuthState.unauthenticated;
+          _ref.invalidate(configCheckedProvider);
         }
       }
     });
@@ -53,6 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       _hasBeenAuthenticated = true;
       state = AuthState.authenticated;
 
+      // Discover/sync channels in background with coordinated lock
       _ensureInfrastructure().catchError((e) {
         AppLogger.error('AuthNotifier: Initial infrastructure setup failed', e);
       });
@@ -66,6 +72,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Ensures AeroDrive channel infrastructure exists.
   /// Tries discovery first, falls back to provisioning.
   Future<void> _ensureInfrastructure() async {
+    final settingsRepo = _ref.read(settingsRepositoryProvider);
+    final existingChannels = await settingsRepo.getSetting('storage_channels_list');
+    if (existingChannels != null && existingChannels.isNotEmpty && existingChannels != '[]') {
+      AppLogger.info('AuthNotifier: Infrastructure already provisioned locally, skipping setup');
+      return;
+    }
+
+    _ref.read(provisioningActiveProvider.notifier).state = true;
     try {
       final masterKeyBytes = _ref.read(masterKeyProvider);
       if (masterKeyBytes == null) {
@@ -77,12 +91,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _ref.read(ensureInfrastructureProvider(masterKey).future);
     } catch (e, s) {
       AppLogger.error('Auth: Infrastructure provisioning/discovery failed', e, s);
+    } finally {
+      _ref.read(provisioningActiveProvider.notifier).state = false;
     }
   }
 
   void forceUnauthenticated() {
     _hasBeenAuthenticated = false;
     state = AuthState.unauthenticated;
+    _ref.invalidate(configCheckedProvider);
   }
 }
 

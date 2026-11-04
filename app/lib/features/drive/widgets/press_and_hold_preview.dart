@@ -130,7 +130,6 @@ class _PreviewOverlayState extends ConsumerState<_PreviewOverlay> {
   Widget build(BuildContext context) {
     final sizeStr = _formatBytes(widget.file.size ?? 0);
     final isVideo = widget.file.mimeType?.startsWith('video/') == true;
-    final isImage = widget.file.mimeType?.startsWith('image/') == true;
     final isPdf = widget.file.mimeType?.contains('pdf') == true;
 
     return Material(
@@ -250,8 +249,10 @@ class _PreviewOverlayState extends ConsumerState<_PreviewOverlay> {
                           if (_isLoading)
                             Container(
                               color: Colors.black38,
-                              child: const Center(
-                                child: CircularProgressIndicator(color: AppColors.primary),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                         ],

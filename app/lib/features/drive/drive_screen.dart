@@ -22,6 +22,7 @@ import '../../core/providers/infrastructure_providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../domain/infrastructure/infrastructure_provisioning_service.dart';
 import '../../data/db/database.dart';
 import '../../domain/channel_load_balancer.dart';
 import '../../domain/folder_scanner.dart';
@@ -41,6 +42,7 @@ import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
 import '../scanner/document_scanner_screen.dart';
+import 'widgets/breadcrumb_bar.dart';
 import 'widgets/channel_setup_wizard_dialog.dart';
 import '../../widgets/sync_debug_overlay.dart';
 
@@ -53,6 +55,108 @@ class DriveScreen extends ConsumerStatefulWidget {
 
 class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingObserver {
   bool _isDragging = false;
+  bool _isCheckingConfig = false;
+  DateTime? _lastControlPressTime;
+
+  void _selectAllVisible() {
+    final contentsAsync = ref.read(folderContentsProvider);
+    contentsAsync.whenData((contents) {
+      final folders = contents['folders'] as List<FolderData>? ?? [];
+      final files = contents['files'] as List<FileData>? ?? [];
+      final allIds = <String>{
+        for (final f in folders) f.id,
+        for (final f in files) f.id,
+      };
+
+      if (allIds.isNotEmpty) {
+        ref.read(isSelectionModeProvider.notifier).state = true;
+        ref.read(selectedItemsProvider.notifier).state = allIds;
+      }
+    });
+  }
+
+  void _deleteSelectedIfAny() {
+    final isSelectionMode = ref.read(isSelectionModeProvider);
+    final selectedItems = ref.read(selectedItemsProvider);
+    if (isSelectionMode && selectedItems.isNotEmpty) {
+      _handleDeleteSelected(context, selectedItems);
+    }
+  }
+
+  void _clearSelection() {
+    final isSelectionMode = ref.read(isSelectionModeProvider);
+    if (isSelectionMode) {
+      ref.read(isSelectionModeProvider.notifier).state = false;
+      ref.read(selectedItemsProvider.notifier).state = {};
+    }
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent || event is KeyUpEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.controlLeft ||
+          event.logicalKey == LogicalKeyboardKey.controlRight ||
+          event.logicalKey == LogicalKeyboardKey.metaLeft ||
+          event.logicalKey == LogicalKeyboardKey.metaRight) {
+        _lastControlPressTime = DateTime.now();
+      }
+    }
+
+    if (event is KeyDownEvent) {
+      final isCtrlPressed = HardwareKeyboard.instance.isControlPressed ||
+          HardwareKeyboard.instance.isMetaPressed ||
+          (_lastControlPressTime != null &&
+              DateTime.now().difference(_lastControlPressTime!) < const Duration(milliseconds: 600));
+
+      if (event.logicalKey == LogicalKeyboardKey.keyA && isCtrlPressed) {
+        _selectAllVisible();
+        return KeyEventResult.handled;
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.delete ||
+          event.logicalKey == LogicalKeyboardKey.backspace) {
+        final isSelectionMode = ref.read(isSelectionModeProvider);
+        final selectedItems = ref.read(selectedItemsProvider);
+        if (isSelectionMode && selectedItems.isNotEmpty) {
+          _deleteSelectedIfAny();
+          return KeyEventResult.handled;
+        }
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        final isSelectionMode = ref.read(isSelectionModeProvider);
+        if (isSelectionMode) {
+          _clearSelection();
+          return KeyEventResult.handled;
+        }
+      }
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  void _showSyncToast(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.info_outline, color: AppColors.onSurface, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: AppColors.onSurface),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.surfaceElevated,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -85,6 +189,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
       AppLogger.info('DriveScreen: initState postFrameCallback. isAppUnlocked=${ref.read(isAppUnlockedProvider)}');
       if (mounted && ref.read(isAppUnlockedProvider)) {
         _runConfigAndSetupCheck();
+      } else {
+        // Safety timeout: If unlock takes longer than 8 seconds (e.g. offline/network delay),
+        // release the spinner so user is not trapped indefinitely.
+        Future.delayed(const Duration(seconds: 8), () {
+          if (mounted && !ref.read(configCheckedProvider)) {
+            AppLogger.warning('DriveScreen: isAppUnlockedProvider timeout after 8s — releasing spinner.');
+            ref.read(configCheckedProvider.notifier).state = true;
+            _showSyncToast('Offline mode: Could not verify remote encryption keys.');
+          }
+        });
       }
       
       // Cleanup any temp joined sharing channels that were left joined due to interruption
@@ -170,151 +284,216 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     AppLogger.info('DriveScreen: _runConfigAndSetupCheck() started.');
     if (!mounted) return;
 
-    final configService = ref.read(configSyncServiceProvider);
-    final settingsRepo = ref.read(settingsRepositoryProvider);
+    // Prevent concurrent or re-entrant executions
+    if (_isCheckingConfig) {
+      AppLogger.info('DriveScreen: Config check already in progress, skipping duplicate call.');
+      return;
+    }
 
     // Check if we've already checked config during this app session to avoid repeated checks
     final checked = ref.read(configCheckedProvider);
     AppLogger.info('DriveScreen: configChecked status = $checked');
     if (checked) return;
 
-    // Ensure we show loading state in UI
-    ref.read(configCheckedProvider.notifier).state = false;
+    _isCheckingConfig = true;
+    bool isRestoreDialogShowing = false;
 
-    // Start check
-    AppLogger.info('DriveScreen: Running checkConfigStatus...');
-    ConfigStatus status;
     try {
-      status = await configService.checkConfigStatus().timeout(const Duration(seconds: 15));
-      AppLogger.info('DriveScreen: checkConfigStatus status returned = $status');
-    } on TimeoutException {
-      AppLogger.warning('Config check timed out after 15s — proceeding with local config');
-      if (mounted) ref.read(configCheckedProvider.notifier).state = true;
-      return;
-    } catch (e) {
-      AppLogger.error('Config check failed', e);
-      if (mounted) ref.read(configCheckedProvider.notifier).state = true;
-      return;
-    }
-
-    if (!mounted) return;
-
-    final localChannels = await settingsRepo.getSetting('storage_channels_list');
-    final hasLocalConfig = localChannels != null && localChannels.isNotEmpty && localChannels != '[]';
-    AppLogger.info('DriveScreen: localConfig=$localChannels, hasLocalConfig=$hasLocalConfig');
-
-    if (!hasLocalConfig && status != ConfigStatus.found_unrestored) {
-      // First, try discovering existing infrastructure before assuming no channels exist
-      final telegramService = ref.read(telegramServiceProvider.notifier);
-      final masterKeyBytes = ref.read(masterKeyProvider);
-      if (masterKeyBytes != null) {
-        final discoveryService = ref.read(channelDiscoveryServiceProvider);
-        final discoveryResult = await discoveryService.discoverInfrastructure(
-          telegramService: telegramService,
-          masterKey: SecretKey(masterKeyBytes),
-        );
-
-        if (discoveryResult.storageChannelIds.isNotEmpty || discoveryResult.configChannelId != null) {
-          AppLogger.info('DriveScreen: Discovered existing AeroDrive channels on Telegram! Restoring.');
-          await discoveryService.restoreFromDiscovery(discoveryResult);
-
-          // Check if remote config channel has full settings to restore
-          final jsonConfig = await configService.restoreConfigFromChannel();
-          if (jsonConfig != null) {
-            await _applyRestoredConfig(jsonConfig);
-          } else {
-            // Run disaster recovery with discovered channels
-            await ref.read(recoveryServiceProvider).runDisasterRecovery(
-              masterKey: SecretKey(masterKeyBytes),
-            );
-            ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
-            ref.invalidate(folderContentsProvider);
+      // Check if background provisioning is running from AuthNotifier
+      if (ref.read(provisioningActiveProvider)) {
+        AppLogger.info('DriveScreen: Background provisioning is in progress. Awaiting completion...');
+        final activeFuture = InfrastructureProvisioningService.activeProvisioningFuture;
+        if (activeFuture != null) {
+          try {
+            await activeFuture.timeout(const Duration(seconds: 45));
+          } catch (e) {
+            AppLogger.warning('DriveScreen: Waiting for provisioning timed out or threw: $e');
           }
-
-          if (mounted) {
-            ref.read(configCheckedProvider.notifier).state = true;
-            configService.syncTelegramFolder();
+        } else {
+          // Fallback polling delay until provisioning flag clears
+          var waitCount = 0;
+          while (ref.read(provisioningActiveProvider) && waitCount < 90) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            waitCount++;
           }
-          return;
         }
       }
 
-      AppLogger.info('DriveScreen: No storage channels found on account. Launching ChannelSetupWizardDialog.');
-      if (mounted) {
-        ref.read(configCheckedProvider.notifier).state = true;
-        _showChannelSetupPrompt(context);
-      }
-      return;
-    }
+      final configService = ref.read(configSyncServiceProvider);
+      final settingsRepo = ref.read(settingsRepositoryProvider);
 
-    if (status == ConfigStatus.missing) {
-      if (hasLocalConfig) {
-        AppLogger.info('DriveScreen: status is missing, hasLocalConfig is true. Showing recreated prompt.');
-        // Prompt that config channel was deleted remotely and we are recreating it
-        await _showPromptDialog(
-          title: 'Configuration Channel Deleted',
-          message: 'The secure configuration channel was deleted on Telegram. We will now recreate it and restore your sync configuration.',
-          buttonText: 'Recreate Channel',
-          onConfirm: () async {
-            await configService.syncConfigToChannel();
-          },
-        );
+      // Ensure we show loading state in UI
+      ref.read(configCheckedProvider.notifier).state = false;
+
+      // Start check
+      AppLogger.info('DriveScreen: Running checkConfigStatus...');
+      ConfigStatus status;
+      try {
+        status = await configService.checkConfigStatus().timeout(const Duration(seconds: 15));
+        AppLogger.info('DriveScreen: checkConfigStatus status returned = $status');
+      } on TimeoutException {
+        AppLogger.warning('Config check timed out after 15s — proceeding with local config');
+        if (mounted) {
+          _showSyncToast('Remote sync timed out. Operating in offline mode.');
+        }
+        return;
+      } catch (e, s) {
+        AppLogger.error('Config check failed', e, s);
+        if (mounted) {
+          _showSyncToast('Sync check failed. Operating in offline mode.');
+        }
+        return;
       }
-    } else if (status == ConfigStatus.missing_message) {
-      if (hasLocalConfig) {
-        AppLogger.info('DriveScreen: status is missing_message, hasLocalConfig is true. Showing resync prompt.');
-        // Prompt that config message was deleted remotely
-        await _showPromptDialog(
-          title: 'Configuration Message Deleted',
-          message: 'The configuration backup inside the channel was deleted. We will now re-encrypt and upload your local configuration.',
-          buttonText: 'Re-sync Configuration',
-          onConfirm: () async {
-            await configService.syncConfigToChannel();
-          },
-        );
+
+      if (!mounted) return;
+
+      final localChannels = await settingsRepo.getSetting('storage_channels_list');
+      final hasLocalConfig = localChannels != null && localChannels.isNotEmpty && localChannels != '[]';
+      AppLogger.info('DriveScreen: localConfig=$localChannels, hasLocalConfig=$hasLocalConfig');
+
+      if (!hasLocalConfig && status != ConfigStatus.found_unrestored) {
+        // First, try discovering existing infrastructure before assuming no channels exist
+        final telegramService = ref.read(telegramServiceProvider.notifier);
+        final masterKeyBytes = ref.read(masterKeyProvider);
+        if (masterKeyBytes != null) {
+          try {
+            final discoveryService = ref.read(channelDiscoveryServiceProvider);
+            final discoveryResult = await discoveryService.discoverInfrastructure(
+              telegramService: telegramService,
+              masterKey: SecretKey(masterKeyBytes),
+            );
+
+            if (discoveryResult.storageChannelIds.isNotEmpty || discoveryResult.configChannelId != null) {
+              AppLogger.info('DriveScreen: Discovered existing AeroDrive channels on Telegram! Restoring.');
+              await discoveryService.restoreFromDiscovery(discoveryResult);
+
+              // Check if remote config channel has full settings to restore
+              final jsonConfig = await configService.restoreConfigFromChannel();
+              if (jsonConfig != null) {
+                await _applyRestoredConfig(jsonConfig);
+              } else {
+                // Run disaster recovery with discovered channels
+                await ref.read(recoveryServiceProvider).runDisasterRecovery(
+                  masterKey: SecretKey(masterKeyBytes),
+                );
+                ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
+                ref.invalidate(folderContentsProvider);
+              }
+
+              if (mounted) {
+                try {
+                  configService.syncTelegramFolder();
+                } catch (e) {
+                  AppLogger.warning('DriveScreen: syncTelegramFolder failed: $e');
+                }
+              }
+              return;
+            }
+          } catch (e, s) {
+            AppLogger.error('DriveScreen: Infrastructure discovery failed', e, s);
+            if (mounted) {
+              _showSyncToast('Channel discovery failed. Launching setup wizard.');
+            }
+          }
+        }
+
+        AppLogger.info('DriveScreen: No storage channels found on account. Launching ChannelSetupWizardDialog.');
+        if (mounted) {
+          _showChannelSetupPrompt(context);
+        }
+        return;
       }
-    } else if (status == ConfigStatus.found_unrestored) {
-      AppLogger.info('DriveScreen: status is found_unrestored. Auto-restoring configuration.');
-      // Auto-restore configuration and run recovery
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogCtx) => PopScope(
-            canPop: false,
-            child: AlertDialog(
-              backgroundColor: AppColors.surfaceElevated,
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const CircularProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text('Restoring configuration from Telegram...', style: TextStyle(color: AppColors.onSurface)),
-                ],
+
+      if (status == ConfigStatus.missing) {
+        if (hasLocalConfig) {
+          AppLogger.info('DriveScreen: status is missing, hasLocalConfig is true. Showing recreated prompt.');
+          // Prompt that config channel was deleted remotely and we are recreating it
+          await _showPromptDialog(
+            title: 'Configuration Channel Deleted',
+            message: 'The secure configuration channel was deleted on Telegram. We will now recreate it and restore your sync configuration.',
+            buttonText: 'Recreate Channel',
+            onConfirm: () async {
+              await configService.syncConfigToChannel();
+            },
+          );
+        }
+      } else if (status == ConfigStatus.missing_message) {
+        if (hasLocalConfig) {
+          AppLogger.info('DriveScreen: status is missing_message, hasLocalConfig is true. Showing resync prompt.');
+          // Prompt that config message was deleted remotely
+          await _showPromptDialog(
+            title: 'Configuration Message Deleted',
+            message: 'The configuration backup inside the channel was deleted. We will now re-encrypt and upload your local configuration.',
+            buttonText: 'Re-sync Configuration',
+            onConfirm: () async {
+              await configService.syncConfigToChannel();
+            },
+          );
+        }
+      } else if (status == ConfigStatus.found_unrestored) {
+        AppLogger.info('DriveScreen: status is found_unrestored. Auto-restoring configuration.');
+        if (mounted) {
+          isRestoreDialogShowing = true;
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogCtx) => PopScope(
+              canPop: false,
+              child: AlertDialog(
+                backgroundColor: AppColors.surfaceElevated,
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text('Restoring configuration from Telegram...', style: TextStyle(color: AppColors.onSurface)),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
+          );
+        }
+
+        try {
+          final jsonConfig = await configService.restoreConfigFromChannel();
+          if (jsonConfig != null) {
+            await _applyRestoredConfig(jsonConfig);
+          }
+        } catch (e, s) {
+          AppLogger.error('DriveScreen: restoreConfigFromChannel failed', e, s);
+          if (mounted) {
+            _showSyncToast('Failed to restore remote configuration.');
+          }
+        } finally {
+          if (mounted && isRestoreDialogShowing) {
+            Navigator.of(context, rootNavigator: true).pop();
+            isRestoreDialogShowing = false;
+          }
+        }
       }
 
-      final jsonConfig = await configService.restoreConfigFromChannel();
-      if (jsonConfig != null) {
-        await _applyRestoredConfig(jsonConfig);
-      }
-
-      // Dismiss loading dialog
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        try {
+          configService.syncTelegramFolder();
+        } catch (e) {
+          AppLogger.warning('DriveScreen: syncTelegramFolder failed: $e');
+        }
+        try {
+          ref.read(realtimeSyncServiceProvider).catchUp();
+        } catch (e) {
+          AppLogger.warning('DriveScreen: realtimeSync catchUp failed: $e');
+        }
       }
-    }
-
-    // Mark config check complete so main UI is displayed
-    if (mounted) {
-      ref.read(configCheckedProvider.notifier).state = true;
-      // Also sync the Telegram folder structure to group all connected channels
-      configService.syncTelegramFolder();
-      // Run catch-up sync to discover any items created or modified on other devices
-      ref.read(realtimeSyncServiceProvider).catchUp();
+    } catch (e, s) {
+      AppLogger.error('DriveScreen: Unexpected error during _runConfigAndSetupCheck', e, s);
+      if (mounted) {
+        _showSyncToast('Sync initialization failed. Operating in offline mode.');
+      }
+    } finally {
+      _isCheckingConfig = false;
+      if (mounted) {
+        ref.read(configCheckedProvider.notifier).state = true;
+      }
     }
   }
 
@@ -443,7 +622,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
   Widget build(BuildContext context) {
     ref.listen<bool>(isAppUnlockedProvider, (previous, next) async {
       AppLogger.info('DriveScreen: ref.listen(isAppUnlockedProvider) changed: previous=$previous, next=$next');
-      if (next) {
+      if (next && !_isCheckingConfig && !ref.read(configCheckedProvider)) {
         _runConfigAndSetupCheck();
       }
     });
@@ -492,6 +671,18 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                       fontSize: 14,
                     ),
                   ),
+                  const SizedBox(height: 32),
+                  TextButton.icon(
+                    onPressed: () {
+                      ref.read(configCheckedProvider.notifier).state = true;
+                      _showSyncToast('Operating in offline mode.');
+                    },
+                    icon: const Icon(Icons.cloud_off_outlined, size: 18),
+                    label: const Text('Continue Offline'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -513,10 +704,21 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     final isFavoriteOnly = ref.watch(isFavoriteOnlyProvider);
     final isOfflineOnly = ref.watch(isOfflineOnlyProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildAppBar(context),
-      body: DropTarget(
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyA, control: true): _selectAllVisible,
+        const SingleActivator(LogicalKeyboardKey.keyA, meta: true): _selectAllVisible,
+        const SingleActivator(LogicalKeyboardKey.delete): _deleteSelectedIfAny,
+        const SingleActivator(LogicalKeyboardKey.backspace): _deleteSelectedIfAny,
+        const SingleActivator(LogicalKeyboardKey.escape): _clearSelection,
+      },
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: _buildAppBar(context),
+          body: DropTarget(
         onDragEntered: (_) => setState(() => _isDragging = true),
         onDragExited: (_) => setState(() => _isDragging = false),
         onDragDone: (detail) async {
@@ -636,20 +838,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                                         Text('Available Offline', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                       ],
                                     )
-                              : isRoot
-                                  ? Text(
-                                      'My Drive',
-                                      style: TextStyle(
-                                        color: AppColors.onSurface,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    )
-                                  : breadcrumbsAsync.when(
-                                      data: (breadcrumbs) => _buildPathOverview(context, breadcrumbs, currentFolderId),
-                                      loading: () => const SizedBox.shrink(),
-                                      error: (_, _) => const SizedBox.shrink(),
-                                    ),
+                              : const BreadcrumbBar(),
                         ),
                         Row(
                           children: [
@@ -852,6 +1041,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
       bottomNavigationBar: (isMobile && !isKeyboardVisible)
           ? const SizedBox(height: 80)
           : null,
+        ),
+      ),
     );
   }
 
@@ -968,6 +1159,16 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     final selectedItems = ref.watch(selectedItemsProvider);
 
     if (isSelectionMode) {
+      final contents = ref.watch(folderContentsProvider).valueOrNull ?? {};
+      final folders = contents['folders'] as List<FolderData>? ?? [];
+      final files = contents['files'] as List<FileData>? ?? [];
+      final allVisibleIds = <String>{
+        for (final f in folders) f.id,
+        for (final f in files) f.id,
+      };
+      final isAllSelected = allVisibleIds.isNotEmpty &&
+          allVisibleIds.every((id) => selectedItems.contains(id));
+
       return AppBar(
         backgroundColor: AppColors.surfaceElevated,
         elevation: 4,
@@ -983,6 +1184,20 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
           style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              isAllSelected ? Icons.deselect_rounded : Icons.select_all_rounded,
+              color: AppColors.onSurface,
+            ),
+            tooltip: isAllSelected ? 'Deselect All' : 'Select All',
+            onPressed: () {
+              if (isAllSelected) {
+                ref.read(selectedItemsProvider.notifier).state = {};
+              } else {
+                ref.read(selectedItemsProvider.notifier).state = allVisibleIds;
+              }
+            },
+          ),
           IconButton(
             icon: Icon(Icons.download_rounded, color: AppColors.onSurface),
             tooltip: 'Download',
@@ -1039,8 +1254,6 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
           data: (data) {
             if (data['hasActive'] != true) return const SizedBox.shrink();
             final progress = data['progress'] as double;
-            final upCount = data['uploads'] as int;
-            final downCount = data['downloads'] as int;
             
             return InkWell(
               onTap: () => _showBackgroundTasksBottomSheet(context),
@@ -1085,52 +1298,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     );
   }
 
-  Widget _buildPathOverview(BuildContext context, List<FolderData> breadcrumbs, String? currentFolderId) {
-    final isRootCurrent = currentFolderId == null;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              ref.read(navigationStackProvider.notifier).state = [];
-              ref.read(currentFolderIdProvider.notifier).state = null;
-            },
-            child: Text(
-              'My Drive',
-              style: TextStyle(
-                color: isRootCurrent ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.6),
-                fontSize: 14,
-                fontWeight: isRootCurrent ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ),
-          for (final folder in breadcrumbs) ...[
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Icon(Icons.chevron_right, size: 14, color: AppColors.outline),
-            ),
-            GestureDetector(
-              onTap: () {
-                final index = breadcrumbs.indexOf(folder);
-                final newStack = ref.read(navigationStackProvider).take(index + 1).toList();
-                ref.read(navigationStackProvider.notifier).state = newStack;
-                ref.read(currentFolderIdProvider.notifier).state = folder.id;
-              },
-              child: Text(
-                folder.name,
-                style: TextStyle(
-                  color: folder.id == currentFolderId ? AppColors.onSurface : AppColors.onSurfaceVariant.withValues(alpha: 0.6),
-                  fontSize: 14,
-                  fontWeight: folder.id == currentFolderId ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+
 
   Future<void> _handleDownloadSelected(BuildContext context, Set<String> selectedIds) async {
     final db = ref.read(databaseProvider);
@@ -1968,7 +2136,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                             final item = active[index];
                             final isUpload = item.transfer.type == 'UPLOAD_FILE';
                             final progress = item.transfer.totalBytes != null && item.transfer.totalBytes! > 0
-                                ? (item.transfer.bytesTransferred! / item.transfer.totalBytes!)
+                                ? (item.transfer.bytesTransferred / item.transfer.totalBytes!)
                                 : 0.0;
                             
                             return ListTile(

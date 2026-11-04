@@ -203,9 +203,10 @@ class _OtpBoxState extends State<_OtpBox> {
 
   @override
   Widget build(BuildContext context) {
-    final active = widget.activeColor ?? const Color(0xFFBB86FC);
-    final inactive = widget.inactiveColor ?? Colors.white24;
-    final text = widget.textColor ?? Colors.white;
+    final colorScheme = Theme.of(context).colorScheme;
+    final active = widget.activeColor ?? colorScheme.primary;
+    final inactive = widget.inactiveColor ?? colorScheme.outlineVariant;
+    final text = widget.textColor ?? colorScheme.onSurface;
     final focusNode = widget.focusNode;
 
     return AnimatedBuilder(
@@ -247,7 +248,7 @@ class _OtpBoxState extends State<_OtpBox> {
               filled: true,
               fillColor: focusNode.hasFocus
                   ? active.withValues(alpha: 0.1)
-                  : Colors.white.withValues(alpha: 0.05),
+                  : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               contentPadding: EdgeInsets.zero,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),

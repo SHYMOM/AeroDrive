@@ -18,6 +18,7 @@ import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
+import 'file_info_dialog.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
 
@@ -433,6 +434,11 @@ class FileGridItem extends ConsumerWidget {
           _showCopyDialog(context, ref);
         } else if (value == 'star') {
           _toggleFavorite(ref);
+        } else if (value == 'info') {
+          showDialog(
+            context: context,
+            builder: (ctx) => FileInfoDialog(file: file),
+          );
         }
       },
       itemBuilder: (context) {
@@ -445,7 +451,13 @@ class FileGridItem extends ConsumerWidget {
               children: [
                 Icon(isOfflinePinned ? Icons.offline_pin_outlined : Icons.offline_pin_rounded, color: Colors.tealAccent, size: 18),
                 const SizedBox(width: 8),
-                Text(isOfflinePinned ? 'Remove Offline Access' : 'Available Offline', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                Expanded(
+                  child: Text(
+                    isOfflinePinned ? 'Remove Offline Access' : 'Available Offline',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -454,6 +466,7 @@ class FileGridItem extends ConsumerWidget {
           PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
           PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
           PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+          PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
           const PopupMenuDivider(),
           PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
         ];
@@ -584,6 +597,7 @@ class FileGridItem extends ConsumerWidget {
         PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         PopupMenuItem(value: 'move', child: Text('Move to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         PopupMenuItem(value: 'star', child: Text(file.isFavorite ? 'Remove Star' : 'Star File', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(value: 'info', child: Text('Info / Details', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         PopupMenuItem(value: 'select', child: Text('Select', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         const PopupMenuDivider(),
         PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppColors.error))),
@@ -622,6 +636,11 @@ class FileGridItem extends ConsumerWidget {
       _showCopyDialog(context, ref);
     } else if (value == 'star') {
       _toggleFavorite(ref);
+    } else if (value == 'info') {
+      showDialog(
+        context: context,
+        builder: (ctx) => FileInfoDialog(file: file),
+      );
     } else if (value == 'select') {
       ref.read(isSelectionModeProvider.notifier).state = true;
       ref.read(selectedItemsProvider.notifier).state = {file.id};

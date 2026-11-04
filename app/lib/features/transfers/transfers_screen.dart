@@ -61,20 +61,20 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        title: Text('Clear History', style: TextStyle(color: AppColors.onSurface)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+        title: Text('Clear History', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to clear all completed and failed transfer records from history?',
-          style: TextStyle(color: AppColors.onSurface),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: AppColors.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Clear'),
+            child: const Text('Clear'),
           ),
         ],
       ),
@@ -107,7 +107,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final transfersAsync = ref.watch(transfersStreamProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Row(
           children: [
@@ -119,12 +119,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.folder_outlined, size: 16, color: AppColors.secondary),
+                    Icon(Icons.folder_outlined, size: 16, color: Theme.of(context).colorScheme.primary),
                     const SizedBox(width: 6),
                     Text(
                       'Drive',
                       style: TextStyle(
-                        color: AppColors.secondary,
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -133,11 +133,11 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.outline),
+            Icon(Icons.chevron_right_rounded, size: 16, color: Theme.of(context).colorScheme.outlineVariant),
             const SizedBox(width: 4),
             Text(
               'Transfers',
-              style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
         ),
@@ -145,7 +145,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
           tooltip: 'Back to Drive',
           onPressed: () {
             if (context.canPop()) {
@@ -160,12 +160,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
             icon: const Icon(Icons.folder_outlined, size: 16),
             label: const Text('My Drive'),
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.primaryLight,
+              foregroundColor: Theme.of(context).colorScheme.primary,
             ),
             onPressed: () => context.go('/drive'),
           ),
           IconButton(
-            icon: Icon(Icons.delete_sweep_outlined, color: AppColors.onSurfaceVariant),
+            icon: Icon(Icons.delete_sweep_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
             tooltip: 'Clear History',
             onPressed: () => _clearHistory(context),
           ),
@@ -226,9 +226,9 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.03),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -238,12 +238,18 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                         Row(
                           children: [
                             CircleAvatar(
-                              backgroundColor: isUpload 
-                                  ? AppColors.primary.withValues(alpha: 0.1) 
-                                  : AppColors.secondary.withValues(alpha: 0.1),
+                              backgroundColor: status == 'ENCRYPTING'
+                                  ? Colors.amber.withValues(alpha: 0.15)
+                                  : (isUpload 
+                                      ? AppColors.primary.withValues(alpha: 0.1) 
+                                      : AppColors.secondary.withValues(alpha: 0.1)),
                               child: Icon(
-                                isUpload ? Icons.cloud_upload : Icons.cloud_download,
-                                color: isUpload ? AppColors.primary : AppColors.secondary,
+                                status == 'ENCRYPTING'
+                                    ? Icons.enhanced_encryption_outlined
+                                    : (isUpload ? Icons.cloud_upload : Icons.cloud_download),
+                                color: status == 'ENCRYPTING'
+                                    ? Colors.amber
+                                    : (isUpload ? AppColors.primary : AppColors.secondary),
                                 size: 20,
                               ),
                             ),
@@ -260,8 +266,14 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    isUpload ? 'Upload' : 'Download',
-                                    style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
+                                    status == 'ENCRYPTING'
+                                        ? 'Preparing & Encrypting'
+                                        : (isUpload ? 'Upload' : 'Download'),
+                                    style: TextStyle(
+                                      color: status == 'ENCRYPTING' ? Colors.amber : AppColors.onSurfaceVariant,
+                                      fontSize: 11,
+                                      fontWeight: status == 'ENCRYPTING' ? FontWeight.w500 : FontWeight.normal,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -271,7 +283,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             if (status == 'PENDING' || status == 'PROCESSING' || status == 'ENCRYPTING' || status == 'FAILED') ...[
                               const SizedBox(width: 8),
                               IconButton(
-                                icon: Icon(Icons.close, size: 18, color: Colors.grey),
+                                icon: Icon(Icons.close, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
                                 onPressed: () => _cancelTransfer(item.transfer.id),
@@ -284,10 +296,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
-                              value: progress,
+                              value: (status == 'ENCRYPTING' && progress == 0.0) ? null : progress,
                               backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                isUpload ? AppColors.primary : AppColors.secondary
+                                status == 'ENCRYPTING'
+                                    ? Colors.amber
+                                    : (isUpload ? AppColors.primary : AppColors.secondary)
                               ),
                               minHeight: 4,
                             ),
@@ -297,12 +311,22 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}',
+                                status == 'ENCRYPTING'
+                                    ? (progress > 0
+                                        ? 'Preparing: ${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}'
+                                        : 'Preparing & encrypting file...')
+                                    : '${_formatSize(bytesTransferred)} of ${_formatSize(totalBytes)}',
                                 style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
                               ),
                               Text(
-                                '${(progress * 100).toStringAsFixed(0)}%',
-                                style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant, fontWeight: FontWeight.bold),
+                                status == 'ENCRYPTING' && progress == 0.0
+                                    ? 'Preparing...'
+                                    : '${(progress * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: status == 'ENCRYPTING' ? Colors.amber : AppColors.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -311,7 +335,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Error: ${item.transfer.errorMessage}',
-                            style: const TextStyle(color: Colors.redAccent, fontSize: 11),
+                            style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 11),
                           ),
                         ],
                       ],
@@ -322,7 +346,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.redAccent))),
+          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.error))),
         ),
     );
   }
@@ -334,13 +358,13 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           Icon(
             Icons.swap_vert_circle_outlined,
             size: 64,
-            color: AppColors.outline,
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
           const SizedBox(height: 24),
           Text(
             'No transfers found',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppColors.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -348,7 +372,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           Text(
             _getFilterEmptyText(),
             style: TextStyle(
-              color: AppColors.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 13,
             ),
           ),
@@ -357,8 +381,8 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
             icon: const Icon(Icons.cloud_outlined, size: 18),
             label: const Text('Return to My Drive'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -430,18 +454,18 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     return FilterChip(
       label: Text(label),
       selected: selected,
-      selectedColor: AppColors.primary.withValues(alpha: 0.2),
-      checkmarkColor: AppColors.primary,
-      backgroundColor: AppColors.surfaceElevated.withValues(alpha: 0.1),
+      selectedColor: Theme.of(context).colorScheme.primaryContainer,
+      checkmarkColor: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
       labelStyle: TextStyle(
-        color: selected ? AppColors.onSurface : AppColors.onSurfaceVariant,
+        color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
         fontWeight: selected ? FontWeight.bold : FontWeight.normal,
         fontSize: 12,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
-          color: selected ? AppColors.primary : AppColors.outlineVariant,
+          color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
           width: 0.5,
         ),
       ),

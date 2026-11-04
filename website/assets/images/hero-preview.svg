@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1200" y2="750" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="50%" stop-color="#0E1626"/>
+      <stop offset="100%" stop-color="#080C14"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="300" y2="200" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00D2FF"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8B5CF6"/>
+      <stop offset="100%" stop-color="#EC4899"/>
+    </linearGradient>
+    <filter id="winShadow" x="-10" y="-10" width="1220" height="770" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="25" stdDeviation="30" flood-color="#00D2FF" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- App Window Background -->
+  <rect x="20" y="20" width="1160" height="710" rx="16" fill="url(#bgGrad)" stroke="#1E293B" stroke-width="1.5" filter="url(#winShadow)"/>
+
+  <!-- Window Header / Titlebar -->
+  <rect x="20" y="20" width="1160" height="48" rx="16" fill="#0A0E17"/>
+  <rect x="20" y="52" width="1160" height="16" fill="#0A0E17"/>
+  <line x1="20" y1="68" x2="1180" y2="68" stroke="#1E293B" stroke-width="1"/>
+  
+  <!-- Window Controls -->
+  <circle cx="48" cy="44" r="6" fill="#EF4444"/>
+  <circle cx="68" cy="44" r="6" fill="#F59E0B"/>
+  <circle cx="88" cy="44" r="6" fill="#10B981"/>
+  
+  <!-- App Title & Security Badge in Header -->
+  <text x="540" y="49" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#94A3B8" text-anchor="middle">AeroDrive — End-to-End Encrypted Cloud</text>
+  <rect x="990" y="32" width="160" height="24" rx="12" fill="#064E3B" fill-opacity="0.5" stroke="#10B981" stroke-width="1"/>
+  <circle cx="1004" cy="44" r="4" fill="#10B981"/>
+  <text x="1016" y="48" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#34D399">E2EE VAULT ACTIVE</text>
+
+  <!-- Sidebar -->
+  <rect x="20" y="69" width="240" height="660" fill="#090D16" stroke="#1E293B" stroke-width="1"/>
+  
+  <!-- Brand in Sidebar -->
+  <circle cx="56" cy="106" r="16" fill="url(#accentGrad)"/>
+  <text x="82" y="111" font-family="'Inter', sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">AeroDrive</text>
+  <rect x="175" y="99" width="45" height="16" rx="4" fill="#1E293B"/>
+  <text x="184" y="111" font-family="'Inter', sans-serif" font-size="9" font-weight="700" fill="#38BDF8">v2.4 PRO</text>
+
+  <!-- Nav Items -->
+  <!-- Active: My Drive -->
+  <rect x="36" y="145" width="208" height="40" rx="8" fill="#1E293B" fill-opacity="0.8" stroke="#38BDF8" stroke-width="1"/>
+  <rect x="40" y="149" width="4" height="32" rx="2" fill="#38BDF8"/>
+  <text x="68" y="170" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">📁  My Drive</text>
+  
+  <text x="68" y="210" font-family="'Inter', sans-serif" font-size="13" font-weight="500" fill="#94A3B8">🖼️  AI Photos & Faces</text>
+  <text x="68" y="250" font-family="'Inter', sans-serif" font-size="13" font-weight="500" fill="#94A3B8">🎬  Media Streaming</text>
+  <text x="68" y="290" font-family="'Inter', sans-serif" font-size="13" font-weight="500" fill="#94A3B8">🔗  Share Links</text>
+  <text x="68" y="330" font-family="'Inter', sans-serif" font-size="13" font-weight="500" fill="#94A3B8">🧹  Storage Cleaner</text>
+  <text x="68" y="370" font-family="'Inter', sans-serif" font-size="13" font-weight="500" fill="#94A3B8">🗑️  Trash Bin</text>
+  
+  <line x1="36" y1="400" x2="244" y2="400" stroke="#1E293B" stroke-width="1"/>
+
+  <!-- Storage Widget in Sidebar -->
+  <rect x="36" y="550" width="208" height="160" rx="12" fill="#0D1526" stroke="#1E293B" stroke-width="1"/>
+  <text x="52" y="578" font-family="'Inter', sans-serif" font-size="12" font-weight="700" fill="#F8FAFC">Cloud Storage</text>
+  <text x="52" y="600" font-family="'Inter', sans-serif" font-size="18" font-weight="800" fill="#38BDF8">48.2 GB <tspan font-size="12" font-weight="500" fill="#64748B">/ ∞ Unlimited</tspan></text>
+  
+  <!-- Category Bar -->
+  <rect x="52" y="616" width="176" height="8" rx="4" fill="#1E293B"/>
+  <rect x="52" y="616" width="90" height="8" rx="4" fill="#3B82F6"/>
+  <rect x="142" y="616" width="45" height="8" rx="4" fill="#10B981"/>
+  <rect x="187" y="616" width="25" height="8" rx="4" fill="#F59E0B"/>
+
+  <circle cx="56" cy="645" r="4" fill="#3B82F6"/>
+  <text x="66" y="649" font-family="'Inter', sans-serif" font-size="10" fill="#94A3B8">Videos (26GB)</text>
+  <circle cx="56" cy="665" r="4" fill="#10B981"/>
+  <text x="66" y="669" font-family="'Inter', sans-serif" font-size="10" fill="#94A3B8">Images (14GB)</text>
+  <circle cx="56" cy="685" r="4" fill="#F59E0B"/>
+  <text x="66" y="689" font-family="'Inter', sans-serif" font-size="10" fill="#94A3B8">Docs & Other (8GB)</text>
+
+  <!-- Main Content Area -->
+  <!-- Top Action Bar -->
+  <rect x="280" y="85" width="450" height="42" rx="10" fill="#0D1322" stroke="#1E293B" stroke-width="1"/>
+  <text x="312" y="111" font-family="'Inter', sans-serif" font-size="13" fill="#64748B">🔍  Search encrypted files, tags, faces, places...</text>
+  
+  <rect x="1010" y="85" width="150" height="42" rx="10" fill="url(#accentGrad)"/>
+  <text x="1085" y="111" font-family="'Inter', sans-serif" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">⚡ + Upload Files</text>
+
+  <!-- Breadcrumbs Bar -->
+  <rect x="280" y="145" width="880" height="38" rx="8" fill="#0A0E1A" stroke="#1E293B" stroke-width="1"/>
+  <text x="296" y="169" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#38BDF8">Home <tspan fill="#64748B">/</tspan> Work Projects <tspan fill="#64748B">/</tspan> 4K Video Renders</text>
+
+  <!-- Folder Grid (Row 1) -->
+  <g transform="translate(280, 200)">
+    <rect width="205" height="74" rx="10" fill="url(#cardGrad)" stroke="#1E293B" stroke-width="1"/>
+    <text x="20" y="38" font-size="22">📁</text>
+    <text x="52" y="36" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Marketing Assets</text>
+    <text x="52" y="54" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">14 files • 3.2 GB</text>
+  </g>
+  <g transform="translate(505, 200)">
+    <rect width="205" height="74" rx="10" fill="url(#cardGrad)" stroke="#1E293B" stroke-width="1"/>
+    <text x="20" y="38" font-size="22">📁</text>
+    <text x="52" y="36" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Client Contracts</text>
+    <text x="52" y="54" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">28 files • 420 MB</text>
+  </g>
+  <g transform="translate(730, 200)">
+    <rect width="205" height="74" rx="10" fill="url(#cardGrad)" stroke="#1E293B" stroke-width="1"/>
+    <text x="20" y="38" font-size="22">📁</text>
+    <text x="52" y="36" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Tokyo Trip 2026</text>
+    <text x="52" y="54" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">384 photos • 12 GB</text>
+  </g>
+  <g transform="translate(955, 200)">
+    <rect width="205" height="74" rx="10" fill="url(#cardGrad)" stroke="#1E293B" stroke-width="1"/>
+    <text x="20" y="38" font-size="22">📁</text>
+    <text x="52" y="36" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Software Builds</text>
+    <text x="52" y="54" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">6 files • 8.4 GB</text>
+  </g>
+
+  <!-- Recent Files Header -->
+  <text x="282" y="310" font-family="'Inter', sans-serif" font-size="15" font-weight="700" fill="#F8FAFC">Recent Encrypted Files</text>
+
+  <!-- File Cards Grid -->
+  <!-- File 1: 4K Video with Sub-chunk stream badge -->
+  <g transform="translate(280, 330)">
+    <rect width="275" height="180" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <!-- Video Preview Banner -->
+    <rect width="275" height="110" rx="12" fill="#1E293B"/>
+    <rect width="275" height="110" fill="url(#accentGrad)" fill-opacity="0.15"/>
+    <circle cx="137" cy="55" r="20" fill="#00D2FF" fill-opacity="0.8"/>
+    <polygon points="132,45 147,55 132,65" fill="#FFFFFF"/>
+    <rect x="12" y="12" width="70" height="20" rx="4" fill="#000000" fill-opacity="0.7"/>
+    <text x="47" y="26" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#38BDF8" text-anchor="middle">STREAM 4K</text>
+    <text x="260" y="26" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#F1F5F9" text-anchor="end">18:42</text>
+    <!-- File Details -->
+    <text x="14" y="136" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Keynote_Presentation.mp4</text>
+    <text x="14" y="156" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">3.6 GB • AES-256-CTR • 74 Chunks</text>
+    <rect x="210" y="142" width="52" height="18" rx="9" fill="#064E3B"/>
+    <text x="236" y="155" font-family="'Inter', sans-serif" font-size="9" font-weight="700" fill="#34D399" text-anchor="middle">STRIPED</text>
+  </g>
+
+  <!-- File 2: Encrypted PDF -->
+  <g transform="translate(580, 330)">
+    <rect width="275" height="180" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <rect width="275" height="110" rx="12" fill="#1E293B"/>
+    <text x="137" y="65" font-size="36" text-anchor="middle">📄</text>
+    <rect x="12" y="12" width="54" height="20" rx="4" fill="#EF4444" fill-opacity="0.2"/>
+    <text x="39" y="26" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#F87171" text-anchor="middle">PDF</text>
+    <text x="14" y="136" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">AeroDrive_Whitepaper_v2.pdf</text>
+    <text x="14" y="156" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">18.4 MB • AES-256-GCM • Pinned</text>
+    <rect x="210" y="142" width="52" height="18" rx="9" fill="#1E3A8A"/>
+    <text x="236" y="155" font-family="'Inter', sans-serif" font-size="9" font-weight="700" fill="#60A5FA" text-anchor="middle">PINNED</text>
+  </g>
+
+  <!-- File 3: High-Res RAW Photo with Face vector -->
+  <g transform="translate(880, 330)">
+    <rect width="275" height="180" rx="12" fill="#0F172A" stroke="#1E293B" stroke-width="1"/>
+    <rect width="275" height="110" rx="12" fill="#1E293B"/>
+    <rect width="275" height="110" fill="url(#purpleGrad)" fill-opacity="0.15"/>
+    <text x="137" y="65" font-size="36" text-anchor="middle">📸</text>
+    <rect x="12" y="12" width="76" height="20" rx="4" fill="#7C3AED" fill-opacity="0.3"/>
+    <text x="50" y="26" font-family="'Inter', sans-serif" font-size="10" font-weight="700" fill="#C084FC" text-anchor="middle">AI LABELED</text>
+    <text x="14" y="136" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#F1F5F9">Studio_Portrait_08.raw</text>
+    <text x="14" y="156" font-family="'Inter', sans-serif" font-size="11" fill="#64748B">48.2 MB • Faces: Alex, Sara • Tokyo</text>
+    <circle cx="230" cy="151" r="10" fill="#3B82F6"/>
+    <circle cx="245" cy="151" r="10" fill="#EC4899"/>
+  </g>
+
+  <!-- Active Transfer Progress Floating Banner -->
+  <g transform="translate(280, 540)">
+    <rect width="875" height="75" rx="12" fill="#0A1120" stroke="#00D2FF" stroke-width="1.5"/>
+    <circle cx="36" cy="38" r="18" fill="url(#accentGrad)"/>
+    <path d="M30 38L36 32L42 38M36 33V44" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="70" y="32" font-family="'Inter', sans-serif" font-size="13" font-weight="700" fill="#F8FAFC">Uploading "Studio_Archive_2026.zip" (14.2 GB)</text>
+    <text x="70" y="52" font-family="'Inter', sans-serif" font-size="11" fill="#38BDF8">Parallel striping active across 3 Telegram channels • 42 MB/s • ETA: 2m 14s</text>
+    <text x="840" y="32" font-family="'Inter', sans-serif" font-size="14" font-weight="800" fill="#00D2FF" text-anchor="end">72%</text>
+    <!-- Progress Bar -->
+    <rect x="70" y="60" width="770" height="6" rx="3" fill="#1E293B"/>
+    <rect x="70" y="60" width="554" height="6" rx="3" fill="url(#accentGrad)"/>
+  </g>
+
+  <!-- Cryptographic Proof Footer Tag -->
+  <g transform="translate(280, 640)">
+    <text x="0" y="24" font-family="'JetBrains Mono', monospace" font-size="11" fill="#475569">MASTER KEY DERIVATION: Argon2id (m=64MB, t=4, p=2) ── CLIENT DEK: AES-256-GCM ── ZERO TELEMETRY</text>
+  </g>
+</svg>
+

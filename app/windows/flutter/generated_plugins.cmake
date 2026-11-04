@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   app_links
   battery_plus
   desktop_drop
+  fc_native_video_thumbnail
   flutter_secure_storage_windows
   local_auth_windows
   media_kit_libs_windows_video

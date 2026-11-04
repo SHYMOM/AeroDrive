@@ -119,7 +119,7 @@ class _InfrastructureSetupScreenState extends ConsumerState<InfrastructureSetupS
                   _currentStep,
                   key: ValueKey<String>(_currentStep),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.primaryLight,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -135,7 +135,7 @@ class _InfrastructureSetupScreenState extends ConsumerState<InfrastructureSetupS
                   value: _progress,
                   minHeight: 8,
                   backgroundColor: Colors.white.withValues(alpha: 0.1),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ).animate().fadeIn(delay: 300.ms),
               const SizedBox(height: 12),

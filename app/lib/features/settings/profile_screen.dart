@@ -101,10 +101,10 @@ class ProfileScreen extends ConsumerWidget {
 
           // Secondary Account Profiles
           if (secondaries.isNotEmpty) ...[
-            const Row(
+            Row(
               children: [
                 Icon(Icons.link, size: 18, color: AppColors.secondaryLight),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Text(
                   'LINKED SECONDARY PROFILES',
                   style: TextStyle(
@@ -140,7 +140,7 @@ class ProfileScreen extends ConsumerWidget {
                         const SizedBox(height: 2),
                         Text(
                           '@${client.username}',
-                          style: const TextStyle(fontSize: 11, color: AppColors.secondaryLight),
+                          style: TextStyle(fontSize: 11, color: AppColors.secondaryLight),
                         ),
                       ],
                     ],

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
@@ -42,6 +44,12 @@ class _SingleChunkPayload {
   final List<int>? ctrIv;
 }
 
+class _HashTaskArgs {
+  const _HashTaskArgs(this.filePath, this.sendPort);
+  final String filePath;
+  final SendPort sendPort;
+}
+
 class UploadOrchestrator {
   UploadOrchestrator();
 
@@ -65,8 +73,93 @@ class UploadOrchestrator {
 
   /// Computes full-file SHA-256 hash in a background isolate using 4MB streaming reads.
   /// This prevents freezing the UI or main event loop during large file processing.
-  static Future<String> computeFileHash(File file) async {
-    return compute(_hashFileIsolate, file.path);
+  /// If [onProgress] is supplied, emits (bytesRead, totalBytes) as blocks are read.
+  static Future<String> computeFileHash(
+    File file, {
+    void Function(int bytesRead, int totalBytes)? onProgress,
+  }) async {
+    if (onProgress == null) {
+      return compute(_hashFileIsolate, file.path);
+    }
+
+    final receivePort = ReceivePort();
+    final completer = Completer<String>();
+
+    late final Isolate isolate;
+    try {
+      isolate = await Isolate.spawn<_HashTaskArgs>(
+        _hashFileWithProgressIsolate,
+        _HashTaskArgs(file.path, receivePort.sendPort),
+      );
+    } catch (e) {
+      receivePort.close();
+      rethrow;
+    }
+
+    receivePort.listen(
+      (dynamic message) {
+        if (message is List && message.isNotEmpty) {
+          final action = message[0];
+          if (action == 'progress' && message.length >= 3) {
+            try {
+              onProgress(message[1] as int, message[2] as int);
+            } catch (_) {}
+          } else if (action == 'done' && message.length >= 2) {
+            if (!completer.isCompleted) completer.complete(message[1] as String);
+            receivePort.close();
+            isolate.kill(priority: Isolate.immediate);
+          } else if (action == 'error' && message.length >= 2) {
+            if (!completer.isCompleted) completer.completeError(Exception(message[1]));
+            receivePort.close();
+            isolate.kill(priority: Isolate.immediate);
+          }
+        }
+      },
+      onError: (dynamic err) {
+        if (!completer.isCompleted) completer.completeError(err);
+        receivePort.close();
+        isolate.kill(priority: Isolate.immediate);
+      },
+      onDone: () {
+        if (!completer.isCompleted) {
+          completer.completeError(StateError('Isolate closed without producing a hash'));
+        }
+      },
+    );
+
+    return completer.future;
+  }
+
+  static Future<void> _hashFileWithProgressIsolate(_HashTaskArgs args) async {
+    final sendPort = args.sendPort;
+    final algorithm = Sha256();
+    final sink = algorithm.newHashSink();
+    try {
+      final openFile = await File(args.filePath).open();
+      try {
+        const int bufferSize = 4 * 1024 * 1024;
+        final length = await openFile.length();
+        var offset = 0;
+        sendPort.send(['progress', 0, length]);
+        while (offset < length) {
+          final toRead = (length - offset < bufferSize) ? length - offset : bufferSize;
+          final block = await openFile.read(toRead);
+          if (block.isEmpty) break;
+          sink.add(block);
+          offset += toRead;
+          sendPort.send(['progress', offset, length]);
+          await Future.delayed(Duration.zero);
+        }
+      } finally {
+        await openFile.close();
+      }
+      sink.close();
+      final hash = await sink.hash();
+      final hashStr = hash.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+      sendPort.send(['done', hashStr]);
+    } catch (e) {
+      sendPort.send(['error', e.toString()]);
+    }
   }
 
   static Future<String> _hashFileIsolate(String filePath) async {

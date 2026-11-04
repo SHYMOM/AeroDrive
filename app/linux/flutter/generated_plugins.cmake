@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
+  fc_native_video_thumbnail
   flutter_secure_storage_linux
   gtk
   media_kit_libs_linux

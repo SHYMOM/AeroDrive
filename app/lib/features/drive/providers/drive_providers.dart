@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/providers/repository_providers.dart';
-import '../../../core/providers/security_providers.dart';
 import '../../../data/db/database.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 
@@ -18,10 +17,7 @@ final isFavoriteOnlyProvider = StateProvider<bool>((ref) => false);
 final isOfflineOnlyProvider = StateProvider<bool>((ref) => false);
 
 /// Tracks if we have already checked for a remote config during this session
-final configCheckedProvider = StateProvider<bool>((ref) {
-  ref.watch(isAppUnlockedProvider);
-  return false;
-});
+final configCheckedProvider = StateProvider<bool>((ref) => false);
 
 /// Manages the breadcrumb path to the current folder.
 final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
@@ -328,9 +324,12 @@ final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
   ref.watch(dbRebuildVersionProvider);
 
   return db
-      .customSelect('SELECT SUM(size) AS total FROM files WHERE deleted_at IS NULL;')
+      .customSelect(
+        'SELECT SUM(size) AS total FROM files WHERE deleted_at IS NULL;',
+        readsFrom: {db.files},
+      )
       .watchSingle()
-      .map((row) => row.read<int>('total') ?? 0);
+      .map((row) => row.read<int?>('total') ?? 0);
 });
 
 /// Reads the saved file icon style setting ('Minimal', 'Filled', 'Colored', 'Outlined').

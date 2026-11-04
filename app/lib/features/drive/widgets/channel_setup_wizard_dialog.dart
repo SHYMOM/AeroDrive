@@ -2,27 +2,25 @@ import 'package:cryptography/cryptography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants.dart';
-import '../../../core/logger.dart';
 import '../../../core/providers/infrastructure_providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/providers/security_providers.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../domain/infrastructure/infrastructure_provisioning_service.dart';
 import '../../telegram/telegram_manager.dart';
 import '../../telegram/telegram_service.dart';
 
-/// Modal dialog that prompts the user to set up the minimum required 4 channels
+/// Modal dialog that prompts the user to set up the minimum required 5 channels
 /// for AeroDrive:
 /// 1. AeroDrive Storage 1
 /// 2. AeroDrive Storage 2
-/// 3. AeroDrive Config
-/// 4. AeroDrive Shared
+/// 3. AeroDrive Storage 3
+/// 4. AeroDrive Config
+/// 5. AeroDrive Shared
 ///
 /// Features:
 /// - Explicit warnings not to add any person to the channels and not to remove descriptions.
-/// - Option to auto-create all 4 channels with live progress.
-/// - Option to pick and configure 4 existing channels (renames them, updates photos, and writes descriptions).
+/// - Option to auto-create all 5 channels with live progress.
+/// - Option to pick and configure 5 existing channels (renames them, updates photos, and writes descriptions).
 class ChannelSetupWizardDialog extends ConsumerStatefulWidget {
   const ChannelSetupWizardDialog({
     super.key,
@@ -58,6 +56,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
 
   int? _selectedStorage1;
   int? _selectedStorage2;
+  int? _selectedStorage3;
   int? _selectedConfig;
   int? _selectedShared;
 
@@ -140,7 +139,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('All 4 AeroDrive channels created and configured successfully!'),
+            content: Text('All 5 AeroDrive channels created and configured successfully!'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -160,19 +159,21 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
   Future<void> _handleConfirmExisting() async {
     if (_selectedStorage1 == null ||
         _selectedStorage2 == null ||
+        _selectedStorage3 == null ||
         _selectedConfig == null ||
         _selectedShared == null) {
-      setState(() => _errorMessage = 'Please assign all 4 channels to proceed.');
+      setState(() => _errorMessage = 'Please assign all 5 channels to proceed.');
       return;
     }
 
     final selectedSet = {
       _selectedStorage1!,
       _selectedStorage2!,
+      _selectedStorage3!,
       _selectedConfig!,
       _selectedShared!,
     };
-    if (selectedSet.length != 4) {
+    if (selectedSet.length != 5) {
       setState(() => _errorMessage = 'Each role must be assigned to a distinct Telegram channel.');
       return;
     }
@@ -206,6 +207,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
       telegramService: primary,
       storageChannel1Id: _selectedStorage1!,
       storageChannel2Id: _selectedStorage2!,
+      storageChannel3Id: _selectedStorage3!,
       configChannelId: _selectedConfig!,
       sharedChannelId: _selectedShared!,
       masterKey: masterKey,
@@ -360,12 +362,12 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
           ),
           const SizedBox(height: 18),
           Text(
-            'To enable decentralized zero-knowledge storage, AeroDrive requires 4 dedicated Telegram channels on your account:',
+            'To enable decentralized zero-knowledge storage, AeroDrive requires 5 dedicated Telegram channels on your account:',
             style: TextStyle(color: AppColors.onSurface, fontSize: 13, height: 1.4),
           ),
           const SizedBox(height: 14),
 
-          // 4 Channels breakdown
+          // 5 Channels breakdown
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
@@ -386,6 +388,13 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
                   icon: Icons.inventory_2_outlined,
                   name: 'AeroDrive Storage 2',
                   desc: 'Load-balanced redundant storage (multi-channel)',
+                  tag: 'REQUIRED',
+                ),
+                const Divider(height: 16, color: Colors.white12),
+                _buildChannelItem(
+                  icon: Icons.inventory_2_outlined,
+                  name: 'AeroDrive Storage 3',
+                  desc: 'High-throughput striped payload & redundancy',
                   tag: 'REQUIRED',
                 ),
                 const Divider(height: 16, color: Colors.white12),
@@ -462,7 +471,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
               ),
               child: Text(
                 _errorMessage!,
-                style: const TextStyle(color: AppColors.error, fontSize: 12),
+                style: TextStyle(color: AppColors.error, fontSize: 12),
               ),
             ),
           ],
@@ -473,7 +482,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
           FilledButton.icon(
             onPressed: _handleAutoCreate,
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Auto-Create All 4 Channels (Recommended)'),
+            label: const Text('Auto-Create All 5 Channels (Recommended)'),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               backgroundColor: AppColors.primary,
@@ -521,14 +530,14 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Link 4 Existing Channels',
+                      'Link 5 Existing Channels',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: AppColors.onSurface,
                             fontWeight: FontWeight.bold,
                           ),
                     ),
                     Text(
-                      'Designate 4 existing Telegram channels where you are an admin.',
+                      'Designate 5 existing Telegram channels where you are an admin.',
                       style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12),
                     ),
                   ],
@@ -573,13 +582,19 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
             ),
             const SizedBox(height: 12),
             _buildChannelDropdown(
-              label: '3. Config Channel (Sync & Registry)',
+              label: '3. Storage Channel 3 (Redundant Storage)',
+              value: _selectedStorage3,
+              onChanged: (id) => setState(() => _selectedStorage3 = id),
+            ),
+            const SizedBox(height: 12),
+            _buildChannelDropdown(
+              label: '4. Config Channel (Sync & Registry)',
               value: _selectedConfig,
               onChanged: (id) => setState(() => _selectedConfig = id),
             ),
             const SizedBox(height: 12),
             _buildChannelDropdown(
-              label: '4. Shared Channel (Share Link Relay)',
+              label: '5. Shared Channel (Share Link Relay)',
               value: _selectedShared,
               onChanged: (id) => setState(() => _selectedShared = id),
             ),
@@ -589,7 +604,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
             const SizedBox(height: 12),
             Text(
               _errorMessage!,
-              style: const TextStyle(color: AppColors.error, fontSize: 12),
+              style: TextStyle(color: AppColors.error, fontSize: 12),
             ),
           ],
 
@@ -597,7 +612,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
           FilledButton.icon(
             onPressed: _adminChannels.isNotEmpty ? _handleConfirmExisting : null,
             icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Confirm & Configure 4 Channels'),
+            label: const Text('Confirm & Configure 5 Channels'),
             style: FilledButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
@@ -645,7 +660,7 @@ class _ChannelSetupWizardDialogState extends ConsumerState<ChannelSetupWizardDia
           ),
           child: Text(
             tag,
-            style: const TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold),
+            style: TextStyle(color: AppColors.primary, fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ),
       ],

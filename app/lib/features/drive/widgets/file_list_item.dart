@@ -17,6 +17,7 @@ import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
+import 'file_info_dialog.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
 
@@ -91,7 +92,10 @@ class FileListItem extends ConsumerWidget {
               : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
-      child: ListTile(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: SizedBox(
           width: 52,
@@ -184,8 +188,9 @@ class FileListItem extends ConsumerWidget {
           }
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildOptionsMenu(BuildContext context, WidgetRef ref) => PopupMenuButton<String>(
       icon: Icon(Icons.more_vert, color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -263,7 +268,13 @@ class FileListItem extends ConsumerWidget {
               children: [
                 Icon(isOfflinePinned ? Icons.offline_pin_outlined : Icons.offline_pin_rounded, color: Colors.tealAccent, size: 18),
                 const SizedBox(width: 10),
-                Text(isOfflinePinned ? 'Remove Offline Access' : 'Available Offline', style: TextStyle(color: theme.colorScheme.onSurface)),
+                Expanded(
+                  child: Text(
+                    isOfflinePinned ? 'Remove Offline Access' : 'Available Offline',
+                    style: TextStyle(color: theme.colorScheme.onSurface),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
@@ -387,60 +398,9 @@ class FileListItem extends ConsumerWidget {
   }
 
   void _showInfoDialog(BuildContext context, WidgetRef ref) {
-    final sizeStr = _formatBytes(file.size ?? 0);
-    final createdStr = file.createdAt != null
-        ? DateFormat('MM/dd/yyyy hh:mm a').format(file.createdAt!)
-        : 'Unknown';
-    final photoTakenStr = file.photoTakenAt != null
-        ? DateFormat('MM/dd/yyyy hh:mm a').format(file.photoTakenAt!)
-        : 'None available';
-
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        title: Row(
-          children: [
-            const Icon(Icons.info_outline, color: AppColors.primary),
-            const SizedBox(width: 10),
-            Text('File Info', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoRow(context, 'Name:', file.name),
-            _buildInfoRow(context, 'Type:', file.mimeType ?? 'Unknown'),
-            _buildInfoRow(context, 'Size:', sizeStr),
-            _buildInfoRow(context, 'Uploaded:', createdStr),
-            if (file.duration != null && file.duration! > 0)
-              _buildInfoRow(context, 'Video Duration:', _formatDuration(file.duration)),
-            _buildInfoRow(context, 'Photo Taken (EXIF):', photoTakenStr),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Close', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(BuildContext context, String label, String value) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: TextStyle(color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 13, fontWeight: FontWeight.w500)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(value, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13))),
-        ],
-      ),
+      builder: (ctx) => FileInfoDialog(file: file),
     );
   }
 }

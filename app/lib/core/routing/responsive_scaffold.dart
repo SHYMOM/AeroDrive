@@ -165,7 +165,7 @@ final class _DesktopLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Row(
         children: [
           SidebarContent(
@@ -223,11 +223,12 @@ final class _MobileLayout extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     final isSettings = location.startsWith('/settings');
     final hideNavBar = isKeyboardVisible || isSettings;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       drawer: Drawer(
-        backgroundColor: AppColors.surface,
+        backgroundColor: colorScheme.surface,
         child: SidebarContent(
           selectedIndex: selectedIndex,
           onDestinationSelected: onDestinationSelected,
@@ -243,11 +244,11 @@ final class _MobileLayout extends StatelessWidget {
                 GlobalProgressBar(),
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    color: AppColors.background,
+                    color: Theme.of(context).scaffoldBackgroundColor,
                     border: Border(top: BorderSide(color: AppColors.outlineVariant)),
                   ),
                   child: NavigationBar(
-                backgroundColor: AppColors.background,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 elevation: 0,
                 selectedIndex: () {
                   final mobileItems = AppDestination.values.where((d) => d != AppDestination.settings).toList();
@@ -274,7 +275,7 @@ final class _MobileLayout extends StatelessWidget {
                             margin: EdgeInsets.only(bottom: 6),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
-                              boxShadow: [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
+                              boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.4), blurRadius: 4)],
                               borderRadius: BorderRadius.circular(2),
                             ),
                           )
@@ -292,7 +293,7 @@ final class _MobileLayout extends StatelessWidget {
                           margin: EdgeInsets.only(bottom: 6),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
-                            boxShadow: [BoxShadow(color: AppColors.glowCyan, blurRadius: 4)],
+                            boxShadow: [BoxShadow(color: colorScheme.primary.withValues(alpha: 0.4), blurRadius: 4)],
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -321,12 +322,14 @@ class SidebarContent extends ConsumerWidget {
   final ValueChanged<int> onDestinationSelected;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Container(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
       width: 280,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         border: Border(
-          right: BorderSide(color: AppColors.outline.withValues(alpha: 0.5)),
+          right: BorderSide(color: colorScheme.outline.withValues(alpha: 0.5)),
         ),
       ),
       child: Column(
@@ -625,6 +628,7 @@ class SidebarContent extends ConsumerWidget {
         ],
       ),
     );
+  }
 
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';

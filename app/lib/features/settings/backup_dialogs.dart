@@ -53,14 +53,16 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
   }
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
+      title: Row(
         children: [
-          Icon(Icons.download, color: AppColors.secondary),
-          SizedBox(width: 12),
-          Text('Export Backup', style: TextStyle(color: Colors.white)),
+          Icon(Icons.download, color: colorScheme.secondary),
+          const SizedBox(width: 12),
+          Text('Export Backup', style: TextStyle(color: colorScheme.onSurface)),
         ],
       ),
       content: _successPath != null
@@ -69,7 +71,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               children: [
                 Icon(Icons.check_circle, color: AppColors.success, size: 48),
                 const SizedBox(height: 16),
-                const Text('Backup exported successfully!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text('Backup exported successfully!', style: TextStyle(color: colorScheme.onSurface, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -86,7 +88,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               ? Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: AppColors.primary),
+                    CircularProgressIndicator(color: colorScheme.primary),
                     const SizedBox(height: 16),
                     Text('Exporting backup data...', style: TextStyle(color: AppColors.onSurfaceVariant)),
                   ],
@@ -101,11 +103,11 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                 ),
                 const SizedBox(height: 16),
                 CheckboxListTile(
-                  title: const Text('Database Data', style: TextStyle(color: Colors.white)),
+                  title: Text('Database Data', style: TextStyle(color: colorScheme.onSurface)),
                   subtitle: Text('Files, folders, chunks, channels, accounts, faces', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
                   value: _exportDatabase,
-                  activeColor: AppColors.primary,
-                  checkColor: Colors.white,
+                  activeColor: colorScheme.primary,
+                  checkColor: colorScheme.onPrimary,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (v) {
                     setState(() {
@@ -114,11 +116,11 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                   },
                 ),
                 CheckboxListTile(
-                  title: const Text('Application Settings', style: TextStyle(color: Colors.white)),
+                  title: Text('Application Settings', style: TextStyle(color: colorScheme.onSurface)),
                   subtitle: Text('Preferences, timeouts, toggles', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 12)),
                   value: _exportSettings,
-                  activeColor: AppColors.primary,
-                  checkColor: Colors.white,
+                  activeColor: colorScheme.primary,
+                  checkColor: colorScheme.onPrimary,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (v) {
                     setState(() {
@@ -131,7 +133,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
       actions: _successPath != null
           ? [
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                style: FilledButton.styleFrom(backgroundColor: colorScheme.primary, foregroundColor: colorScheme.onPrimary),
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Close'),
               ),
@@ -145,8 +147,8 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
                   ),
               FilledButton(
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
                 ),
                 onPressed: (!_exportDatabase && !_exportSettings)
                     ? null
@@ -194,6 +196,7 @@ class _BackupExportDialogState extends ConsumerState<BackupExportDialog> {
               ),
             ],
     );
+  }
 }
 
 enum ImportStage { selectFile, configureImport, loading }
@@ -530,6 +533,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     Widget content;
     List<Widget>? actions;
 
@@ -550,8 +554,8 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               onPressed: _pickFile,
-              icon: Icon(Icons.file_open, color: AppColors.secondary),
-              label: const Text('Choose Backup File', style: TextStyle(color: Colors.white)),
+              icon: Icon(Icons.file_open, color: colorScheme.secondary),
+              label: Text('Choose Backup File', style: TextStyle(color: colorScheme.onSurface)),
             ),
           ],
         );
@@ -579,13 +583,13 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: AppColors.secondary),
-                        SizedBox(width: 8),
+                        Icon(Icons.info_outline, size: 16, color: colorScheme.secondary),
+                        const SizedBox(width: 8),
                         Text(
                           'Backup File Loaded',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.onSurface, fontSize: 12),
                         ),
                       ],
                     ),
@@ -608,36 +612,36 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
               if (_backupData!.containsKey('database'))
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Database Data', style: TextStyle(color: Colors.white)),
+                  title: Text('Database Data', style: TextStyle(color: colorScheme.onSurface)),
                   subtitle: Text('$_fileCount files, $_folderCount folders', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: _importDatabase,
-                  activeColor: AppColors.primary,
-                  checkColor: Colors.white,
+                  activeColor: colorScheme.primary,
+                  checkColor: colorScheme.onPrimary,
                   onChanged: (v) => setState(() => _importDatabase = v ?? false),
                 )
               else
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Database Data', style: TextStyle(color: Colors.white54)),
-                  subtitle: Text('Not available in backup file', style: TextStyle(color: Colors.white30, fontSize: 11)),
-                  trailing: Icon(Icons.block, size: 16, color: Colors.white30),
+                  title: Text('Database Data', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                  subtitle: Text('Not available in backup file', style: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 11)),
+                  trailing: Icon(Icons.block, size: 16, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 ),
               if (_backupData!.containsKey('settings'))
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Application Settings', style: TextStyle(color: Colors.white)),
+                  title: Text('Application Settings', style: TextStyle(color: colorScheme.onSurface)),
                   subtitle: Text('$_settingsCount configuration keys', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: _importSettings,
-                  activeColor: AppColors.primary,
-                  checkColor: Colors.white,
+                  activeColor: colorScheme.primary,
+                  checkColor: colorScheme.onPrimary,
                   onChanged: (v) => setState(() => _importSettings = v ?? false),
                 )
               else
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text('Application Settings', style: TextStyle(color: Colors.white54)),
-                  subtitle: Text('Not available in backup file', style: TextStyle(color: Colors.white30, fontSize: 11)),
-                  trailing: Icon(Icons.block, size: 16, color: Colors.white30),
+                  title: Text('Application Settings', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                  subtitle: Text('Not available in backup file', style: TextStyle(color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 11)),
+                  trailing: Icon(Icons.block, size: 16, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
                 ),
               if (_importDatabase) ...[
                 const SizedBox(height: 16),
@@ -650,16 +654,16 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
                 const SizedBox(height: 8),
                 RadioListTile<bool>(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Merge with local database', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  title: Text('Merge with local database', style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
                   subtitle: Text('Safely combines data; updates matching IDs, preserves rest', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: true,
                   groupValue: _mergeDatabase,
-                  activeColor: AppColors.secondary,
+                  activeColor: colorScheme.secondary,
                   onChanged: (v) => setState(() => _mergeDatabase = v!),
                 ),
                 RadioListTile<bool>(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Overwrite current database', style: TextStyle(color: Colors.white, fontSize: 14)),
+                  title: Text('Overwrite current database', style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
                   subtitle: Text('Wipes existing files, folders, and history before restore', style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11)),
                   value: false,
                   groupValue: _mergeDatabase,
@@ -707,8 +711,8 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
             style: FilledButton.styleFrom(
               backgroundColor: (!_importDatabase && !_importSettings)
                   ? Colors.grey
-                  : (_importDatabase && !_mergeDatabase ? AppColors.error : AppColors.primary),
-              foregroundColor: Colors.white,
+                  : (_importDatabase && !_mergeDatabase ? AppColors.error : colorScheme.primary),
+              foregroundColor: colorScheme.onPrimary,
             ),
             onPressed: (!_importDatabase && !_importSettings) ? null : _executeImport,
             child: const Text('Import'),
@@ -719,7 +723,7 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
         content = Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppColors.primary),
+            CircularProgressIndicator(color: colorScheme.primary),
             const SizedBox(height: 16),
             Text(
               'Importing backup data...',
@@ -735,9 +739,9 @@ class _BackupImportDialogState extends ConsumerState<BackupImportDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
-          Icon(_stage == ImportStage.configureImport && _importDatabase && !_mergeDatabase ? Icons.warning_amber_rounded : Icons.upload, color: _stage == ImportStage.configureImport && _importDatabase && !_mergeDatabase ? AppColors.error : AppColors.secondary),
+          Icon(_stage == ImportStage.configureImport && _importDatabase && !_mergeDatabase ? Icons.warning_amber_rounded : Icons.upload, color: _stage == ImportStage.configureImport && _importDatabase && !_mergeDatabase ? AppColors.error : colorScheme.secondary),
           const SizedBox(width: 12),
-          const Text('Import Backup', style: TextStyle(color: Colors.white)),
+          Text('Import Backup', style: TextStyle(color: colorScheme.onSurface)),
         ],
       ),
       content: content,
