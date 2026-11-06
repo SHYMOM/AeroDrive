@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:local_notifier/local_notifier.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../core/logger.dart';
 
@@ -19,61 +20,87 @@ class NotificationService {
 
   bool _initialized = false;
 
-  bool get _isSupported => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool get _isDesktop => !kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux);
+  bool get _isMobile => !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  bool get _isSupported => _isDesktop || _isMobile;
 
   Future<void> initialize() async {
     if (!_isSupported) return;
     if (_initialized) return;
 
-    const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    if (_isDesktop) {
+      try {
+        await localNotifier.setup(appName: 'AeroDrive');
+      } catch (e) {
+        AppLogger.warning('NotificationService: localNotifier setup failed: $e');
+      }
+    }
 
-    await _plugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (details) {
-        if (details.actionId != null) {
-          instance._actionStreamController.add(details.actionId!);
-        } else {
-          AppLogger.info('Notification clicked: ${details.payload}');
-        }
-      },
-    );
+    if (_isMobile) {
+      const initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
 
-    // Create channels for Android 8.0+
-    if (Platform.isAndroid) {
-      final flutterLocalNotificationsPluginAndroid =
-          _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await _plugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (details) {
+          if (details.actionId != null) {
+            instance._actionStreamController.add(details.actionId!);
+          } else {
+            AppLogger.info('Notification clicked: ${details.payload}');
+          }
+        },
+      );
 
-      await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
-        'aerodrive_uploads',
-        'Uploads',
-        description: 'Notifications for file uploads to AeroDrive',
-        importance: Importance.low,
-      ));
+      // Create channels for Android 8.0+
+      if (Platform.isAndroid) {
+        final flutterLocalNotificationsPluginAndroid =
+            _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-      await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
-        'aerodrive_downloads',
-        'Downloads',
-        description: 'Notifications for file downloads from AeroDrive',
-        importance: Importance.low,
-      ));
+        await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
+          'aerodrive_uploads',
+          'Uploads',
+          description: 'Notifications for file uploads to AeroDrive',
+          importance: Importance.low,
+        ));
 
-      await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
-        'aerodrive_sync',
-        'Sync Status',
-        description: 'Background sync and data merge status',
-        importance: Importance.low,
-      ));
+        await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
+          'aerodrive_downloads',
+          'Downloads',
+          description: 'Notifications for file downloads from AeroDrive',
+          importance: Importance.low,
+        ));
 
-      await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
-        'aerodrive_backup',
-        'Backups',
-        description: 'Automated and manual backup status',
-        importance: Importance.high,
-      ));
+        await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
+          'aerodrive_sync',
+          'Sync Status',
+          description: 'Background sync and data merge status',
+          importance: Importance.low,
+        ));
+
+        await flutterLocalNotificationsPluginAndroid?.createNotificationChannel(const AndroidNotificationChannel(
+          'aerodrive_backup',
+          'Backups',
+          description: 'Automated and manual backup status',
+          importance: Importance.high,
+        ));
+      }
     }
 
     _initialized = true;
+  }
+
+  void _showDesktopNotification(String title, String body, {String? identifier}) {
+    if (!_isDesktop) return;
+    try {
+      final notification = LocalNotification(
+        identifier: identifier,
+        title: title,
+        body: body,
+      );
+      notification.show();
+    } catch (e) {
+      AppLogger.warning('NotificationService: Desktop notification error: $e');
+    }
   }
 
   Future<void> requestPermissions() async {
@@ -87,7 +114,7 @@ class NotificationService {
   }
 
   Future<void> showUploadProgress(int id, String fileName, int progress, int total) async {
-    if (!_isSupported) return;
+    if (!_isMobile) return;
     final int percent = total > 0 ? ((progress / total) * 100).toInt() : 0;
     final androidDetails = AndroidNotificationDetails(
       'aerodrive_uploads',
@@ -119,45 +146,55 @@ class NotificationService {
 
   Future<void> showUploadComplete(int id, String fileName) async {
     if (!_isSupported) return;
-    try {
-      await _plugin.cancel(id);
-    } catch (_) {}
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_uploads',
-      'Uploads',
-      channelDescription: 'Upload complete',
-      importance: Importance.low,
-      priority: Priority.low,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      id,
-      'Upload Complete',
-      fileName,
-      details,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('Upload Complete', fileName);
+    }
+    if (_isMobile) {
+      try {
+        await _plugin.cancel(id);
+      } catch (_) {}
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_uploads',
+        'Uploads',
+        channelDescription: 'Upload complete',
+        importance: Importance.low,
+        priority: Priority.low,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        id,
+        'Upload Complete',
+        fileName,
+        details,
+      );
+    }
   }
 
   Future<void> showUploadFailed(int id, String fileName, String reason) async {
     if (!_isSupported) return;
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_uploads',
-      'Uploads',
-      channelDescription: 'Upload failures',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      id,
-      'Upload Failed: $fileName',
-      reason,
-      details,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('Upload Failed: $fileName', reason);
+    }
+    if (_isMobile) {
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_uploads',
+        'Uploads',
+        channelDescription: 'Upload failures',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        id,
+        'Upload Failed: $fileName',
+        reason,
+        details,
+      );
+    }
   }
 
   Future<void> showDownloadProgress(int id, String fileName, int progress, int total) async {
-    if (!_isSupported) return;
+    if (!_isMobile) return;
     final int percent = total > 0 ? ((progress / total) * 100).toInt() : 0;
     final androidDetails = AndroidNotificationDetails(
       'aerodrive_downloads',
@@ -182,80 +219,100 @@ class NotificationService {
 
   Future<void> showDownloadComplete(int id, String fileName, String filePath) async {
     if (!_isSupported) return;
-    try {
-      await _plugin.cancel(id);
-    } catch (_) {}
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_downloads',
-      'Downloads',
-      channelDescription: 'Download complete',
-      importance: Importance.low,
-      priority: Priority.low,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      id,
-      'Download Complete',
-      fileName,
-      details,
-      payload: filePath,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('Download Complete', fileName);
+    }
+    if (_isMobile) {
+      try {
+        await _plugin.cancel(id);
+      } catch (_) {}
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_downloads',
+        'Downloads',
+        channelDescription: 'Download complete',
+        importance: Importance.low,
+        priority: Priority.low,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        id,
+        'Download Complete',
+        fileName,
+        details,
+        payload: filePath,
+      );
+    }
   }
 
   Future<void> showDownloadFailed(int id, String fileName, String reason) async {
     if (!_isSupported) return;
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_downloads',
-      'Downloads',
-      channelDescription: 'Download failures',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      id,
-      'Download Failed: $fileName',
-      reason,
-      details,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('Download Failed: $fileName', reason);
+    }
+    if (_isMobile) {
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_downloads',
+        'Downloads',
+        channelDescription: 'Download failures',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        id,
+        'Download Failed: $fileName',
+        reason,
+        details,
+      );
+    }
   }
 
   Future<void> showBackupComplete(String filePath) async {
     if (!_isSupported) return;
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_backup',
-      'Backups',
-      channelDescription: 'Automated and manual backup status',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      9001,
-      'Backup Successful',
-      filePath,
-      details,
-      payload: filePath,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('Backup Successful', filePath);
+    }
+    if (_isMobile) {
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_backup',
+        'Backups',
+        channelDescription: 'Automated and manual backup status',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        9001,
+        'Backup Successful',
+        filePath,
+        details,
+        payload: filePath,
+      );
+    }
   }
 
   Future<void> showSyncStatus(String message) async {
     if (!_isSupported) return;
-    const androidDetails = AndroidNotificationDetails(
-      'aerodrive_sync',
-      'Sync Status',
-      channelDescription: 'Background sync and data merge status',
-      importance: Importance.low,
-      priority: Priority.low,
-      onlyAlertOnce: true,
-    );
-    const details = NotificationDetails(android: androidDetails);
-    await _plugin.show(
-      9002,
-      'AeroDrive Sync',
-      message,
-      details,
-    );
+    if (_isDesktop) {
+      _showDesktopNotification('AeroDrive Sync', message);
+    }
+    if (_isMobile) {
+      const androidDetails = AndroidNotificationDetails(
+        'aerodrive_sync',
+        'Sync Status',
+        channelDescription: 'Background sync and data merge status',
+        importance: Importance.low,
+        priority: Priority.low,
+        onlyAlertOnce: true,
+      );
+      const details = NotificationDetails(android: androidDetails);
+      await _plugin.show(
+        9002,
+        'AeroDrive Sync',
+        message,
+        details,
+      );
+    }
   }
 
   int getSafeNotificationId(String id) {

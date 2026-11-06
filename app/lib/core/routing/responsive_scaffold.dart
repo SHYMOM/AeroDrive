@@ -325,7 +325,7 @@ class SidebarContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      width: 280,
+      width: 250,
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
@@ -334,15 +334,15 @@ class SidebarContent extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          const SizedBox(height: 48),
+          const SizedBox(height: 20),
           // User Profile
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -351,25 +351,25 @@ class SidebarContent extends ConsumerWidget {
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
-                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 12)
+                      BoxShadow(color: AppColors.primary.withValues(alpha: 0.4), blurRadius: 10)
                     ],
                   ),
                   child: Center(
-                    child: Text('A', style: TextStyle(color: AppColors.onPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
+                    child: Text('A', style: TextStyle(color: AppColors.onPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
-                SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Aero User',
-                        style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w700),
+                        style: TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.w700),
                       ),
                       Text(
                         'Zero-Knowledge',
-                        style: TextStyle(color: AppColors.secondary, fontSize: 12, fontWeight: FontWeight.w500),
+                        style: TextStyle(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
@@ -377,30 +377,30 @@ class SidebarContent extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 14),
           
           // Storage Widget moved to top!
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _buildStorageCard(context, ref),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           
           // Navigation Items
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               children: [
                 ...AppDestination.values.asMap().entries.map((entry) {
                   final idx = entry.key;
                   final dest = entry.value;
                   final isSelected = selectedIndex == idx;
                   return Padding(
-                    padding: EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: 2),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                         onTap: () {
                           if (Scaffold.of(context).isDrawerOpen) {
                             Navigator.pop(context);
@@ -409,9 +409,9 @@ class SidebarContent extends ConsumerWidget {
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                             color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
                             border: isSelected ? Border.all(color: AppColors.primary.withValues(alpha: 0.5)) : null,
                           ),
@@ -420,15 +420,15 @@ class SidebarContent extends ConsumerWidget {
                               Icon(
                                 isSelected ? dest.selectedIcon : dest.icon,
                                 color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                                size: 24,
+                                size: 20,
                               ),
-                              SizedBox(width: 16),
+                              const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   dest.label,
                                   style: TextStyle(
                                     color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
-                                    fontSize: 15,
+                                    fontSize: 13.5,
                                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                   ),
                                 ),
@@ -443,15 +443,15 @@ class SidebarContent extends ConsumerWidget {
                 );
                 }),
                 
-                Divider(color: AppColors.outline, height: 24),
+                Divider(color: AppColors.outline, height: 16),
                 
                 // Import Shared Link Option
                 Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         if (Scaffold.of(context).isDrawerOpen) {
                           Navigator.pop(context);
@@ -459,16 +459,16 @@ class SidebarContent extends ConsumerWidget {
                         showDialog(context: context, builder: (context) => const ImportLinkDialog());
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.link, color: AppColors.secondary, size: 24),
-                            SizedBox(width: 16),
+                            Icon(Icons.link, color: AppColors.secondary, size: 20),
+                            const SizedBox(width: 12),
                             Text(
                               'Import Shared Link',
                               style: TextStyle(
                                 color: AppColors.onSurfaceVariant,
-                                fontSize: 15,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -481,11 +481,11 @@ class SidebarContent extends ConsumerWidget {
 
                 // My Shared Links Option
                 Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         if (Scaffold.of(context).isDrawerOpen) {
                           Navigator.pop(context);
@@ -493,16 +493,16 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/settings/shared_links');
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.share_outlined, color: AppColors.primary, size: 24),
-                            SizedBox(width: 16),
+                            Icon(Icons.share_outlined, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 12),
                             Text(
                               'My Shared Links',
                               style: TextStyle(
                                 color: AppColors.onSurfaceVariant,
-                                fontSize: 15,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -515,11 +515,11 @@ class SidebarContent extends ConsumerWidget {
 
                 // Trash Option
                 Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         if (Scaffold.of(context).isDrawerOpen) {
                           Navigator.pop(context);
@@ -527,16 +527,16 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/trash');
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline, color: AppColors.error, size: 24),
-                            SizedBox(width: 16),
+                            Icon(Icons.delete_outline, color: AppColors.error, size: 20),
+                            const SizedBox(width: 12),
                             Text(
                               'Trash',
                               style: TextStyle(
                                 color: AppColors.onSurfaceVariant,
-                                fontSize: 15,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -549,11 +549,11 @@ class SidebarContent extends ConsumerWidget {
 
                 // About Option
                 Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.only(bottom: 2),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         if (Scaffold.of(context).isDrawerOpen) {
                           Navigator.pop(context);
@@ -561,16 +561,16 @@ class SidebarContent extends ConsumerWidget {
                         context.push('/settings/about');
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
                           children: [
-                            Icon(Icons.info_outline, color: AppColors.onSurfaceVariant, size: 24),
-                            SizedBox(width: 16),
+                            Icon(Icons.info_outline, color: AppColors.onSurfaceVariant, size: 20),
+                            const SizedBox(width: 12),
                             Text(
                               'About',
                               style: TextStyle(
                                 color: AppColors.onSurfaceVariant,
-                                fontSize: 15,
+                                fontSize: 13.5,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -586,11 +586,11 @@ class SidebarContent extends ConsumerWidget {
           
           // ── Bottom Credit Signature ───────────────────────────
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
                 gradient: LinearGradient(
                   colors: [Theme.of(context).colorScheme.surfaceContainerHighest, Theme.of(context).colorScheme.surface],
                   begin: Alignment.topLeft,
@@ -602,10 +602,10 @@ class SidebarContent extends ConsumerWidget {
                 children: [
                   Text(
                     'Made With ❤️ In 🇧🇩',
-                    style: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 1),
+                    style: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.6), fontSize: 8.5, letterSpacing: 0.8),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 2),
                   ShaderMask(
                     shaderCallback: (bounds) => LinearGradient(
                       colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.tertiary],
@@ -614,9 +614,9 @@ class SidebarContent extends ConsumerWidget {
                       'SHEIKH SHYMOM ISLAM',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 9.5,
+                        fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 1.5,
+                        letterSpacing: 1.2,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -641,9 +641,9 @@ class SidebarContent extends ConsumerWidget {
     final storageUsedAsync = ref.watch(totalStorageProvider);
     
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         gradient: LinearGradient(
           colors: [Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3), Theme.of(context).colorScheme.surfaceContainerHighest],
           begin: Alignment.topLeft,
@@ -651,7 +651,7 @@ class SidebarContent extends ConsumerWidget {
         ),
         border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
         boxShadow: [
-          BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 16)
+          BoxShadow(color: AppColors.primary.withValues(alpha: 0.2), blurRadius: 10)
         ],
       ),
       child: Column(
@@ -660,21 +660,21 @@ class SidebarContent extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(6),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.primary.withValues(alpha: 0.2),
                 ),
-                child: Icon(Icons.all_inclusive, color: AppColors.primary, size: 16),
+                child: Icon(Icons.all_inclusive, color: AppColors.primary, size: 14),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 8),
               Text(
                 'Storage',
-                style: TextStyle(color: AppColors.onSurface, fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(color: AppColors.onSurface, fontSize: 13, fontWeight: FontWeight.bold),
               ),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 8),
           storageUsedAsync.when(
             data: (bytes) {
               // Just a visual representation since we have unlimited storage

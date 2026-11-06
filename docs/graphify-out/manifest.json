@@ -1,0 +1,92 @@
+{
+  "app.js": {
+    "mtime": 1793794410.5690582,
+    "ast_hash": "069feaed155f51197e9645287dc9cbe0",
+    "semantic_hash": ""
+  },
+  "API.md": {
+    "mtime": 1782470202.6620886,
+    "ast_hash": "d747bd5bcb9643303b8c8afa2b284d8c",
+    "semantic_hash": ""
+  },
+  "ARCHITECTURE.md": {
+    "mtime": 1782470202.663664,
+    "ast_hash": "e3b80391633e668efa3ddea510ad81a3",
+    "semantic_hash": ""
+  },
+  "COMPLIANCE.md": {
+    "mtime": 1782470202.6642337,
+    "ast_hash": "63b297942765ffbfb06f8d48e13bdc19",
+    "semantic_hash": ""
+  },
+  "SECURITY.md": {
+    "mtime": 1782470202.6642337,
+    "ast_hash": "6689d83719ad43a3fce7ab1268c4f0d9",
+    "semantic_hash": ""
+  },
+  "assets/images/README.md": {
+    "mtime": 1793787141.2223282,
+    "ast_hash": "adaff2a2619710d949d6123e78b4cb66",
+    "semantic_hash": ""
+  },
+  "index.html": {
+    "mtime": 1793800766.114087,
+    "ast_hash": "26aba5f7c9ec7c4ece97d502840ed999",
+    "semantic_hash": ""
+  },
+  "assets/images/android-files-view.png": {
+    "mtime": 1793792556.793456,
+    "ast_hash": "4e55e1074f55d5b0b9353311c435ebd6",
+    "semantic_hash": ""
+  },
+  "assets/images/android-gallery.png": {
+    "mtime": 1793792557.6748302,
+    "ast_hash": "1d1cc586cef2bb343061b49cc011e84f",
+    "semantic_hash": ""
+  },
+  "assets/images/android-home.png": {
+    "mtime": 1793792556.6679838,
+    "ast_hash": "d67f4887fbbe0ca055b2b94b7a2bc423",
+    "semantic_hash": ""
+  },
+  "assets/images/desktop-home.png": {
+    "mtime": 1793791120.891444,
+    "ast_hash": "60a8140d7df03a04edbe2000192a48f9",
+    "semantic_hash": ""
+  },
+  "assets/images/drive-preview.svg": {
+    "mtime": 1793786996.8864279,
+    "ast_hash": "08d0e83e4b5e0ee2849a94477e61f7c7",
+    "semantic_hash": ""
+  },
+  "assets/images/file-manager.png": {
+    "mtime": 1793792057.2017245,
+    "ast_hash": "53b1dd224a1be63bd72ef406c2b23126",
+    "semantic_hash": ""
+  },
+  "assets/images/gallery-preview.svg": {
+    "mtime": 1793787065.4404593,
+    "ast_hash": "cdf5e6f3276bc82a42778adf2d48c6b1",
+    "semantic_hash": ""
+  },
+  "assets/images/hero-preview.svg": {
+    "mtime": 1793786972.2326312,
+    "ast_hash": "74dc352ed081b500bc2735cc82c8b55a",
+    "semantic_hash": ""
+  },
+  "assets/images/logo.svg": {
+    "mtime": 1793786928.4725378,
+    "ast_hash": "04bb4e8934f8158f91355921a02d4ea0",
+    "semantic_hash": ""
+  },
+  "assets/images/stream-preview.svg": {
+    "mtime": 1793787090.3745964,
+    "ast_hash": "0e22e29b86c63c8dd87277c4f970868d",
+    "semantic_hash": ""
+  },
+  "assets/images/vault-preview.svg": {
+    "mtime": 1793787126.8006892,
+    "ast_hash": "ecbbe495afa219394f2659a4cfc40c2a",
+    "semantic_hash": ""
+  }
+}

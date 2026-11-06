@@ -884,9 +884,9 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                                 childAspectRatio: 1.65,
                               )
                             : const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 220,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
+                                maxCrossAxisExtent: 170,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
                                 childAspectRatio: 1.65,
                               ),
                         delegate: SliverChildBuilderDelegate(
@@ -924,9 +924,9 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                                 childAspectRatio: 0.82,
                               )
                             : const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 220,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
+                                maxCrossAxisExtent: 160,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 10,
                                 childAspectRatio: 0.82,
                               ),
                         delegate: SliverChildBuilderDelegate(

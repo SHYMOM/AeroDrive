@@ -17,9 +17,9 @@ import 'appearance_settings_screen.dart';
 import 'auto_backup_settings_dialogs.dart';
 import 'backup_dialogs.dart';
 import 'media_settings_dialogs.dart';
-import 'security_settings_dialogs.dart';
 import 'telegram_api_dialog.dart';
 import 'transfer_settings_dialogs.dart';
+import 'webdav_settings_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -74,7 +74,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ]),
                   _buildSettingsGroup('Security & Privacy', Icons.shield_outlined, cs, [
                     _SettingsSwitchItem('Biometric App Lock', 'Require Fingerprint / Face ID to open app', Icons.fingerprint, 'app_lock_biometrics_enabled', false),
-                    _SettingsItem('Recovery Phrase', 'View 24-word BIP39 master backup phrase', Icons.vpn_key_outlined, onTap: () => showDialog(context: context, builder: (_) => const RecoveryPhraseDialog())),
                     _SettingsItem('Storage Cleaner', 'Find and delete duplicates, large videos, and clutter', Icons.cleaning_services_outlined, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CleanerScreen()))),
                   ]),
                   _buildSettingsGroup('Backup & Restore', Icons.settings_backup_restore, cs, [
@@ -82,20 +81,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _SettingsItem('Import Backup', 'Restore from local storage', Icons.upload, onTap: () => showDialog(context: context, builder: (_) => const BackupImportDialog())),
                     _SettingsItem('Google Takeout Importer', 'Import Google Photos with original dates & GPS', Icons.cloud_download_outlined, onTap: () => showDialog(context: context, builder: (_) => const TakeoutImporterDialog())),
                     _SettingsItem('Auto-Backup Schedule', 'Daily / Weekly / Monthly', Icons.schedule, onTap: () => showDialog(context: context, builder: (_) => const BackupScheduleDialog())),
-                    _SettingsItem('Dropbox Backup', 'Connect / Frequency', Icons.cloud_done_outlined, onTap: () => context.push('/settings/backup/dropbox')),
                     _SettingsItem('Telegram Self-Backup', 'Save to Saved Messages', Icons.telegram, onTap: () => showDialog(context: context, builder: (_) => const TelegramSelfBackupDialog())),
                   ]),
                   _buildSettingsGroup('Upload & Download', Icons.swap_vert, cs, [
                     _buildDynamicItem('Parallel Threads', 'concurrent transfers', Icons.layers_outlined, 'parallel_threads', '3', () => showDialog(context: context, builder: (_) => const ParallelThreadsDialog())),
-                    _buildDynamicItem('Bandwidth Limit', 'MB/s', Icons.speed, 'bandwidth_limit', 'Uncapped', () => showDialog(context: context, builder: (_) => const BandwidthLimitDialog())),
-                    _buildDynamicItem('Auto-Retry Count', 'attempts before failing', Icons.replay, 'auto_retry_count', '3', () => showDialog(context: context, builder: (_) => const AutoRetryCountDialog())),
-                    _buildDynamicItem('Default Upload Quality', 'quality', Icons.image_outlined, 'upload_quality', 'Original', () => showDialog(context: context, builder: (_) => const UploadQualityDialog())),
                   ]),
                   _buildSettingsGroup('Media & Previews', Icons.perm_media_outlined, cs, [
                     _buildDynamicItem('Thumbnail Cache Size', 'max storage limit', Icons.sd_storage_outlined, 'thumbnail_cache_size', '1GB', () => showDialog(context: context, builder: (_) => const ThumbnailCacheSizeDialog())),
                     _SettingsItem('Clear Thumbnail Cache', 'Free up local space', Icons.cleaning_services_outlined, onTap: () => showDialog(context: context, builder: (_) => const ClearThumbnailCacheDialog())),
-                    _buildDynamicItem('Video Player Default Quality', 'resolution', Icons.high_quality, 'video_player_quality', '1080p', () => showDialog(context: context, builder: (_) => const VideoPlayerQualityDialog())),
-                    _SettingsSwitchItem('Pre-fetch on Folder Open', 'Load thumbnails immediately', Icons.bolt, 'prefetch_folder_open', false),
                   ]),
                   _buildSettingsGroup('Advanced Auto-Backup', Icons.photo_camera_back, cs, [
                     _SettingsSwitchItem('Enable Auto-Backup', 'Master switch for background uploads', Icons.backup_outlined, 'master_autobackup_enabled', false),
@@ -113,7 +106,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     _SettingsItem('Shared Links', 'Manage and revoke your active share links', Icons.link, onTap: () => context.push('/settings/shared_links')),
                   ]),
                   _buildSettingsGroup('Network', Icons.network_check, cs, [
-                    _SettingsSwitchItem('Proxy Settings', 'SOCKS5 / MTProto', Icons.router_outlined, 'proxy_enabled', false),
+                    _SettingsItem(
+                      'WebDAV Network Drive',
+                      'Mount AeroDrive as a local drive (Z:\\)',
+                      Icons.folder_shared_outlined,
+                      onTap: () => showDialog(
+                        context: context,
+                        builder: (_) => const WebDavSettingsDialog(),
+                      ),
+                    ),
                   ]),
                   _buildSettingsGroup('Appearance', Icons.palette, cs, [
                     _SettingsItem('Theme & Colors', 'Dark / Light, Accent, Icons', Icons.color_lens_outlined, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()))),
@@ -128,9 +129,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ]),
                   _buildSettingsGroup('About', Icons.info_outline, cs, [
                     _SettingsItem('About AeroDrive', 'Version, Developer, Links', Icons.new_releases_outlined, onTap: () => context.push('/settings/about')),
-                  ]),
-                  _buildSettingsGroup('AI Intelligence', Icons.psychology_outlined, cs, [
-                    _SettingsSwitchItem('Power User Mode', 'Run AI processing on battery (drains battery faster)', Icons.battery_alert, 'ai_power_user', false),
                   ]),
                   const SizedBox(height: 24),
                   _buildLogoutButton(cs),

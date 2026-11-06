@@ -280,7 +280,7 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
                 tooltip: 'Auto-Group Similar Faces',
                 onPressed: () async {
                   final db = ref.read(databaseProvider);
-                  final merged = await FaceClusteringEngine.clusterExistingFaces(db);
+                  final merged = await FaceClusteringEngine.clusterExistingFaces(db, forceRecompute: true);
                   ref.invalidate(faceClustersProvider);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -336,8 +336,8 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
 
         return GridView.builder(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 160,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
             childAspectRatio: 0.85,
@@ -451,10 +451,12 @@ class _FacesScreenState extends ConsumerState<FacesScreen> {
 
   Widget _buildClusterPhotosGrid() {
     final siblingPhotos = _selectedCluster!.photos;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final cols = (screenWidth / 180).floor().clamp(3, 8);
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),

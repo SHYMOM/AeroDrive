@@ -218,7 +218,13 @@ class SmartAnalyzer {
           labels = mlLabels.map((l) => l.label).toList();
           labeler.close();
 
-          final faceDetector = FaceDetector(options: FaceDetectorOptions());
+          final faceDetector = FaceDetector(
+            options: FaceDetectorOptions(
+              enableLandmarks: true,
+              performanceMode: FaceDetectorMode.accurate,
+              minFaceSize: 0.03,
+            ),
+          );
           final facesList = await faceDetector.processImage(inputImage);
           faceRects = facesList.map((f) => f.boundingBox).toList();
           faceDetector.close();
@@ -367,7 +373,13 @@ class SmartAnalyzer {
           tags = mlLabels.map((l) => l.label).toList();
           labeler.close();
 
-          final faceDetector = FaceDetector(options: FaceDetectorOptions());
+          final faceDetector = FaceDetector(
+            options: FaceDetectorOptions(
+              enableLandmarks: true,
+              performanceMode: FaceDetectorMode.accurate,
+              minFaceSize: 0.03,
+            ),
+          );
           final facesList = await faceDetector.processImage(inputImage);
           faceRects = facesList.map((f) => f.boundingBox).toList();
           faceDetector.close();

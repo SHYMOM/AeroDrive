@@ -213,10 +213,9 @@ class DownloadQueueService {
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
           .write(const TransferQueueCompanion(status: drift.Value('PROCESSING')));
 
-    // Extract actual fileId and custom path if present
+    // Extract actual fileId
     final parts = item.fileId!.split('|');
     final actualFileId = parts[0];
-    final String? customOutputPath = parts.length > 1 ? parts[1] : null;
 
     // 3. Fetch File and Chunk metadata
     final dbFile = await (_db.select(_db.files)..where((f) => f.id.equals(actualFileId))).getSingleOrNull();
@@ -239,7 +238,7 @@ class DownloadQueueService {
 
     // Count only chunks with confirmed positive messageId and valid channelId
     final validChunks = dbChunks.where((c) => c.messageId != null && c.messageId! > 0 && c.channelId != null).toList();
-    final totalChunks = dbFile.totalChunks ?? dbChunks.length;
+    final totalChunks = dbFile.totalChunks;
     final validChunkIndices = validChunks.map((c) => c.chunkIndex).whereType<int>().toSet();
     final allIndicesPresent = totalChunks > 0 &&
         List.generate(totalChunks, (i) => i).every((idx) => validChunkIndices.contains(idx));
@@ -407,6 +406,11 @@ class DownloadQueueService {
                 _fileTotalBytes.remove(actualFileId);
               }
             } else {
+              // Check if the item was already finalized and completed by the event listener
+              final currentItem = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(item.id))).getSingleOrNull();
+              if (currentItem?.status == 'COMPLETED') {
+                return;
+              }
               AppLogger.error('Download chunk ${dbChunk.chunkIndex} failed or stalled without completing.');
               await _markQueueFailed(item.id, 'Chunk ${dbChunk.chunkIndex} download timed out');
             }

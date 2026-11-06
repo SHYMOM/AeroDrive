@@ -255,8 +255,10 @@ class UploadQueueService {
             final item = await (_db.select(_db.transferQueue)..where((q) => q.id.equals(queueId))).getSingleOrNull();
             if (item != null) {
               final originalFileId = item.fileId;
-              final fileName = originalFileId?.split('|').firstOrNull
-                  ?.split(RegExp(r'[\\/]')).last ?? 'Unknown';
+              final rawName = (originalFileId != null && originalFileId.split('|').length > 3 && originalFileId.split('|')[3].isNotEmpty)
+                  ? originalFileId.split('|')[3]
+                  : (originalFileId?.split('|').firstOrNull?.split(RegExp(r'[\\/]')).last ?? 'Unknown');
+              final fileName = rawName.replaceFirst(RegExp(r'^[0-9a-fA-F\-]{36}_'), '');
 
               // Try to get totalChunks from the file record (inserted during processQueueItem)
               final fileRecord = await (_db.select(_db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
@@ -774,7 +776,10 @@ class UploadQueueService {
           status: const drift.Value('ENCRYPTING'),
           bytesTransferred: const drift.Value(0),
         ));
-    final fileName = sourceFile.path.contains('/') ? sourceFile.path.split('/').last : sourceFile.path.split('\\').last;
+    final rawFileName = (parts.length > 3 && parts[3].isNotEmpty)
+        ? parts[3]
+        : (sourceFile.path.contains('/') ? sourceFile.path.split('/').last : sourceFile.path.split('\\').last);
+    final fileName = rawFileName.replaceFirst(RegExp(r'^[0-9a-fA-F\-]{36}_'), '');
     final mimeType = _getMimeType(fileName);
     final isStreamable = mimeType.startsWith('video/') || mimeType.startsWith('audio/');
 
@@ -828,7 +833,8 @@ class UploadQueueService {
     final chunkSize = UploadOrchestrator.getOptimalChunkSize(fileLength);
     final totalChunks = (fileLength <= chunkSize) ? 1 : ((fileLength + chunkSize - 1) ~/ chunkSize);
 
-    final fileId = _uuid.v4();
+    final preassignedFileId = (parts.length > 2 && parts[2].isNotEmpty) ? parts[2] : null;
+    final fileId = preassignedFileId ?? _uuid.v4();
 
     final tempBaseDir = await getTemporaryDirectory();
     final uploadDir = Directory('${tempBaseDir.path}${Platform.pathSeparator}aerodrive_upload_$fileId');
@@ -1533,8 +1539,12 @@ class UploadQueueService {
 
       final originalFileId = item.fileId;
       if (originalFileId == null) return;
-      final originalPath = originalFileId.split('|')[0];
-      final fileName = originalPath.contains('/') ? originalPath.split('/').last : originalPath.split('\\').last;
+      final parts = originalFileId.split('|');
+      final originalPath = parts[0];
+      final rawFileName = (parts.length > 3 && parts[3].isNotEmpty)
+          ? parts[3]
+          : (originalPath.contains('/') ? originalPath.split('/').last : originalPath.split('\\').last);
+      final fileName = rawFileName.replaceFirst(RegExp(r'^[0-9a-fA-F\-]{36}_'), '');
       final mimeType = _getMimeType(fileName);
       final uploadDate = item.createdAt ?? DateTime.now();
 

@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../data/db/database.dart';
+import '../../domain/ai/face_clustering_engine.dart';
 import '../gallery/thumbnail_service.dart';
 import '../tags/tag_service.dart';
 
@@ -96,10 +97,13 @@ class MLService {
       }
       AppLogger.info('Successfully labeled ${file.name} with ${labels.length} tags.');
 
-      // 2. Face Detection
+      // 2. Face Detection (Accurate mode, detects multiple faces & small faces in group photos)
       final faceDetector = FaceDetector(
         options: FaceDetectorOptions(
-          
+          enableLandmarks: true,
+          enableClassification: true,
+          performanceMode: FaceDetectorMode.accurate,
+          minFaceSize: 0.03, // Detect small faces in multi-person photos
         ),
       );
       
@@ -111,13 +115,16 @@ class MLService {
         
         final cacheDir = await getApplicationSupportDirectory();
         final facesDir = Directory('${cacheDir.path}/faces');
+        if (!await facesDir.exists()) {
+          await facesDir.create(recursive: true);
+        }
         final db = _ref.read(databaseProvider);
         const uuid = Uuid();
 
         for (var i = 0; i < faces.length; i++) {
           final face = faces[i];
-          final clusterId = uuid.v4();
-          final cropPath = '${facesDir.path}/${clusterId}_${file.id}.jpg';
+          final tempCropId = uuid.v4();
+          final cropPath = '${facesDir.path}/${tempCropId}_${file.id}.jpg';
 
           // Crop in background
           await compute(_cropFaceIsolate, CropTaskArgs(
@@ -129,21 +136,44 @@ class MLService {
             height: face.boundingBox.height.toInt(),
           ));
 
-          // Save to DB
-          await db.into(db.faceClusters).insert(
-            FaceClustersCompanion.insert(
-              id: clusterId,
-              name: const drift.Value('Detected Face'),
-            ),
-            mode: drift.InsertMode.insertOrIgnore,
-          );
+          // Compute embedding and find/cluster with existing people
+          String clusterId;
+          final cropFile = File(cropPath);
+          if (await cropFile.exists()) {
+            final cropBytes = await cropFile.readAsBytes();
+            final decodedCrop = img.decodeImage(cropBytes);
+            if (decodedCrop != null) {
+              final embedding = FaceClusteringEngine.extractFaceEmbedding(decodedCrop, face);
+              clusterId = await FaceClusteringEngine.findOrCreateCluster(
+                db: db,
+                newEmbedding: embedding,
+                mlKitFace: face,
+              );
+              // Rename crop file so it matches the clustered person id
+              final finalPath = '${facesDir.path}/${clusterId}_${file.id}.jpg';
+              if (finalPath != cropPath) {
+                try {
+                  await cropFile.rename(finalPath);
+                } catch (_) {}
+              }
+            } else {
+              clusterId = tempCropId;
+            }
+          } else {
+            clusterId = tempCropId;
+          }
 
+          // Link photo to person cluster
           await db.into(db.photoFaces).insert(
             PhotoFacesCompanion.insert(
-              id: const Uuid().v4(),
+              id: uuid.v4(),
               fileId: file.id,
               faceClusterId: clusterId,
-              confidence: const drift.Value(0.9), // We just use 0.9 as a default for MLKit detected faces
+              confidence: const drift.Value(0.9),
+              boxLeft: drift.Value(face.boundingBox.left),
+              boxTop: drift.Value(face.boundingBox.top),
+              boxWidth: drift.Value(face.boundingBox.width),
+              boxHeight: drift.Value(face.boundingBox.height),
             ),
             mode: drift.InsertMode.insertOrIgnore,
           );

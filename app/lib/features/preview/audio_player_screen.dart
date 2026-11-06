@@ -14,6 +14,8 @@ import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
+import '../../domain/download_orchestrator.dart';
+import '../../domain/offline/offline_pin_service.dart';
 import '../../domain/streaming/streaming_server.dart';
 import '../gallery/thumbnail_service.dart';
 import '../sharing/share_dialog.dart';
@@ -60,6 +62,7 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
 
   late AnimationController _rotationController;
   final Random _random = Random();
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -123,19 +126,6 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
     });
 
     try {
-      final masterKey = ref.read(masterKeyProvider);
-      if (masterKey == null) {
-        throw Exception('Vault is locked. Unlock to play audio.');
-      }
-
-      final streamingServer = ref.read(streamingServerProvider);
-      if (streamingServer.port == 0) {
-        await streamingServer.start();
-      }
-
-      final url = 'http://127.0.0.1:${streamingServer.port}/stream?id=${currentFile.id}';
-      AppLogger.info('AudioPlayer: Opening stream $url for file ${currentFile.name}');
-
       if (_player == null) {
         _player = Player();
         _setupPlayerListeners();
@@ -143,7 +133,55 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
         await _player!.stop();
       }
 
-      await _player!.open(Media(url), play: true);
+      // 1. Check if file is available locally (pinned offline or already in download folder)
+      String? localSource;
+      try {
+        final offlineFile = await ref.read(offlinePinServiceProvider).getOfflineFile(currentFile.id);
+        if (offlineFile != null && await offlineFile.exists()) {
+          localSource = offlineFile.path;
+          AppLogger.info('AudioPlayer: Playing from offline pinned cache: $localSource');
+        } else {
+          final targetDir = await DownloadOrchestrator.ensureDownloadDirectory(currentFile.mimeType);
+          final candidate = File('${targetDir.path}${Platform.pathSeparator}${currentFile.name}');
+          if (await candidate.exists()) {
+            localSource = candidate.path;
+            AppLogger.info('AudioPlayer: Playing from local downloads: $localSource');
+          }
+        }
+      } catch (e) {
+        AppLogger.warning('AudioPlayer: Error checking local file cache: $e');
+      }
+
+      if (!mounted || _isDisposed) {
+        _player?.stop();
+        return;
+      }
+
+      if (localSource != null) {
+        await _player!.open(Media(localSource), play: !_isDisposed);
+      } else {
+        // 2. Real-time streaming from encrypted Telegram chunks via local HTTP server
+        final masterKey = ref.read(masterKeyProvider);
+        if (masterKey == null) {
+          throw Exception('Vault is locked. Unlock to play audio.');
+        }
+
+        final streamingServer = ref.read(streamingServerProvider);
+        if (streamingServer.port == 0) {
+          await streamingServer.start();
+        }
+
+        final url = 'http://127.0.0.1:${streamingServer.port}/stream?id=${currentFile.id}';
+        AppLogger.info('AudioPlayer: Opening real-time stream $url for file ${currentFile.name}');
+
+        await _player!.open(Media(url), play: !_isDisposed);
+      }
+
+      if (!mounted || _isDisposed) {
+        _player?.stop();
+        return;
+      }
+
       await _player!.setRate(_playbackRate);
       await _player!.setVolume(_isMuted ? 0 : _volume);
 
@@ -493,8 +531,20 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
   }
 
   @override
+  void deactivate() {
+    _isDisposed = true;
+    _player?.stop();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
+    try {
+      ref.read(streamingServerProvider).cancelStreamsForFile(currentFile.id);
+    } catch (_) {}
     _rotationController.dispose();
+    _player?.stop();
     _player?.dispose();
     super.dispose();
   }

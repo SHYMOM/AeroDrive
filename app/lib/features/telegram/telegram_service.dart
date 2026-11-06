@@ -955,7 +955,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
       return await sendRequest(modernPayload, timeout: const Duration(hours: 6));
     } catch (e) {
       // If modern inputDocument wrapper is rejected by an older TDLib build, fallback to direct inputFileLocal
-      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+      final isInputFileErr = (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) ||
+          e.toString().contains('InputFile is not specified');
+      if (isInputFileErr) {
         AppLogger.warning('Modern inputDocument payload rejected ($e), retrying with legacy schema');
         final fallbackPayload = _buildDocumentPayload(
           chatId: chatId,
@@ -985,7 +987,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     try {
       return await sendRequest(modernPayload);
     } catch (e) {
-      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+      final isInputFileErr = (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) ||
+          e.toString().contains('InputFile is not specified');
+      if (isInputFileErr) {
         AppLogger.warning('Modern inputDocument payload rejected ($e), retrying with legacy schema');
         final fallbackPayload = _buildDocumentPayload(
           chatId: chatId,
@@ -1012,7 +1016,9 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     try {
       return await sendRequest(modernPayload);
     } catch (e) {
-      if (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) {
+      final isInputFileErr = (e is Map && (e['code'] == 400 || e['message']?.toString().contains('InputFile is not specified') == true)) ||
+          e.toString().contains('InputFile is not specified');
+      if (isInputFileErr) {
         AppLogger.warning('Modern inputPhoto payload rejected ($e), retrying with legacy schema');
         final fallbackPayload = _buildPhotoPayload(
           chatId: chatId,

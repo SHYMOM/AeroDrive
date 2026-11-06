@@ -35,6 +35,7 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
   // M3: Scrubber seek throttling
   bool _isScrubbing = false;
   Duration _scrubPosition = Duration.zero;
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -46,9 +47,20 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
   }
 
   @override
+  void deactivate() {
+    _isDisposed = true;
+    player?.stop();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
+    _isDisposed = true;
     _hideControlsTimer?.cancel();
-    ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    try {
+      ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    } catch (_) {}
+    player?.stop();
     player?.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([
@@ -133,10 +145,17 @@ class _FullscreenVideoScreenState extends ConsumerState<FullscreenVideoScreen> {
         }
       });
 
+      if (!mounted || _isDisposed) {
+        player?.stop();
+        return;
+      }
+
       await player!.open(Media(url));
 
-      if (mounted) {
+      if (mounted && !_isDisposed) {
         setState(() => _isLoading = false);
+      } else {
+        player?.stop();
       }
     } catch (e) {
       AppLogger.error('FullscreenVideoScreen: Failed to init stream', e);

@@ -635,7 +635,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       }
 
       final keys = grouped.keys.toList();
-      final cols = _timelineView == PhotosTimelineView.all ? ref.watch(mediaColumnCountProvider) : 3;
+      final screenWidth = MediaQuery.sizeOf(context).width;
+      final defaultCols = (screenWidth / 180).floor().clamp(3, 8);
+      final cols = _timelineView == PhotosTimelineView.all ? ref.watch(mediaColumnCountProvider) : defaultCols;
 
       return ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -694,11 +696,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       return GridView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 200,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          childAspectRatio: 0.8,
+          childAspectRatio: 0.85,
         ),
         itemCount: keys.length,
         itemBuilder: (context, idx) {
@@ -927,10 +929,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 220,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
+                      childAspectRatio: 1.15,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -954,11 +957,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                        childAspectRatio: 0.75, // Adjust aspect ratio to fit subtitles safely
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 160,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.78, // Adjust aspect ratio to fit subtitles safely
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {

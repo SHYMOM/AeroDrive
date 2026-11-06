@@ -48,6 +48,7 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
   bool _isScrubbing = false;
   Duration _scrubPosition = Duration.zero;
   bool _isInitializingStream = false;
+  bool _isDisposed = false;
 
   String _folderName = 'Top Level';
   int _folderItemCount = 0;
@@ -94,8 +95,19 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
   }
 
   @override
+  void deactivate() {
+    _isDisposed = true;
+    player?.stop();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
-    ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    _isDisposed = true;
+    try {
+      ref.read(streamingServerProvider).cancelStreamsForFile(widget.file.id);
+    } catch (_) {}
+    player?.stop();
     player?.dispose();
     super.dispose();
   }
@@ -178,14 +190,26 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
         }
       });
 
+      if (!mounted || _isDisposed) {
+        newPlayer.stop();
+        newPlayer.dispose();
+        return;
+      }
+
       try {
-        await newPlayer.open(Media(url), play: widget.isActive);
+        await newPlayer.open(Media(url), play: widget.isActive && !_isDisposed);
+        if (!mounted || _isDisposed) {
+          newPlayer.stop();
+          newPlayer.dispose();
+          return;
+        }
         await newPlayer.setPlaylistMode(PlaylistMode.none); // Handle looping manually
 
-        if (mounted) {
+        if (mounted && !_isDisposed) {
           setState(() => _isLoading = false);
         }
       } catch (e) {
+        newPlayer.stop();
         newPlayer.dispose();
         player = null;
         controller = null;

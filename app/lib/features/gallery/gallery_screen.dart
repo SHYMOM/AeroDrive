@@ -30,14 +30,16 @@ class GalleryScreenContent extends ConsumerWidget {
           if (mediaFiles.isEmpty) {
             return const Center(child: Text('No photos or videos yet.'));
           }
+          final screenWidth = MediaQuery.sizeOf(context).width;
+          final cols = (screenWidth / 180).floor().clamp(3, 8);
           return RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(mediaFilesProvider);
             },
             child: GridView.builder(
               padding: const EdgeInsets.all(4),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: cols,
                 crossAxisSpacing: 4,
                 mainAxisSpacing: 4,
               ),

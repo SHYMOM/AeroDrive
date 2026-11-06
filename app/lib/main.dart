@@ -16,7 +16,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:workmanager/workmanager.dart';
+import 'core/utils/tray_service.dart';
 
 import 'core/logger.dart';
 import 'core/providers/repository_providers.dart';
@@ -36,6 +38,8 @@ import 'domain/folder_scanner.dart';
 import 'domain/streaming/streaming_server.dart';
 import 'domain/upload_crash_debugger.dart' as crash;
 import 'domain/sync/realtime_sync_service.dart';
+import 'domain/webdav/webdav_config.dart';
+import 'domain/webdav/webdav_server.dart';
 import 'features/debug/debug_error_screen.dart';
 import 'features/drive/providers/drive_providers.dart';
 import 'features/sharing/import_link_dialog.dart';
@@ -509,7 +513,38 @@ void main() async {
   }
 
   // --- Launch App ---
-  runApp(const ProviderScope(child: AeroDriveApp()));
+  // --- Window Manager & Tray on Windows ---
+  if (!kIsWeb && Platform.isWindows) {
+    try {
+      await windowManager.ensureInitialized();
+      const windowOptions = WindowOptions(
+        size: Size(1280, 720),
+        center: true,
+        backgroundColor: Colors.transparent,
+        skipTaskbar: false,
+        titleBarStyle: TitleBarStyle.normal,
+      );
+      await windowManager.waitUntilReadyToShow(windowOptions, () async {
+        final isBackgroundLaunch = Platform.executableArguments.contains('--background');
+        if (isBackgroundLaunch) {
+          await windowManager.hide();
+        } else {
+          await windowManager.show();
+          await windowManager.focus();
+        }
+      });
+      await windowManager.setPreventClose(true);
+      await TrayService.instance.initialize();
+    } catch (e) {
+      AppLogger.warning('Window/Tray initialization skipped or failed: $e');
+    }
+  }
+
+  // Permanent root container ensures services like WebDAV never get disposed
+  final rootContainer = ProviderContainer();
+  WebDavServer.setRootContainer(rootContainer);
+
+  runApp(UncontrolledProviderScope(container: rootContainer, child: const AeroDriveApp()));
 }
 
 /// Root application widget.
@@ -520,13 +555,16 @@ class AeroDriveApp extends ConsumerStatefulWidget {
   ConsumerState<AeroDriveApp> createState() => _AeroDriveAppState();
 }
 
-class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
+class _AeroDriveAppState extends ConsumerState<AeroDriveApp> with WindowListener {
   late final AppLinks _appLinks;
   StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
+    if (!kIsWeb && Platform.isWindows) {
+      windowManager.addListener(this);
+    }
     _initDeepLinks();
     _checkScheduledBackup();
 
@@ -567,6 +605,21 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
       }
     });
 
+
+    // Auto-start WebDAV server if enabled by the user
+    Future.microtask(() async {
+      try {
+        final configService = WebDavConfigService();
+        final shouldAutoStart = await configService.isServerAutoStartEnabled();
+        if (shouldAutoStart) {
+          final creds = await configService.getCredentials();
+          await WebDavServer.start(widgetRef: ref, creds: creds);
+          AppLogger.info('WebDAV Server automatically started on launch on port ${creds.port}');
+        }
+      } catch (e, s) {
+        AppLogger.error('Failed to auto-start WebDAV server on launch', e, s);
+      }
+    });
 
     // If launched from BOOT_COMPLETED, trigger immediate sync
     _handleBootLaunch();
@@ -666,9 +719,23 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> {
 
   @override
   void dispose() {
+    if (!kIsWeb && Platform.isWindows) {
+      windowManager.removeListener(this);
+    }
     _linkSubscription?.cancel();
     IsolateNameServer.removePortNameMapping('aerodrive_main_isolate');
     super.dispose();
+  }
+
+  @override
+  void onWindowClose() async {
+    if (!kIsWeb && Platform.isWindows) {
+      final isPreventClose = await windowManager.isPreventClose();
+      if (isPreventClose) {
+        await windowManager.hide();
+        await TrayService.instance.updateContextMenu();
+      }
+    }
   }
 
   @override

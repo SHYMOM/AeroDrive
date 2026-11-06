@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:collection/collection.dart';
 import 'package:drift/drift.dart' as drift;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
@@ -13,77 +14,93 @@ import '../../data/db/database.dart';
 
 class FaceClusteringEngine {
   static const int embeddingDimension = 128;
-  static const double similarityThreshold = 0.72;
+  static const double similarityThreshold = 0.64;
   static const Uuid _uuid = Uuid();
 
-  /// Extracts a 128-dimensional normalized feature embedding vector from a cropped face image.
-  /// Combines spatial 8x8 block luminance/contrast with facial structural band frequencies.
+  /// Extracts an illumination-invariant, 128-dimensional normalized feature embedding vector
+  /// from a cropped face image combining Histogram of Oriented Gradients (HOG),
+  /// facial chrominance (Cb/Cr), and vertical structural profile bands.
   static Float32List extractFaceEmbedding(img.Image faceImage, [Face? mlKitFace]) {
-    // 1. Standardize face crop to 64x64 grayscale
-    final img.Image resized = img.copyResize(faceImage, width: 64, height: 64);
-    final img.Image gray = img.grayscale(resized);
+    // 1. Standardize face crop to 64x64
+    final img.Image resizedColor = img.copyResize(faceImage, width: 64, height: 64);
+    final img.Image gray = img.grayscale(resizedColor);
 
     final rawVector = Float32List(embeddingDimension);
     int vecIdx = 0;
 
-    // 2. Spatial 8x8 Block Grid (64 cells) - Average luminance and local contrast
-    for (int by = 0; by < 8; by++) {
-      for (int bx = 0; bx < 8; bx++) {
-        double sum = 0.0;
-        double sumSq = 0.0;
+    // 2. Spatial Histogram of Oriented Gradients (HOG) - 64 features (4x4 blocks x 4 gradient directions)
+    // Invariant to lighting changes, captures contours of eyes, nose, lips, jawline
+    const int numBlocksX = 4;
+    const int numBlocksY = 4;
+    const int blockSize = 16;
+
+    for (int by = 0; by < numBlocksY; by++) {
+      for (int bx = 0; bx < numBlocksX; bx++) {
+        final startX = bx * blockSize;
+        final startY = by * blockSize;
+        final bins = [0.0, 0.0, 0.0, 0.0];
+
+        for (int y = startY + 1; y < startY + blockSize - 1; y++) {
+          for (int x = startX + 1; x < startX + blockSize - 1; x++) {
+            final double dx = (gray.getPixel(x + 1, y).r - gray.getPixel(x - 1, y).r).toDouble();
+            final double dy = (gray.getPixel(x, y + 1).r - gray.getPixel(x, y - 1).r).toDouble();
+            final double mag = math.sqrt(dx * dx + dy * dy);
+            if (mag < 1.0) continue;
+
+            // Angle in degrees [0, 180)
+            double angle = (math.atan2(dy, dx) * 180.0 / math.pi);
+            if (angle < 0) angle += 180.0;
+
+            // 4 orientation bins: [0°-45°: horizontal, 45°-90°: diagonal1, 90°-135°: vertical, 135°-180°: diagonal2]
+            final int bin = (angle / 45.0).floor().clamp(0, 3);
+            bins[bin] += mag;
+          }
+        }
+
+        final double blockTotal = bins.reduce((a, b) => a + b);
+        for (int b = 0; b < 4; b++) {
+          if (vecIdx < 64) {
+            rawVector[vecIdx++] = blockTotal > 0 ? (bins[b] / blockTotal) : 0.25;
+          }
+        }
+      }
+    }
+
+    // 3. Facial Chrominance Distribution (Cb / Cr in YCbCr) - 32 features (4x4 blocks x 2 channels)
+    // Chrominance (skin pigment/hue) is invariant to lighting brightness and shadow
+    for (int by = 0; by < numBlocksY; by++) {
+      for (int bx = 0; bx < numBlocksX; bx++) {
+        final startX = bx * blockSize;
+        final startY = by * blockSize;
+        double sumCb = 0.0;
+        double sumCr = 0.0;
         int count = 0;
 
-        for (int y = by * 8; y < (by + 1) * 8; y++) {
-          for (int x = bx * 8; x < (bx + 1) * 8; x++) {
-            final pixel = gray.getPixel(x, y);
-            final lum = pixel.r.toDouble() / 255.0; // grayscale r=g=b
-            sum += lum;
-            sumSq += lum * lum;
+        for (int y = startY; y < startY + blockSize; y++) {
+          for (int x = startX; x < startX + blockSize; x++) {
+            final pixel = resizedColor.getPixel(x, y);
+            final double r = pixel.r.toDouble();
+            final double g = pixel.g.toDouble();
+            final double b = pixel.b.toDouble();
+
+            final double cb = (-0.168736 * r - 0.331264 * g + 0.5 * b + 128.0) / 255.0;
+            final double cr = (0.5 * r - 0.418688 * g - 0.081312 * b + 128.0) / 255.0;
+            sumCb += cb;
+            sumCr += cr;
             count++;
           }
         }
 
-        final mean = sum / count;
-        final variance = math.max(0.0, (sumSq / count) - (mean * mean));
-        final stdDev = math.sqrt(variance);
-
-        // Even indices get mean luminance, odd indices get contrast/edge density
-        if (vecIdx < 64) {
-          rawVector[vecIdx++] = mean;
+        if (vecIdx < 96) {
+          rawVector[vecIdx++] = count > 0 ? (sumCb / count) : 0.5;
+        }
+        if (vecIdx < 96) {
+          rawVector[vecIdx++] = count > 0 ? (sumCr / count) : 0.5;
         }
       }
     }
 
-    // 3. Structural horizontal and vertical band profiles (32 values)
-    // Eyes band (rows 16-28), Nose band (rows 28-42), Mouth band (rows 42-56)
-    for (int band = 0; band < 16; band++) {
-      final yStart = band * 4;
-      double bandMean = 0.0;
-      for (int y = yStart; y < yStart + 4; y++) {
-        for (int x = 0; x < 64; x++) {
-          bandMean += gray.getPixel(x, y).r.toDouble() / 255.0;
-        }
-      }
-      if (vecIdx < 96) {
-        rawVector[vecIdx++] = bandMean / 256.0;
-      }
-    }
-
-    for (int col = 0; col < 16; col++) {
-      final xStart = col * 4;
-      double colMean = 0.0;
-      for (int y = 0; y < 64; y++) {
-        for (int x = xStart; x < xStart + 4; x++) {
-          colMean += gray.getPixel(x, y).r.toDouble() / 255.0;
-        }
-      }
-      if (vecIdx < 96) {
-        rawVector[vecIdx++] = colMean / 256.0;
-      }
-    }
-
-    // 4. Facial Landmark Geometry (32 values) if ML Kit Face is present,
-    // otherwise fallback to center-to-edge radial gradient signatures
+    // 4. Facial Geometry & Landmark Proportions - 32 features
     if (mlKitFace != null && mlKitFace.landmarks.isNotEmpty) {
       final box = mlKitFace.boundingBox;
       final bw = math.max(1.0, box.width);
@@ -97,48 +114,66 @@ class FaceClusteringEngine {
       final rightEar = mlKitFace.landmarks[FaceLandmarkType.rightEar]?.position;
 
       if (leftEye != null && rightEye != null) {
-        final eyeDist = (rightEye.x - leftEye.x).abs() / bw;
-        final eyeSlope = (rightEye.y - leftEye.y) / bw;
-        rawVector[vecIdx++] = eyeDist;
-        rawVector[vecIdx++] = eyeSlope;
+        rawVector[vecIdx++] = (rightEye.x - leftEye.x).abs() / bw;
+        rawVector[vecIdx++] = (rightEye.y - leftEye.y) / bw;
       }
-
       if (leftEye != null && nose != null) {
         rawVector[vecIdx++] = ((nose.x - leftEye.x).abs()) / bw;
         rawVector[vecIdx++] = ((nose.y - leftEye.y).abs()) / bh;
       }
-
       if (rightEye != null && nose != null) {
         rawVector[vecIdx++] = ((rightEye.x - nose.x).abs()) / bw;
         rawVector[vecIdx++] = ((rightEye.y - nose.y).abs()) / bh;
       }
-
       if (nose != null && mouth != null) {
         rawVector[vecIdx++] = ((mouth.y - nose.y).abs()) / bh;
         rawVector[vecIdx++] = ((mouth.x - nose.x).abs()) / bw;
       }
-
       if (leftEar != null && rightEar != null) {
         rawVector[vecIdx++] = (rightEar.x - leftEar.x).abs() / bw;
       }
     }
 
-    // Fill remaining elements up to 128 with radial symmetry values
+    // Vertical structural profile bands to complete 128 dimensions
+    // Measures relative density of forehead (bands 0-3), eyes (bands 4-7),
+    // nose (bands 8-11), and mouth/chin (bands 12-15)
     while (vecIdx < embeddingDimension) {
-      final rIndex = vecIdx - 96;
-      final r = (rIndex + 1) * 2;
-      double circleSum = 0.0;
-      int circleCount = 0;
-      for (double angle = 0; angle < 2 * math.pi; angle += 0.3) {
-        final cx = (32 + r * math.cos(angle)).round().clamp(0, 63);
-        final cy = (32 + r * math.sin(angle)).round().clamp(0, 63);
-        circleSum += gray.getPixel(cx, cy).r.toDouble() / 255.0;
-        circleCount++;
+      final band = (vecIdx - 96) ~/ 2;
+      final isVertical = (vecIdx % 2) == 1;
+      double bandSum = 0.0;
+      int bandCount = 0;
+
+      if (!isVertical) {
+        final startY = (band * 4).clamp(0, 60);
+        for (int y = startY; y < startY + 4; y++) {
+          for (int x = 8; x < 56; x++) {
+            bandSum += gray.getPixel(x, y).r.toDouble() / 255.0;
+            bandCount++;
+          }
+        }
+      } else {
+        final startX = (band * 4).clamp(0, 60);
+        for (int y = 8; y < 56; y++) {
+          for (int x = startX; x < startX + 4; x++) {
+            bandSum += gray.getPixel(x, y).r.toDouble() / 255.0;
+            bandCount++;
+          }
+        }
       }
-      rawVector[vecIdx++] = circleCount > 0 ? (circleSum / circleCount) : 0.0;
+
+      rawVector[vecIdx++] = bandCount > 0 ? (bandSum / bandCount) : 0.0;
     }
 
-    // 5. Unit Normalization: ||v|| = 1.0 (enables fast dot-product Cosine Similarity)
+    // 5. Zero-center vector to remove common DC illumination bias, then normalize to unit sphere
+    double sum = 0.0;
+    for (int i = 0; i < embeddingDimension; i++) {
+      sum += rawVector[i];
+    }
+    final double mean = sum / embeddingDimension;
+    for (int i = 0; i < embeddingDimension; i++) {
+      rawVector[i] -= mean;
+    }
+
     return normalize(rawVector);
   }
 
@@ -239,8 +274,8 @@ class FaceClusteringEngine {
   }
 
   /// Clusters existing un-clustered or duplicate face clusters in SQLite into unified person folders.
-  /// Scans cached face crops, computes embeddings, and merges clusters with similarity >= similarityThreshold.
-  static Future<int> clusterExistingFaces(AeroDriveDatabase db) async {
+  /// Scans cached face crops, computes robust LBP/color embeddings, and merges clusters with similarity >= similarityThreshold.
+  static Future<int> clusterExistingFaces(AeroDriveDatabase db, {bool forceRecompute = false}) async {
     try {
       final cacheDir = await getApplicationSupportDirectory();
       final facesDir = Directory('${cacheDir.path}/faces');
@@ -255,7 +290,7 @@ class FaceClusteringEngine {
       final Map<String, Float32List> clusterEmbeddings = {};
 
       for (final cluster in clusters) {
-        if (cluster.embedding != null) {
+        if (!forceRecompute && cluster.embedding != null) {
           final emb = blobToEmbedding(cluster.embedding);
           if (emb != null) {
             clusterEmbeddings[cluster.id] = emb;
@@ -277,7 +312,7 @@ class FaceClusteringEngine {
               final emb = extractFaceEmbedding(decoded);
               clusterEmbeddings[cluster.id] = emb;
 
-              // Save to database
+              // Save updated robust embedding to database
               await (db.update(db.faceClusters)..where((fc) => fc.id.equals(cluster.id))).write(
                 FaceClustersCompanion(embedding: drift.Value(embeddingToBlob(emb)))
               );
@@ -318,6 +353,16 @@ class FaceClusteringEngine {
         final dupId = entry.key;
         final targetId = _findRoot(mergeTo, dupId);
         if (dupId == targetId) continue;
+
+        // Preserve name if duplicate has a name and target doesn't
+        final dupCluster = clusters.firstWhereOrNull((c) => c.id == dupId);
+        final targetCluster = clusters.firstWhereOrNull((c) => c.id == targetId);
+        if (dupCluster?.name != null && dupCluster!.name!.isNotEmpty &&
+            (targetCluster?.name == null || targetCluster!.name!.isEmpty)) {
+          await (db.update(db.faceClusters)..where((fc) => fc.id.equals(targetId))).write(
+            FaceClustersCompanion(name: drift.Value(dupCluster.name))
+          );
+        }
 
         // Reassign all photo_faces mappings to primary cluster
         await (db.update(db.photoFaces)..where((pf) => pf.faceClusterId.equals(dupId))).write(
