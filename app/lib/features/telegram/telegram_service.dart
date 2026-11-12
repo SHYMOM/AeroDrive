@@ -928,6 +928,27 @@ class TelegramService extends StateNotifier<TelegramAuthState> {
     };
   }
 
+  Future<Map<String, dynamic>> editMessageCaption(int chatId, int messageId, String caption) async {
+    return sendRequest({
+      "@type": "editMessageCaption",
+      "chat_id": chatId,
+      "message_id": messageId,
+      "caption": {
+        "@type": "formattedText",
+        "text": caption,
+      },
+    });
+  }
+
+  Future<Map<String, dynamic>> deleteMessages(int chatId, List<int> messageIds, {bool revoke = true}) async {
+    return sendRequest({
+      "@type": "deleteMessages",
+      "chat_id": chatId,
+      "message_ids": messageIds,
+      "revoke": revoke,
+    });
+  }
+
   Future<Map<String, dynamic>> uploadDocument(int chatId, String localFilePath, {String? caption}) async {
     final normalizedPath = localFilePath.replaceAll(r'\', '/');
 

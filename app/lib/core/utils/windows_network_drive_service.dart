@@ -32,17 +32,47 @@ class WindowsNetworkDriveService {
     }
   }
 
+  /// Returns a list of drive letters that are NOT currently in use on Windows.
+  static Future<List<String>> getAvailableDriveLetters() async {
+    if (!isWindows) return ['Z:', 'Y:', 'X:', 'W:', 'V:', 'U:'];
+    try {
+      final inUse = <String>{};
+      final netRes = await Process.run('net', ['use']);
+      if (netRes.exitCode == 0) {
+        final matches = RegExp(r'([A-Za-z]:)').allMatches(netRes.stdout.toString());
+        for (final m in matches) {
+          inUse.add(m.group(1)!.toUpperCase());
+        }
+      }
+      final drives = 'ZYXWVUTSRQPONMLKJIHGFEDC'.split('');
+      final available = <String>[];
+      for (final letter in drives) {
+        final driveStr = '$letter:';
+        if (Directory('$driveStr\\').existsSync() || inUse.contains(driveStr)) {
+          continue;
+        }
+        available.add(driveStr);
+      }
+      return available.isNotEmpty ? available : ['Z:', 'Y:', 'X:'];
+    } catch (_) {
+      return ['Z:', 'Y:', 'X:', 'W:', 'V:'];
+    }
+  }
+
   /// Mounts the local WebDAV server as an actual Windows network drive letter (e.g., `Z:`).
   /// Launches Windows File Explorer to the mounted drive upon success.
   /// Returns the mounted drive letter.
-  static Future<String> mountDrive(int port) async {
+  static Future<String> mountDrive(int port, {String? preferredLetter}) async {
     if (!isWindows) {
       throw UnsupportedError('Network drive mounting is only supported on Windows');
     }
 
-    // Try mounting to next available drive letter with 'net use *'
     final mountUrl = 'http://127.0.0.1:$port/';
-    final result = await Process.run('net', ['use', '*', mountUrl]);
+    final targetLetter = preferredLetter != null 
+        ? (preferredLetter.endsWith(':') ? preferredLetter : '$preferredLetter:')
+        : '*';
+
+    final result = await Process.run('net', ['use', targetLetter, mountUrl]);
 
     if (result.exitCode != 0) {
       final stderr = result.stderr.toString();
@@ -53,7 +83,7 @@ class WindowsNetworkDriveService {
     final stdout = result.stdout.toString();
     // Expected output format: "Drive Z: is now connected to http://127.0.0.1:49188/."
     final match = RegExp(r'Drive\s+([A-Za-z]:)', caseSensitive: false).firstMatch(stdout);
-    final driveLetter = match?.group(1) ?? await getMountedDrive(port) ?? 'Z:';
+    final driveLetter = match?.group(1) ?? await getMountedDrive(port) ?? (preferredLetter ?? 'Z:');
 
     // Open Windows File Explorer to the freshly mounted drive
     try {
@@ -62,6 +92,23 @@ class WindowsNetworkDriveService {
 
     AppLogger.info('WindowsNetworkDriveService: Successfully mounted $mountUrl as $driveLetter');
     return driveLetter;
+  }
+
+  /// 1-Click mount helper for Linux desktops via GIO / GVFS.
+  static Future<void> mountLinux(int port) async {
+    final uri = 'dav://127.0.0.1:$port/';
+    try {
+      await Process.run('gio', ['mount', uri]);
+    } catch (_) {}
+    try {
+      await Process.run('xdg-open', [uri]);
+    } catch (_) {}
+  }
+
+  /// 1-Click mount helper for macOS via Finder (Connect to Server).
+  static Future<void> mountMacOS(int port) async {
+    final uri = 'http://127.0.0.1:$port/';
+    await Process.run('open', [uri]);
   }
 
   /// Disconnects and unmounts the specified drive letter.

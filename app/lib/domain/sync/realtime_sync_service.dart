@@ -15,6 +15,7 @@ import '../../features/drive/providers/drive_providers.dart';
 import '../../features/telegram/telegram_manager.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../../features/trash/trash_screen.dart';
+import '../drive_operations_service.dart';
 import '../recovery/manifest_encoder.dart';
 import '../smart_analyzer.dart';
 import 'config_sync_service.dart';
@@ -33,6 +34,22 @@ class RealtimeSyncService {
   StreamSubscription? _allEventsSub;
   Timer? _periodicCatchUpTimer;
   int? _configChatId;
+
+  static final Map<String, DateTime> _recentlyRenamed = {};
+
+  static void recordRecentRename(String id) {
+    _recentlyRenamed[id] = DateTime.now();
+  }
+
+  static bool isRecentlyRenamed(String id) {
+    final ts = _recentlyRenamed[id];
+    if (ts == null) return false;
+    if (DateTime.now().difference(ts) > const Duration(seconds: 45)) {
+      _recentlyRenamed.remove(id);
+      return false;
+    }
+    return true;
+  }
 
   void startListening() {
     if (_isListening) return;
@@ -226,6 +243,22 @@ class RealtimeSyncService {
       await db.transaction(() async {
         if (manifest['t'] == 'dir') {
           final folderId = manifest['id'] as String;
+          final folderName = manifest['name'] as String;
+          final parentId = manifest['pid'] as String?;
+
+          // Check if this folder has been tombstoned due to a rename or move
+          if (DriveOperationsService.isFolderTombstoned(parentId: parentId, name: folderName)) {
+            AppLogger.info('RealtimeSync: Suppressing tombstoned ghost folder "$folderName" ($folderId)');
+            final msgId = msg['id'] as int?;
+            if (msgId != null) {
+              try {
+                final telegram = _ref.read(telegramServiceProvider.notifier);
+                unawaited(telegram.deleteMessages(chatId, [msgId], revoke: true));
+              } catch (_) {}
+            }
+            return;
+          }
+
           final existingFolder = await (db.select(db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
 
           final int? tsSeconds = manifest['ts'] as int?;
@@ -247,16 +280,41 @@ class RealtimeSyncService {
             folderCreatedAt = remoteDate;
           }
 
+          final encRaw = manifest['enc'];
+          final isFolderEnc = encRaw == null || encRaw == 1 || encRaw == true || encRaw == '1';
+
+          final favRaw = manifest['fav'];
+          final isFolderFav = favRaw == 1 || favRaw == true || favRaw == '1';
+
+          String effectiveFolderName = folderName;
+          if (existingFolder != null && isRecentlyRenamed(folderId)) {
+            effectiveFolderName = existingFolder.name;
+          }
+
           await db.into(db.folders).insertOnConflictUpdate(
             FoldersCompanion.insert(
               id: folderId,
-              name: manifest['name'] as String,
-              parentId: drift.Value(manifest['pid'] as String?),
+              name: effectiveFolderName,
+              parentId: drift.Value(parentId),
               color: drift.Value(manifest['col'] as String?),
+              isEncrypted: drift.Value(isFolderEnc),
+              isFavorite: drift.Value(existingFolder != null ? (existingFolder.isFavorite || isFolderFav) : isFolderFav),
               createdAt: drift.Value(folderCreatedAt),
               updatedAt: drift.Value(DateTime.now()),
             ),
           );
+
+          final msgId = msg['id'] as int?;
+          if (msgId != null) {
+            await db.into(db.manifestMessages).insertOnConflictUpdate(
+              ManifestMessagesCompanion.insert(
+                id: folderId,
+                channelId: drift.Value(chatId),
+                telegramMessageId: drift.Value(msgId),
+                manifestVersion: const drift.Value(1),
+              ),
+            );
+          }
           changed = true;
           AppLogger.info('RealtimeSync: Added/Updated folder $folderId');
         } else if (manifest['t'] == 'thumb') {
@@ -312,14 +370,23 @@ class RealtimeSyncService {
             fileCreatedAt = remoteDate;
           }
 
+          String effectiveFileName = manifest['name'] as String;
+          if (existingFile != null && isRecentlyRenamed(fileId)) {
+            effectiveFileName = existingFile.name;
+          }
+
+          final favRaw = manifest['fav'];
+          final isFileFav = favRaw == 1 || favRaw == true || favRaw == '1';
+
           await db.into(db.files).insertOnConflictUpdate(
             FilesCompanion.insert(
               id: fileId,
-              name: manifest['name'] as String,
+              name: effectiveFileName,
               folderId: drift.Value(manifest['pid'] as String?),
               size: drift.Value(size),
               mimeType: drift.Value(manifest['mime'] as String?),
-              isEncrypted: drift.Value(manifest['enc'] == 1),
+              isEncrypted: drift.Value(manifest['enc'] == null || manifest['enc'] == 1 || manifest['enc'] == true || manifest['enc'] == '1'),
+              isFavorite: drift.Value(existingFile != null ? (existingFile.isFavorite || isFileFav) : isFileFav),
               isChunked: drift.Value(isChunkedVal),
               totalChunks: drift.Value(totalChunksVal),
               sha256Hash: drift.Value(wrappedDekString),

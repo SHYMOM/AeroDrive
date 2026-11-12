@@ -11,11 +11,16 @@ import '../../../core/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../../../domain/activity/activity_service.dart';
+import '../../../domain/drive_operations_service.dart';
 import '../../../domain/folder_download_service.dart';
+import '../../../domain/sync/realtime_sync_service.dart';
 import '../../gallery/thumbnail_service.dart';
+import '../../settings/webdav_settings_dialog.dart';
 import '../../sharing/share_dialog.dart';
 import '../providers/drive_providers.dart';
+import 'channel_setup_wizard_dialog.dart';
 import 'file_type_icon.dart';
+import 'rename_item_dialog.dart';
 
 enum InspectorTab { details, activity }
 
@@ -143,15 +148,9 @@ class _FileInfoInspectorState extends ConsumerState<FileInfoInspector> {
   }
 
   Future<void> _handleToggleStar(FileData? file, FolderData? folder) async {
-    final db = ref.read(databaseProvider);
+    final driveOps = ref.read(driveOperationsServiceProvider);
     if (file != null) {
-      final newFav = !file.isFavorite;
-      await (db.update(db.files)..where((f) => f.id.equals(file.id))).write(
-        FilesCompanion(isFavorite: drift.Value(newFav)),
-      );
-      ref.read(selectedFileForInspectorProvider.notifier).state =
-          file.copyWith(isFavorite: newFav);
-      ref.invalidate(folderContentsProvider);
+      final newFav = await driveOps.toggleFileFavorite(file.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -161,13 +160,7 @@ class _FileInfoInspectorState extends ConsumerState<FileInfoInspector> {
         );
       }
     } else if (folder != null) {
-      final newFav = !folder.isFavorite;
-      await (db.update(db.folders)..where((f) => f.id.equals(folder.id))).write(
-        FoldersCompanion(isFavorite: drift.Value(newFav)),
-      );
-      ref.read(selectedFolderForInspectorProvider.notifier).state =
-          folder.copyWith(isFavorite: newFav);
-      ref.invalidate(folderContentsProvider);
+      final newFav = await driveOps.toggleFolderFavorite(folder.id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -405,16 +398,42 @@ class _FileInfoInspectorState extends ConsumerState<FileInfoInspector> {
 
                 // Name & Metadata Subtitle
                 Center(
-                  child: Text(
-                    name,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.onSurface,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (!isRootDrive) ...[
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: Icon(Icons.edit_outlined, size: 16, color: AppColors.onSurfaceVariant),
+                          onPressed: () {
+                            showAeroDriveRenameDialog(
+                              context: context,
+                              ref: ref,
+                              folder: selectedFolder,
+                              file: selectedFile,
+                            );
+                          },
+                          tooltip: 'Rename',
+                          splashRadius: 14,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -430,37 +449,82 @@ class _FileInfoInspectorState extends ConsumerState<FileInfoInspector> {
                 ),
                 const SizedBox(height: 20),
 
-                // ── 4-Button Interactive Quick Action Row ──────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildActionButton(
-                      icon: Icons.download_rounded,
-                      label: 'Download',
-                      color: AppColors.primary,
-                      onTap: () => _handleDownload(selectedFile, selectedFolder),
-                    ),
-                    _buildActionButton(
-                      icon: Icons.link_rounded,
-                      label: 'Share',
-                      color: AppColors.secondary,
-                      onTap: () => _handleShare(selectedFile, selectedFolder),
-                    ),
-                    _buildActionButton(
-                      icon: isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
-                      label: isStarred ? 'Starred' : 'Star',
-                      color: isStarred ? const Color(0xFFF59E0B) : AppColors.onSurfaceVariant,
-                      onTap: isRootDrive ? () {} : () => _handleToggleStar(selectedFile, selectedFolder),
-                    ),
-                    _buildActionButton(
-                      icon: Icons.delete_outline_rounded,
-                      label: 'Delete',
-                      color: const Color(0xFFEF4444),
-                      isDestructive: true,
-                      onTap: isRootDrive ? () {} : () => _handleDelete(selectedFile, selectedFolder),
-                    ),
-                  ],
-                ),
+                // ── Interactive Quick Action Row ──────────────
+                if (isRootDrive)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.dns_rounded,
+                        label: 'Mount Drive',
+                        color: AppColors.primary,
+                        onTap: () {
+                          showDialog<void>(
+                            context: context,
+                            builder: (ctx) => const WebDavSettingsDialog(),
+                          );
+                        },
+                      ),
+                      _buildActionButton(
+                        icon: Icons.sync_rounded,
+                        label: 'Sync Vault',
+                        color: AppColors.secondary,
+                        onTap: () async {
+                          await ref.read(realtimeSyncServiceProvider).catchUp(force: true);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Vault synchronized with Telegram Cloud'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      _buildActionButton(
+                        icon: Icons.verified_user_outlined,
+                        label: 'Health Check',
+                        color: const Color(0xFF10B981),
+                        onTap: () {
+                          showDialog<void>(
+                            context: context,
+                            builder: (ctx) => const ChannelSetupWizardDialog(),
+                          );
+                        },
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildActionButton(
+                        icon: Icons.download_rounded,
+                        label: 'Download',
+                        color: AppColors.primary,
+                        onTap: () => _handleDownload(selectedFile, selectedFolder),
+                      ),
+                      _buildActionButton(
+                        icon: Icons.link_rounded,
+                        label: 'Share',
+                        color: AppColors.secondary,
+                        onTap: () => _handleShare(selectedFile, selectedFolder),
+                      ),
+                      _buildActionButton(
+                        icon: isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+                        label: isStarred ? 'Starred' : 'Star',
+                        color: isStarred ? const Color(0xFFF59E0B) : AppColors.onSurfaceVariant,
+                        onTap: () => _handleToggleStar(selectedFile, selectedFolder),
+                      ),
+                      _buildActionButton(
+                        icon: Icons.delete_outline_rounded,
+                        label: 'Delete',
+                        color: const Color(0xFFEF4444),
+                        isDestructive: true,
+                        onTap: () => _handleDelete(selectedFile, selectedFolder),
+                      ),
+                    ],
+                  ),
                 const SizedBox(height: 22),
 
                 // ── Segmented Pill Toggle (Info details | Activity) ──

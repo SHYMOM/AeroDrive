@@ -49,6 +49,7 @@ class CaptionSerializer {
     int version = 1,
     int isEncrypted = 1,
     int isChunked = 0,
+    int isFavorite = 0,
     DateTime? createdAt,
   }) async {
     final safeName = name.length > 200 ? name.substring(0, 200) : name;
@@ -88,6 +89,7 @@ class CaptionSerializer {
       "ver": version,
       "enc": isEncrypted,
       "chk": isChunked,
+      "fav": isFavorite,
       if (chunkIndex != null) "c": chunkIndex,
       if (totalChunks != null) "tc": totalChunks,
       if (wrappedDekBase64 != null) "k": wrappedDekBase64,
@@ -157,6 +159,8 @@ class CaptionSerializer {
     required String? parentFolderId,
     required SecretKey masterKey,
     String? color,
+    int isEncrypted = 1,
+    int isFavorite = 0,
     DateTime? createdAt,
   }) async {
     final safeName = name.length > 200 ? name.substring(0, 200) : name;
@@ -169,6 +173,8 @@ class CaptionSerializer {
       if (parentFolderId != null && parentFolderId.isNotEmpty) "pid": parentFolderId,
       "ts": ts,
       "col": color,
+      "enc": isEncrypted,
+      "fav": isFavorite,
     };
 
     final sanitized = _sanitizeForJson(jsonMap) as Map<String, dynamic>;

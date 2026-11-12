@@ -6,6 +6,7 @@ class Folders extends Table {
   TextColumn get name => text()();
   TextColumn get parentId => text().nullable().references(Folders, #id)();
   BoolColumn get isVault => boolean().withDefault(const Constant(false))();
+  BoolColumn get isEncrypted => boolean().withDefault(const Constant(true))();
   TextColumn get color => text().nullable()();
   BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().nullable()();
@@ -25,7 +26,7 @@ class Files extends Table {
   IntColumn get size => integer().nullable()();
   TextColumn get mimeType => text().nullable()();
   TextColumn get sha256Hash => text().nullable()(); // SHA-256 for deduplication (non-unique — multiple files can share same hash)
-  BoolColumn get isEncrypted => boolean().withDefault(const Constant(false))();
+  BoolColumn get isEncrypted => boolean().withDefault(const Constant(true))();
   BoolColumn get isChunked => boolean().withDefault(const Constant(false))();
   IntColumn get totalChunks => integer().withDefault(const Constant(1))();
   TextColumn get encryptionNonce => text().nullable()(); // Base64 nonce

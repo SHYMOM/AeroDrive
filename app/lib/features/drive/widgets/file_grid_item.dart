@@ -16,12 +16,14 @@ import '../../preview/preview_router.dart';
 import '../../sharing/share_dialog.dart';
 import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
+import '../../../domain/drive_operations_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_info_dialog.dart';
 import 'file_info_inspector.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
+import 'rename_item_dialog.dart';
 
 class FileGridItem extends ConsumerWidget {
   
@@ -153,6 +155,20 @@ class FileGridItem extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Icon(Icons.play_arrow_rounded, color: Colors.amber, size: 14),
+                            ),
+                          ),
+
+                        if (!file.isEncrypted)
+                          Positioned(
+                            top: 8,
+                            left: isVid ? 34 : 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.bolt_rounded, color: Color(0xFFF59E0B), size: 12),
                             ),
                           ),
                         
@@ -417,6 +433,8 @@ class FileGridItem extends ConsumerWidget {
               }
             }
           }
+        } else if (value == 'rename') {
+          showAeroDriveRenameDialog(context: context, ref: ref, file: file);
         } else if (value == 'share') {
           showDialog(
             context: context,
@@ -447,6 +465,16 @@ class FileGridItem extends ConsumerWidget {
         return [
           PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
           PopupMenuItem(
+            value: 'rename',
+            child: Row(
+              children: [
+                Icon(Icons.edit_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text('Rename', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              ],
+            ),
+          ),
+          PopupMenuItem(
             value: 'offline',
             child: Row(
               children: [
@@ -475,11 +503,7 @@ class FileGridItem extends ConsumerWidget {
     );
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
-    final db = ref.read(databaseProvider);
-    await (db.update(db.files)..where((f) => f.id.equals(file.id))).write(
-      FilesCompanion(isFavorite: drift.Value(!file.isFavorite)),
-    );
-    ref.read(dbRebuildVersionProvider.notifier).state++;
+    await ref.read(driveOperationsServiceProvider).toggleFileFavorite(file.id);
   }
 
   void _toggleSelection(WidgetRef ref) {
@@ -593,6 +617,16 @@ class FileGridItem extends ConsumerWidget {
       color: AppColors.surfaceElevated,
       items: [
         PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
+        PopupMenuItem(
+          value: 'rename',
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text('Rename', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+            ],
+          ),
+        ),
         PopupMenuItem(value: 'share', child: Text('Share Link', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         PopupMenuItem(value: 'tags', child: Text('Tags', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
         PopupMenuItem(value: 'copy', child: Text('Copy to...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
@@ -622,6 +656,8 @@ class FileGridItem extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Queued ${file.name} for download...')));
       }
+    } else if (value == 'rename') {
+      showAeroDriveRenameDialog(context: context, ref: ref, file: file);
     } else if (value == 'share') {
       showDialog(
         context: context,

@@ -762,6 +762,16 @@ class UploadQueueService {
     final rawFolderId = parts.length > 1 ? parts[1] : '';
     final targetFolderId = (rawFolderId.isEmpty || rawFolderId == 'null') ? null : rawFolderId;
 
+    bool effectiveEncrypted = true;
+    if (parts.length > 4 && parts[4].isNotEmpty) {
+      effectiveEncrypted = parts[4] != '0' && parts[4].toLowerCase() != 'false';
+    } else if (targetFolderId != null) {
+      final parentFolder = await (_db.select(_db.folders)..where((f) => f.id.equals(targetFolderId))).getSingleOrNull();
+      if (parentFolder != null) {
+        effectiveEncrypted = parentFolder.isEncrypted;
+      }
+    }
+
     final sourceFile = File(localFilePath);
     if (!await sourceFile.exists()) {
       await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
@@ -773,7 +783,7 @@ class UploadQueueService {
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
         .write(TransferQueueCompanion(
           totalBytes: drift.Value(fileLength),
-          status: const drift.Value('ENCRYPTING'),
+          status: drift.Value(effectiveEncrypted ? 'ENCRYPTING' : 'PREPARING'),
           bytesTransferred: const drift.Value(0),
         ));
     final rawFileName = (parts.length > 3 && parts[3].isNotEmpty)
@@ -858,7 +868,7 @@ class UploadQueueService {
         folderId: drift.Value(targetFolderId),
         size: drift.Value(fileLength),
         mimeType: drift.Value(mimeType),
-        isEncrypted: const drift.Value(true),
+        isEncrypted: drift.Value(effectiveEncrypted),
         isChunked: drift.Value(totalChunks > 1),
         totalChunks: drift.Value(totalChunks),
         sha256Hash: const drift.Value(''), // updated on finalize
@@ -1003,7 +1013,7 @@ class UploadQueueService {
     final nonceBase64 = base64Encode(encryptionNonce);
     await (_db.update(_db.transferQueue)..where((q) => q.id.equals(item.id)))
       .write(TransferQueueCompanion(
-        errorMessage: drift.Value('$targetFolderId|${dekBytes.join(',')}|$ivPart|$nonceBase64|$encryptionAlgo'),
+        errorMessage: drift.Value('$targetFolderId|${dekBytes.join(',')}|$ivPart|$nonceBase64|$encryptionAlgo|${effectiveEncrypted ? "1" : "0"}'),
       ));
 
     final readyClients = _telegramManager.readyClients;
@@ -1096,23 +1106,32 @@ class UploadQueueService {
           continue;
         }
 
-        UploadFileLogger.instance.logStage('Encrypting chunk ${i + 1}/$totalChunks');
-        if (fileLength > 0) {
-          NotificationService.instance.showUploadProgress(
-            NotificationService.instance.getSafeNotificationId(item.id),
-            'Encrypting chunk ${i + 1}/$totalChunks: $fileName',
-            (i * chunkSize).clamp(0, fileLength),
-            fileLength,
+        if (!effectiveEncrypted) {
+          UploadFileLogger.instance.logStage('Preparing native unencrypted chunk ${i + 1}/$totalChunks');
+          final outSink = File(chunkOutputPath).openWrite();
+          final stream = sourceFile.openRead(startOffset, startOffset + currentChunkLen);
+          await outSink.addStream(stream);
+          await outSink.flush();
+          await outSink.close();
+        } else {
+          UploadFileLogger.instance.logStage('Encrypting chunk ${i + 1}/$totalChunks');
+          if (fileLength > 0) {
+            NotificationService.instance.showUploadProgress(
+              NotificationService.instance.getSafeNotificationId(item.id),
+              'Encrypting chunk ${i + 1}/$totalChunks: $fileName',
+              (i * chunkSize).clamp(0, fileLength),
+              fileLength,
+            );
+          }
+          await _orchestrator.processSingleChunkForUpload(
+            sourceFile: sourceFile,
+            outputFilePath: chunkOutputPath,
+            startOffset: startOffset,
+            chunkLength: currentChunkLen,
+            dekBytes: dekBytes,
+            ctrIv: ctrIv,
           );
         }
-        await _orchestrator.processSingleChunkForUpload(
-          sourceFile: sourceFile,
-          outputFilePath: chunkOutputPath,
-          startOffset: startOffset,
-          chunkLength: currentChunkLen,
-          dekBytes: dekBytes,
-          ctrIv: ctrIv,
-        );
 
         final targetIndex = (fileBaseIndex + i) % storageChannels.length;
         final ch = storageChannels[targetIndex];
@@ -1136,13 +1155,16 @@ class UploadQueueService {
           final cipher = AesGcm.with256bits();
           final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
 
-          final nonce = cipher.newNonce();
-          final secretBox = await cipher.encrypt(
-            dekBytes,
-            secretKey: secretKey,
-            nonce: nonce,
-          );
-          final wrappedDekBase64 = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+          String? wrappedDekBase64;
+          if (effectiveEncrypted) {
+            final nonce = cipher.newNonce();
+            final secretBox = await cipher.encrypt(
+              dekBytes,
+              secretKey: secretKey,
+              nonce: nonce,
+            );
+            wrappedDekBase64 = '${base64Encode(secretBox.nonce)}|${base64Encode(secretBox.mac.bytes)}|${base64Encode(secretBox.cipherText)}';
+          }
 
           chunkCaption = await ManifestEncoder.encodeFileManifest(
             fileId: fileId,
@@ -1153,9 +1175,10 @@ class UploadQueueService {
             size: item.totalBytes ?? 0,
             mime: mimeType,
             wrappedDekBase64: wrappedDekBase64,
-            ctrIvBase64: ctrIv != null ? base64Encode(ctrIv) : null,
+            ctrIvBase64: (effectiveEncrypted && ctrIv != null) ? base64Encode(ctrIv) : null,
             chunkIndex: i,
             totalChunks: totalChunks,
+            isEncrypted: effectiveEncrypted ? 1 : 0,
             isChunked: totalChunks > 1 ? 1 : 0,
             duration: (videoDuration?.inSeconds != null && videoDuration!.inSeconds > 0)
                 ? videoDuration.inSeconds
@@ -1483,6 +1506,7 @@ class UploadQueueService {
     final ctrIvBase64 = metaParts.length >= 3 ? metaParts[2] : '';
     final encryptionNonceBase64 = metaParts.length >= 4 ? metaParts[3] : '';
     final encryptionAlgoStr = metaParts.length >= 5 ? metaParts[4] : 'AES-256-GCM';
+    final isEncryptedFile = metaParts.length >= 6 ? (metaParts[5] != '0') : true;
 
     // Check if all chunks for this upload are complete AND have confirmed real message IDs (messageId > 0)
     final completedChunks = await (_db.select(_db.chunks)..where((c) => c.fileId.equals(fileId))).get();
@@ -1553,11 +1577,12 @@ class UploadQueueService {
       if (existingFile != null) {
         await (_db.update(_db.files)..where((f) => f.id.equals(fileId))).write(
           FilesCompanion(
-            sha256Hash: drift.Value(wrappedDekString),
-            encryptionNonce: encryptionNonceBase64.isNotEmpty
+            isEncrypted: drift.Value(isEncryptedFile),
+            sha256Hash: drift.Value(isEncryptedFile ? wrappedDekString : ''),
+            encryptionNonce: (isEncryptedFile && encryptionNonceBase64.isNotEmpty)
                 ? drift.Value(encryptionNonceBase64)
                 : const drift.Value(null),
-            encryptionAlgo: drift.Value(encryptionAlgoStr),
+            encryptionAlgo: isEncryptedFile ? drift.Value(encryptionAlgoStr) : const drift.Value(null),
             updatedAt: drift.Value(DateTime.now()),
           )
         );
@@ -1569,14 +1594,14 @@ class UploadQueueService {
             folderId: drift.Value(folderId),
             size: drift.Value(item.totalBytes),
             mimeType: drift.Value(mimeType),
-            isEncrypted: const drift.Value(true),
+            isEncrypted: drift.Value(isEncryptedFile),
             isChunked: drift.Value(totalChunks > 1),
             totalChunks: drift.Value(totalChunks),
-            sha256Hash: drift.Value(wrappedDekString),
-            encryptionNonce: encryptionNonceBase64.isNotEmpty
+            sha256Hash: drift.Value(isEncryptedFile ? wrappedDekString : ''),
+            encryptionNonce: (isEncryptedFile && encryptionNonceBase64.isNotEmpty)
                 ? drift.Value(encryptionNonceBase64)
                 : const drift.Value(null),
-            encryptionAlgo: drift.Value(encryptionAlgoStr),
+            encryptionAlgo: isEncryptedFile ? drift.Value(encryptionAlgoStr) : const drift.Value(null),
             createdAt: drift.Value(uploadDate),
             updatedAt: drift.Value(DateTime.now()),
           )

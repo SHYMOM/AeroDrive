@@ -79,7 +79,9 @@ class ManifestEncoder {
     String? country,
     List<String>? tags,
     List<Map<String, dynamic>>? faces,
+    int isEncrypted = 1,
     int isChunked = 0,
+    int isFavorite = 0,
     int version = 1,
     DateTime? createdAt,
   }) async {
@@ -110,7 +112,9 @@ class ManifestEncoder {
       country: country,
       tags: finalTags,
       faces: finalFaces,
+      isEncrypted: isEncrypted,
       isChunked: isChunked,
+      isFavorite: isFavorite,
       version: version,
     );
 
@@ -153,7 +157,9 @@ class ManifestEncoder {
       country: country,
       tags: finalTags,
       faces: finalFaces,
+      isEncrypted: isEncrypted,
       isChunked: isChunked,
+      isFavorite: isFavorite,
       version: version,
       createdAt: createdAt,
     );
@@ -179,7 +185,9 @@ class ManifestEncoder {
     String? country,
     List<String>? tags,
     List<Map<String, dynamic>>? faces,
+    int isEncrypted = 1,
     int isChunked = 0,
+    int isFavorite = 0,
     int version = 1,
   }) {
     return {
@@ -191,8 +199,9 @@ class ManifestEncoder {
       "size": size,
       "mime": mime,
       "ver": version,
-      "enc": 1,
+      "enc": isEncrypted,
       "chk": isChunked,
+      if (isFavorite != 0) "fav": isFavorite,
       if (chunkIndex != null) "c": chunkIndex,
       if (totalChunks != null) "tc": totalChunks,
       if (wrappedDekBase64 != null) "k": wrappedDekBase64,
@@ -221,6 +230,8 @@ class ManifestEncoder {
     required String? parentFolderId,
     required SecretKey masterKey,
     String? color,
+    int isEncrypted = 1,
+    int isFavorite = 0,
     DateTime? createdAt,
   }) async => CaptionSerializer.serializeFolder(
       folderId: folderId,
@@ -228,6 +239,8 @@ class ManifestEncoder {
       parentFolderId: parentFolderId,
       masterKey: masterKey,
       color: color,
+      isEncrypted: isEncrypted,
+      isFavorite: isFavorite,
       createdAt: createdAt,
     );
 

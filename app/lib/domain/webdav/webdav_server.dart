@@ -27,6 +27,8 @@ import '../channel_load_balancer.dart';
 import '../download_orchestrator.dart';
 import '../recovery/manifest_encoder.dart';
 import '../streaming/streaming_server.dart';
+import '../drive_operations_service.dart';
+import '../../features/drive/providers/drive_providers.dart';
 import 'webdav_config.dart';
 
 typedef ProviderReader = T Function<T>(ProviderListenable<T> provider);
@@ -87,12 +89,14 @@ class WebDavServer {
     _mainReceivePort = ReceivePort();
     
     final tempDir = await getTemporaryDirectory();
+    final cacheDirPath = await _getCacheDirPath();
     _serverIsolate = await Isolate.spawn(
       _serverWorker, 
       _WorkerParams(
         sendPort: _mainReceivePort!.sendPort,
         creds: creds,
         tempDirPath: tempDir.path,
+        cacheDirPath: cacheDirPath,
         streamingPort: streamingPort,
       ),
     );
@@ -101,6 +105,25 @@ class WebDavServer {
 
     _activePort = creds.port;
     AppLogger.info("WebDAV Server started on 127.0.0.1:$_activePort (requireAuth: ${creds.requireAuth}, streamingPort: $streamingPort)");
+  }
+
+  static Future<String> _getCacheDirPath() async {
+    final tempDir = await getTemporaryDirectory();
+    String accountId = 'default';
+    try {
+      if (_read != null) {
+        final db = _read!(databaseProvider);
+        final acc = await (db.select(db.accounts)..where((a) => a.isActive.equals(true))).getSingleOrNull();
+        if (acc != null && acc.id.isNotEmpty) {
+          accountId = acc.id;
+        }
+      }
+    } catch (_) {}
+    final dir = Directory('${tempDir.path}${Platform.pathSeparator}aerodrive_webdav_cache${Platform.pathSeparator}$accountId');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir.path;
   }
 
   static void stop() {
@@ -120,11 +143,21 @@ class WebDavServer {
 
   /// Strips leading slashes and any leading Windows WebDAV redirector virtual root ("DavWWWRoot").
   static String cleanWebDavPath(String rawPath) {
-    String p;
+    var p = rawPath.trim();
+    if (p.startsWith('http://') || p.startsWith('https://')) {
+      final uri = Uri.tryParse(p);
+      if (uri != null) {
+        p = uri.path;
+      }
+    }
     try {
-      p = Uri.decodeComponent(rawPath).trim();
+      p = Uri.decodeFull(p).trim();
     } catch (_) {
-      p = rawPath.trim();
+      try {
+        p = Uri.decodeComponent(p).trim();
+      } catch (_) {
+        p = p.trim();
+      }
     }
     while (p.startsWith('/')) {
       p = p.substring(1);
@@ -134,6 +167,9 @@ class WebDavServer {
       while (p.startsWith('/')) {
         p = p.substring(1);
       }
+    }
+    while (p.endsWith('/') && p.isNotEmpty) {
+      p = p.substring(0, p.length - 1);
     }
     return p;
   }
@@ -153,6 +189,12 @@ class WebDavServer {
     if (message is SendPort) {
       _isolateSendPort = message;
       _isolateSendPort!.send(_mainReceivePort!.sendPort);
+      return;
+    }
+
+    if (message is Map<String, dynamic> && message['cmd'] == 'bound_port') {
+      _activePort = message['port'] as int;
+      AppLogger.info('WebDavServer: Bound and active on 127.0.0.1:$_activePort (Loopback Isolated)');
       return;
     }
 
@@ -196,6 +238,23 @@ class WebDavServer {
           final fileId = message['fileId'] as String;
           final localPath = await _downloadFileDirect(fileId);
           _isolateSendPort?.send({'id': id, 'result': localPath});
+        } else if (cmd == 'proppatch') {
+          final targetPath = message['path'] as String;
+          final updatedAt = DateTime.fromMillisecondsSinceEpoch(message['updatedAt'] as int);
+          final resolved = await _resolvePath(targetPath);
+          if (resolved != null) {
+            final db = _read!(databaseProvider);
+            if (resolved['type'] == 'directory') {
+              final folderId = await _resolveFolderId(targetPath.split('/').where((p) => p.isNotEmpty).toList(), db);
+              if (folderId != null) {
+                await (db.update(db.folders)..where((f) => f.id.equals(folderId))).write(FoldersCompanion(updatedAt: drift.Value(updatedAt)));
+              }
+            } else {
+              final fileId = resolved['id'] as String;
+              await (db.update(db.files)..where((f) => f.id.equals(fileId))).write(FilesCompanion(updatedAt: drift.Value(updatedAt)));
+            }
+          }
+          _isolateSendPort?.send({'id': id, 'result': {'status': 'success'}});
         }
       } catch (e, s) {
         AppLogger.error('WebDAV main thread error on cmd $cmd', e, s);
@@ -209,7 +268,7 @@ class WebDavServer {
   static Future<Map<String, dynamic>?> _resolvePath(String rawPath) async {
     final db = _read!(databaseProvider);
     final cleanPath = cleanWebDavPath(rawPath);
-    final parts = cleanPath.split('/').where((p) => p.isNotEmpty).toList();
+    final parts = cleanPath.split('/').where((p) => p.isNotEmpty).map((s) => Uri.decodeComponent(s).trim()).toList();
 
     if (parts.isEmpty) {
       final folders = await (db.select(db.folders)..where((f) => f.parentId.isNull() & f.deletedAt.isNull())).get();
@@ -217,12 +276,14 @@ class WebDavServer {
       
       return {
         'type': 'directory',
+        'id': null,
         'name': '',
         'size': 0,
         'createdAt': DateTime.now().millisecondsSinceEpoch,
         'children': [
           ...folders.map((f) => {
             'type': 'directory',
+            'id': f.id,
             'name': f.name,
             'size': 0,
             'createdAt': f.createdAt?.millisecondsSinceEpoch ?? 0,
@@ -241,30 +302,41 @@ class WebDavServer {
 
     String? currentFolderId;
     for (var i = 0; i < parts.length; i++) {
-      final part = parts[i];
-      final folder = await (db.select(db.folders)
-        ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & f.deletedAt.isNull())
-      ).getSingleOrNull();
+      final partLower = parts[i].toLowerCase();
+      // Case-insensitive folder lookup
+      final subfolders = await (db.select(db.folders)
+        ..where((f) => (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & f.deletedAt.isNull())
+      ).get();
 
-      if (folder != null) {
-        currentFolderId = folder.id;
+      FolderData? matchedFolder;
+      for (final f in subfolders) {
+        if (f.name.trim().toLowerCase() == partLower) {
+          matchedFolder = f;
+          break;
+        }
+      }
+
+      if (matchedFolder != null) {
+        currentFolderId = matchedFolder.id;
         if (i == parts.length - 1) {
-          final subFolders = await (db.select(db.folders)..where((f) => f.parentId.equals(folder.id) & f.deletedAt.isNull())).get();
-          final files = await (db.select(db.files)..where((f) => f.folderId.equals(folder.id) & f.deletedAt.isNull())).get();
+          final childFolders = await (db.select(db.folders)..where((f) => f.parentId.equals(matchedFolder!.id) & f.deletedAt.isNull())).get();
+          final childFiles = await (db.select(db.files)..where((f) => f.folderId.equals(matchedFolder!.id) & f.deletedAt.isNull())).get();
 
           return {
             'type': 'directory',
-            'name': folder.name,
+            'id': matchedFolder.id,
+            'name': matchedFolder.name,
             'size': 0,
-            'createdAt': folder.createdAt?.millisecondsSinceEpoch ?? 0,
+            'createdAt': matchedFolder.createdAt?.millisecondsSinceEpoch ?? 0,
             'children': [
-              ...subFolders.map((f) => {
+              ...childFolders.map((f) => {
                 'type': 'directory',
+                'id': f.id,
                 'name': f.name,
                 'size': 0,
                 'createdAt': f.createdAt?.millisecondsSinceEpoch ?? 0,
               }),
-              ...files.map((f) => {
+              ...childFiles.map((f) => {
                 'type': 'file',
                 'id': f.id,
                 'name': f.name,
@@ -277,17 +349,26 @@ class WebDavServer {
         }
       } else {
         if (i == parts.length - 1) {
-          final file = await (db.select(db.files)
-            ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.folderId.isNull() : f.folderId.equals(currentFolderId)) & f.deletedAt.isNull())
-          ).getSingleOrNull();
-          if (file != null) {
+          final childFiles = await (db.select(db.files)
+            ..where((f) => (currentFolderId == null ? f.folderId.isNull() : f.folderId.equals(currentFolderId)) & f.deletedAt.isNull())
+          ).get();
+
+          FileData? matchedFile;
+          for (final f in childFiles) {
+            if (f.name.trim().toLowerCase() == partLower) {
+              matchedFile = f;
+              break;
+            }
+          }
+
+          if (matchedFile != null) {
             return {
               'type': 'file',
-              'id': file.id,
-              'name': file.name,
-              'size': file.size ?? 0,
-              'createdAt': file.createdAt?.millisecondsSinceEpoch ?? 0,
-              'mimeType': file.mimeType ?? 'application/octet-stream',
+              'id': matchedFile.id,
+              'name': matchedFile.name,
+              'size': matchedFile.size ?? 0,
+              'createdAt': matchedFile.createdAt?.millisecondsSinceEpoch ?? 0,
+              'mimeType': matchedFile.mimeType ?? 'application/octet-stream',
             };
           }
         }
@@ -300,11 +381,20 @@ class WebDavServer {
   static Future<String?> _resolveFolderId(List<String> parts, AeroDriveDatabase db) async {
     String? currentFolderId;
     for (final part in parts) {
-      final folder = await (db.select(db.folders)
-        ..where((f) => f.name.equals(part) & (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & f.deletedAt.isNull())
-      ).getSingleOrNull();
-      if (folder == null) return null;
-      currentFolderId = folder.id;
+      final partLower = part.trim().toLowerCase();
+      final subfolders = await (db.select(db.folders)
+        ..where((f) => (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & f.deletedAt.isNull())
+      ).get();
+
+      FolderData? match;
+      for (final f in subfolders) {
+        if (f.name.trim().toLowerCase() == partLower) {
+          match = f;
+          break;
+        }
+      }
+      if (match == null) return null;
+      currentFolderId = match.id;
     }
     return currentFolderId;
   }
@@ -313,14 +403,21 @@ class WebDavServer {
   static Future<String?> _resolveOrCreateFolderHierarchy(List<String> parts, AeroDriveDatabase db) async {
     String? currentFolderId;
     for (final part in parts) {
-      final folder = await (db.select(db.folders)
-        ..where((f) => f.name.equals(part) & 
-            (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & 
-            f.deletedAt.isNull())
-      ).getSingleOrNull();
+      final partLower = part.trim().toLowerCase();
+      final subfolders = await (db.select(db.folders)
+        ..where((f) => (currentFolderId == null ? f.parentId.isNull() : f.parentId.equals(currentFolderId)) & f.deletedAt.isNull())
+      ).get();
 
-      if (folder != null) {
-        currentFolderId = folder.id;
+      FolderData? match;
+      for (final f in subfolders) {
+        if (f.name.trim().toLowerCase() == partLower) {
+          match = f;
+          break;
+        }
+      }
+
+      if (match != null) {
+        currentFolderId = match.id;
       } else {
         final newFolderId = const Uuid().v4();
         await db.into(db.folders).insert(
@@ -332,8 +429,13 @@ class WebDavServer {
             updatedAt: drift.Value(DateTime.now()),
           ),
         );
-        // Upload folder manifest to Telegram in the background
-        unawaited(_uploadFolderManifestDirect(newFolderId, part, currentFolderId));
+        // Upload folder manifest to Telegram in the background with in-flight tracking
+        final uploadFuture = _uploadFolderManifestDirect(newFolderId, part, currentFolderId);
+        DriveOperationsService.inFlightFolderOps[newFolderId] = uploadFuture;
+        uploadFuture.whenComplete(() {
+          DriveOperationsService.inFlightFolderOps.remove(newFolderId);
+        });
+        unawaited(uploadFuture);
         currentFolderId = newFolderId;
       }
     }
@@ -345,6 +447,11 @@ class WebDavServer {
     if (_read == null) return;
     File? tempFile;
     try {
+      final db = _read!(databaseProvider);
+      // Query latest folder name in case it was renamed immediately (e.g. MKCOL -> MOVE)
+      final currentFolder = await (db.select(db.folders)..where((f) => f.id.equals(folderId))).getSingleOrNull();
+      final effectiveName = currentFolder?.name ?? folderName;
+
       final settingsRepo = _read!(settingsRepositoryProvider);
       final targetChannel = await ChannelLoadBalancer.selectStorageChannel(settings: settingsRepo);
       if (targetChannel == null) return;
@@ -358,10 +465,12 @@ class WebDavServer {
 
       final manifestCaption = await ManifestEncoder.encodeFolderManifest(
         folderId: folderId,
-        folderName: folderName,
+        folderName: effectiveName,
         parentFolderId: parentId,
         masterKey: secretKey,
-        createdAt: DateTime.now(),
+        color: currentFolder?.color,
+        isEncrypted: (currentFolder?.isEncrypted ?? true) ? 1 : 0,
+        createdAt: currentFolder?.createdAt ?? DateTime.now(),
       );
 
       final tempDir = await getTemporaryDirectory();
@@ -380,8 +489,19 @@ class WebDavServer {
             )
           : _read!(telegramServiceProvider.notifier);
 
-      await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
-      AppLogger.info('WebDavServer: Uploaded cloud manifest for folder "$folderName" ($folderId)');
+      final sentMsg = await telegram.uploadDocument(chatId, tempFile.path, caption: manifestCaption);
+      final msgId = sentMsg['id'] as int?;
+      if (msgId != null) {
+        await db.into(db.manifestMessages).insertOnConflictUpdate(
+          ManifestMessagesCompanion.insert(
+            id: folderId,
+            channelId: drift.Value(chatId),
+            telegramMessageId: drift.Value(msgId),
+            manifestVersion: const drift.Value(1),
+          ),
+        );
+      }
+      AppLogger.info('WebDavServer: Uploaded cloud manifest for folder "$effectiveName" ($folderId)');
     } catch (e) {
       AppLogger.warning('WebDavServer: Failed to upload folder manifest: $e');
     } finally {
@@ -396,7 +516,11 @@ class WebDavServer {
   static Future<void> _mkcol(String rawPath) async {
     final db = _read!(databaseProvider);
     final cleanPath = cleanWebDavPath(rawPath);
-    final parts = cleanPath.split('/').where((p) => p.isNotEmpty).toList();
+    final parts = cleanPath
+        .split('/')
+        .where((p) => p.isNotEmpty)
+        .map((s) => Uri.decodeComponent(s).trim())
+        .toList();
     if (parts.isEmpty) return;
 
     await _resolveOrCreateFolderHierarchy(parts, db);
@@ -409,7 +533,11 @@ class WebDavServer {
 
     final cleanPath = cleanWebDavPath(rawPath);
     AppLogger.info('WebDavServer: _delete requested for cleanPath="$cleanPath" (raw="$rawPath")');
-    final parts = cleanPath.split('/').where((p) => p.isNotEmpty).toList();
+    final parts = cleanPath
+        .split('/')
+        .where((p) => p.isNotEmpty)
+        .map((s) => Uri.decodeComponent(s).trim())
+        .toList();
     if (parts.isEmpty) {
       AppLogger.warning('WebDavServer: _delete ignored empty parts');
       return;
@@ -426,6 +554,7 @@ class WebDavServer {
       if (folderId != null) {
         AppLogger.info('WebDavServer: soft-deleting folder $folderId');
         await folderRepo.trashFolder(folderId);
+        _read!(dbRebuildVersionProvider.notifier).update((v) => v + 1);
       }
     } else {
       final fileId = resolved['id'] as String?;
@@ -433,14 +562,14 @@ class WebDavServer {
         AppLogger.info('WebDavServer: soft-deleting file $fileId (${resolved['name']})');
         await fileRepo.softDelete(fileId);
         try {
-          final tempDir = await getTemporaryDirectory();
-          final cacheDir = Directory('${tempDir.path}${Platform.pathSeparator}aerodrive_webdav_cache');
+          final cacheDirPath = await _getCacheDirPath();
           final safeName = (resolved['name'] as String).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-          final cacheFile = File('${cacheDir.path}${Platform.pathSeparator}${fileId}_$safeName');
+          final cacheFile = File('$cacheDirPath${Platform.pathSeparator}${fileId}_$safeName');
           if (await cacheFile.exists()) {
             await cacheFile.delete();
           }
         } catch (_) {}
+        _read!(dbRebuildVersionProvider.notifier).update((v) => v + 1);
       }
     }
   }
@@ -452,10 +581,11 @@ class WebDavServer {
 
     final srcResolved = await _resolvePath(cleanSource);
     if (srcResolved == null) {
+      AppLogger.warning('WebDavServer: _move failed, source not found: "$cleanSource" (raw="$sourcePath")');
       return {'status': 'error', 'code': 404, 'error': 'Source not found'};
     }
 
-    final destParts = cleanDest.split('/').where((p) => p.isNotEmpty).toList();
+    final destParts = cleanDest.split('/').where((p) => p.isNotEmpty).map((s) => Uri.decodeComponent(s).trim()).toList();
     if (destParts.isEmpty) {
       return {'status': 'error', 'code': 400, 'error': 'Invalid destination'};
     }
@@ -463,45 +593,81 @@ class WebDavServer {
     final destName = destParts.last;
     String? destFolderId;
     if (destParts.length > 1) {
-      destFolderId = await _resolveFolderId(destParts.sublist(0, destParts.length - 1), db);
+      destFolderId = await _resolveOrCreateFolderHierarchy(destParts.sublist(0, destParts.length - 1), db);
     }
 
+    bool replacedExisting = false;
+
     if (srcResolved['type'] == 'directory') {
-      final srcParts = cleanSource.split('/').where((p) => p.isNotEmpty).toList();
+      final srcParts = cleanSource.split('/').where((p) => p.isNotEmpty).map((s) => Uri.decodeComponent(s).trim()).toList();
       final folderId = await _resolveFolderId(srcParts, db);
       if (folderId == null) return {'status': 'error', 'code': 404, 'error': 'Folder not found'};
 
-      await (db.update(db.folders)..where((f) => f.id.equals(folderId))).write(
-        FoldersCompanion(
-          name: drift.Value(destName),
-          parentId: drift.Value(destFolderId),
-        ),
-      );
-      return {'status': 'success'};
+      final destSubfolders = await (db.select(db.folders)
+        ..where((f) => (destFolderId == null ? f.parentId.isNull() : f.parentId.equals(destFolderId)) & f.deletedAt.isNull())
+      ).get();
+
+      FolderData? destFolder;
+      for (final f in destSubfolders) {
+        if (f.name.trim().toLowerCase() == destName.toLowerCase()) {
+          destFolder = f;
+          break;
+        }
+      }
+
+      if (destFolder != null && destFolder.id != folderId) {
+        if (!overwrite) {
+          return {'status': 'error', 'code': 412, 'error': 'Destination folder already exists'};
+        }
+        final folderRepo = _read!(folderRepositoryProvider);
+        await folderRepo.trashFolder(destFolder.id);
+        replacedExisting = true;
+      }
+
+      final driveOps = _read!(driveOperationsServiceProvider);
+      await driveOps.moveFolder(folderId, destFolderId, newName: destName);
+      return {'status': 'success', 'replaced': replacedExisting};
     } else {
       final fileId = srcResolved['id'] as String;
-      // Check if destination exists
-      final destFile = await (db.select(db.files)
-        ..where((f) => f.name.equals(destName) & 
-            (destFolderId == null ? f.folderId.isNull() : f.folderId.equals(destFolderId)) & 
-            f.deletedAt.isNull())
-      ).getSingleOrNull();
+      final destFiles = await (db.select(db.files)
+        ..where((f) => (destFolderId == null ? f.folderId.isNull() : f.folderId.equals(destFolderId)) & f.deletedAt.isNull())
+      ).get();
 
-      if (destFile != null) {
+      FileData? destFile;
+      for (final f in destFiles) {
+        if (f.name.trim().toLowerCase() == destName.toLowerCase()) {
+          destFile = f;
+          break;
+        }
+      }
+
+      if (destFile != null && destFile.id != fileId) {
         if (!overwrite) {
           return {'status': 'error', 'code': 412, 'error': 'Destination file already exists'};
         }
         final fileRepo = _read!(fileRepositoryProvider);
         await fileRepo.softDelete(destFile.id);
+        replacedExisting = true;
       }
 
-      await (db.update(db.files)..where((f) => f.id.equals(fileId))).write(
-        FilesCompanion(
-          name: drift.Value(destName),
-          folderId: drift.Value(destFolderId),
-        ),
-      );
-      return {'status': 'success'};
+      final driveOps = _read!(driveOperationsServiceProvider);
+      await driveOps.moveFile(fileId, destFolderId, newName: destName);
+
+      // Rename in disk cache if present
+      try {
+        final cacheDirPath = await _getCacheDirPath();
+        final safeOldName = (srcResolved['name'] as String).replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final oldCacheFile = File('$cacheDirPath${Platform.pathSeparator}${fileId}_$safeOldName');
+        final safeNewName = destName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        final newCacheFile = File('$cacheDirPath${Platform.pathSeparator}${fileId}_$safeNewName');
+        if (await oldCacheFile.exists()) {
+          await oldCacheFile.rename(newCacheFile.path);
+        }
+      } catch (e) {
+        AppLogger.warning('WebDavServer: could not rename cached file on disk: $e');
+      }
+
+      return {'status': 'success', 'replaced': replacedExisting};
     }
   }
 
@@ -515,7 +681,11 @@ class WebDavServer {
       return {'status': 'error', 'code': 404, 'error': 'Source not found'};
     }
 
-    final destParts = cleanDest.split('/').where((p) => p.isNotEmpty).toList();
+    final destParts = cleanDest
+        .split('/')
+        .where((p) => p.isNotEmpty)
+        .map((s) => Uri.decodeComponent(s).trim())
+        .toList();
     if (destParts.isEmpty) {
       return {'status': 'error', 'code': 400, 'error': 'Invalid destination'};
     }
@@ -567,7 +737,11 @@ class WebDavServer {
   static Future<void> _uploadFile(String localPath, String rawTargetPath) async {
     final db = _read!(databaseProvider);
     final cleanPath = cleanWebDavPath(rawTargetPath);
-    final parts = cleanPath.split('/').where((p) => p.isNotEmpty).toList();
+    final parts = cleanPath
+        .split('/')
+        .where((p) => p.isNotEmpty)
+        .map((s) => Uri.decodeComponent(s).trim())
+        .toList();
     if (parts.isEmpty) return;
 
     final fileName = parts.last;
@@ -590,6 +764,14 @@ class WebDavServer {
     final fileIdToUse = existingFile?.id ?? const Uuid().v4();
     final mimeType = _getMimeType(fileName);
 
+    bool isFolderEncrypted = true;
+    if (folderId != null) {
+      final parentFolder = await (db.select(db.folders)..where((f) => f.id.equals(folderId!))).getSingleOrNull();
+      if (parentFolder != null) {
+        isFolderEncrypted = parentFolder.isEncrypted;
+      }
+    }
+
     // If 0-byte file (standard initial Windows Explorer probe before sending real file bytes):
     // Record in local DB and return immediately WITHOUT enqueuing to Telegram.
     // This prevents TDLib rejecting empty documents ("InputFile is not specified") and eliminates phantom failure cards!
@@ -599,6 +781,7 @@ class WebDavServer {
           FilesCompanion(
             size: const drift.Value(0),
             mimeType: drift.Value(mimeType),
+            isEncrypted: drift.Value(isFolderEncrypted),
             updatedAt: drift.Value(DateTime.now()),
           ),
         );
@@ -610,7 +793,7 @@ class WebDavServer {
             folderId: drift.Value(folderId),
             size: const drift.Value(0),
             mimeType: drift.Value(mimeType),
-            isEncrypted: const drift.Value(true),
+            isEncrypted: drift.Value(isFolderEncrypted),
             createdAt: drift.Value(DateTime.now()),
             updatedAt: drift.Value(DateTime.now()),
           ),
@@ -620,22 +803,14 @@ class WebDavServer {
       try {
         await file.delete();
       } catch (_) {}
+      _read!(dbRebuildVersionProvider.notifier).update((v) => v + 1);
       AppLogger.info('WebDavServer: 0-byte probe for "$fileName" acknowledged locally without queuing to Telegram');
       return;
     }
 
-    final tempDir = await getTemporaryDirectory();
-    final cacheDir = Directory('${tempDir.path}${Platform.pathSeparator}aerodrive_webdav_cache');
-    if (!await cacheDir.exists()) {
-      await cacheDir.create(recursive: true);
-    }
-
+    final cacheDirPath = await _getCacheDirPath();
     final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final fileCacheDir = Directory('${cacheDir.path}${Platform.pathSeparator}$fileIdToUse');
-    if (!await fileCacheDir.exists()) {
-      await fileCacheDir.create(recursive: true);
-    }
-    final cachedFilePath = '${fileCacheDir.path}${Platform.pathSeparator}$safeName';
+    final cachedFilePath = '$cacheDirPath${Platform.pathSeparator}${fileIdToUse}_$safeName';
     await file.copy(cachedFilePath);
     try {
       await file.delete();
@@ -647,6 +822,7 @@ class WebDavServer {
         FilesCompanion(
           size: drift.Value(fileSize),
           mimeType: drift.Value(mimeType),
+          isEncrypted: drift.Value(isFolderEncrypted),
           updatedAt: drift.Value(DateTime.now()),
         ),
       );
@@ -658,7 +834,7 @@ class WebDavServer {
           folderId: drift.Value(folderId),
           size: drift.Value(fileSize),
           mimeType: drift.Value(mimeType),
-          isEncrypted: const drift.Value(true),
+          isEncrypted: drift.Value(isFolderEncrypted),
           createdAt: drift.Value(DateTime.now()),
           updatedAt: drift.Value(DateTime.now()),
         ),
@@ -666,7 +842,7 @@ class WebDavServer {
       );
     }
 
-    // Enqueue background upload to Telegram with preassigned fileId and clean filename
+    // Enqueue background upload to Telegram with preassigned fileId, clean filename, and encryption mode
     await db.into(db.transferQueue).insert(
       TransferQueueCompanion.insert(
         id: const Uuid().v4(),
@@ -674,10 +850,12 @@ class WebDavServer {
         status: const drift.Value('PENDING'),
         priority: const drift.Value(1),
         totalBytes: drift.Value(fileSize),
-        fileId: drift.Value('$cachedFilePath|${folderId ?? ''}|$fileIdToUse|$fileName'),
+        fileId: drift.Value('$cachedFilePath|${folderId ?? ''}|$fileIdToUse|$fileName|${isFolderEncrypted ? "1" : "0"}'),
         createdAt: drift.Value(DateTime.now()),
       ),
     );
+
+    _read!(dbRebuildVersionProvider.notifier).update((v) => v + 1);
 
     try {
       _read!(uploadQueueServiceProvider);
@@ -698,14 +876,9 @@ class WebDavServer {
       final db = _read!(databaseProvider);
       final file = await (db.select(db.files)..where((f) => f.id.equals(fileId))).getSingle();
       
-      final tempDir = await getTemporaryDirectory();
-      final cacheDir = Directory('${tempDir.path}${Platform.pathSeparator}aerodrive_webdav_cache');
-      if (!await cacheDir.exists()) {
-        await cacheDir.create(recursive: true);
-      }
-
+      final cacheDirPath = await _getCacheDirPath();
       final safeName = file.name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-      final cacheFilePath = '${cacheDir.path}${Platform.pathSeparator}${file.id}_$safeName';
+      final cacheFilePath = '$cacheDirPath${Platform.pathSeparator}${file.id}_$safeName';
       final cacheFile = File(cacheFilePath);
 
       // Return immediately if valid cached file exists
@@ -793,23 +966,36 @@ class WebDavServer {
         localEncryptedPaths.add(chunkPath);
       }
 
-      // Decrypt chunks to cacheFilePath
-      final masterKeyBytes = _read!(masterKeyProvider) ?? MasterKeyProvider.instance.key;
-      if (masterKeyBytes == null) throw Exception("Master key not available (vault locked)");
+      if (!file.isEncrypted) {
+        if (localEncryptedPaths.length == 1) {
+          await File(localEncryptedPaths.first).copy(cacheFilePath);
+        } else {
+          final outSink = File(cacheFilePath).openWrite();
+          for (final p in localEncryptedPaths) {
+            await outSink.addStream(File(p).openRead());
+          }
+          await outSink.flush();
+          await outSink.close();
+        }
+      } else {
+        // Decrypt chunks to cacheFilePath
+        final masterKeyBytes = _read!(masterKeyProvider) ?? MasterKeyProvider.instance.key;
+        if (masterKeyBytes == null) throw Exception("Master key not available (vault locked)");
 
-      final engine = EncryptionEngine();
-      final unwrapped = await engine.unwrapDek(file.sha256Hash!, masterKeyBytes);
-      final dekBytes = unwrapped[0]!;
-      final ctrIv = unwrapped[1];
+        final engine = EncryptionEngine();
+        final unwrapped = await engine.unwrapDek(file.sha256Hash!, masterKeyBytes);
+        final dekBytes = unwrapped[0]!;
+        final ctrIv = unwrapped[1];
 
-      final orchestrator = DownloadOrchestrator();
-      await orchestrator.processFileForDownload(
-        localEncryptedPaths,
-        safeName,
-        dekBytes,
-        outputPath: cacheFilePath,
-        ctrIv: ctrIv,
-      );
+        final orchestrator = DownloadOrchestrator();
+        await orchestrator.processFileForDownload(
+          localEncryptedPaths,
+          safeName,
+          dekBytes,
+          outputPath: cacheFilePath,
+          ctrIv: ctrIv,
+        );
+      }
 
       completer.complete(cacheFilePath);
       return cacheFilePath;
@@ -916,10 +1102,13 @@ class WebDavServer {
   }
 
   static late String _tempDirPath;
+  static late String _cacheDirPath;
   static int _streamingPort = 0;
+  static final Map<String, String> _activeLocks = {};
 
   static Future<void> _serverWorker(_WorkerParams params) async {
     _tempDirPath = params.tempDirPath;
+    _cacheDirPath = params.cacheDirPath;
     _streamingPort = params.streamingPort;
     _fromMainPort = ReceivePort();
     params.sendPort.send(_fromMainPort.sendPort);
@@ -963,9 +1152,16 @@ class WebDavServer {
         .addHandler(router.call);
 
     try {
-      await shelf_io.serve(handler, InternetAddress.loopbackIPv4, params.creds.port);
+      final server = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, params.creds.port);
+      params.sendPort.send({'cmd': 'bound_port', 'port': server.port});
     } catch (e) {
-      // ignore
+      AppLogger.warning('WebDAV: Port ${params.creds.port} busy: $e. Binding to free loopback port...');
+      try {
+        final fallbackServer = await shelf_io.serve(handler, InternetAddress.loopbackIPv4, 0);
+        params.sendPort.send({'cmd': 'bound_port', 'port': fallbackServer.port});
+      } catch (e2) {
+        AppLogger.error('WebDAV: Failed to bind to loopback address: $e2');
+      }
     }
   }
 
@@ -1011,13 +1207,47 @@ class WebDavServer {
 
   static Future<shelf.Response> _handleProppatch(shelf.Request request) async {
     final rawPath = request.url.path;
-    final href = rawPath.isEmpty ? '/' : '/$rawPath';
+    final cleanPath = cleanWebDavPath(rawPath);
+    final href = _encodeWebDavHref(cleanPath);
+
+    String bodyStr = '';
+    try {
+      bodyStr = await request.readAsString();
+    } catch (_) {}
+
+    DateTime? modTime;
+    final lastModMatch = RegExp(r'<[^>]*Win32LastModifiedTime[^>]*>([^<]+)<', caseSensitive: false).firstMatch(bodyStr) ??
+        RegExp(r'<[^>]*getlastmodified[^>]*>([^<]+)<', caseSensitive: false).firstMatch(bodyStr);
+
+    if (lastModMatch != null) {
+      final val = lastModMatch.group(1)?.trim();
+      if (val != null) {
+        try {
+          modTime = HttpDate.parse(val);
+        } catch (_) {
+          try {
+            modTime = DateTime.tryParse(val);
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (modTime != null) {
+      await _sendToMain('proppatch', {
+        'path': cleanPath,
+        'updatedAt': modTime.millisecondsSinceEpoch,
+      });
+    }
+
     final xmlBody = '''<?xml version="1.0" encoding="utf-8" ?>
-<D:multistatus xmlns:D="DAV:">
+<D:multistatus xmlns:D="DAV:" xmlns:b="urn:uuid:c2f41010-65b3-11d1-a29f-00aa00c14882/">
   <D:response>
     <D:href>$href</D:href>
     <D:propstat>
-      <D:prop/>
+      <D:prop>
+        <D:getlastmodified/>
+        <b:Win32LastModifiedTime/>
+      </D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>
   </D:response>
@@ -1026,7 +1256,10 @@ class WebDavServer {
   }
 
   static Future<shelf.Response> _handleLock(shelf.Request request) async {
+    final cleanPath = cleanWebDavPath(request.url.path);
     final uuid = 'urn:uuid:${DateTime.now().microsecondsSinceEpoch}-${_nextLockId++}';
+    _activeLocks[cleanPath] = uuid;
+
     final xmlBody = '''<?xml version="1.0" encoding="utf-8" ?>
 <D:prop xmlns:D="DAV:">
   <D:lockdiscovery>
@@ -1050,7 +1283,11 @@ class WebDavServer {
 
   static int _nextLockId = 0;
 
-  static Future<shelf.Response> _handleUnlock(shelf.Request request) async => shelf.Response(204);
+  static Future<shelf.Response> _handleUnlock(shelf.Request request) async {
+    final cleanPath = cleanWebDavPath(request.url.path);
+    _activeLocks.remove(cleanPath);
+    return shelf.Response(204);
+  }
 
   static Future<shelf.Response> _handlePropfind(shelf.Request request) async {
     final depth = request.headers['depth'] ?? '1';
@@ -1087,6 +1324,8 @@ class WebDavServer {
               });
               builder.element('b:iscollection', nest: '1');
               builder.element('D:getcontenttype', nest: 'httpd/unix-directory');
+              builder.element('D:quota-available-bytes', nest: '10995116277760'); // 10 TB Cloud Free Space
+              builder.element('D:quota-used-bytes', nest: (resolved['size'] ?? 0).toString());
             } else {
               builder.element('D:resourcetype');
               builder.element('b:iscollection', nest: '0');
@@ -1131,6 +1370,8 @@ class WebDavServer {
                   });
                   builder.element('b:iscollection', nest: '1');
                   builder.element('D:getcontenttype', nest: 'httpd/unix-directory');
+                  builder.element('D:quota-available-bytes', nest: '10995116277760');
+                  builder.element('D:quota-used-bytes', nest: (child['size'] ?? 0).toString());
                 } else {
                   builder.element('D:resourcetype');
                   builder.element('b:iscollection', nest: '0');
@@ -1200,7 +1441,7 @@ class WebDavServer {
         : _getMimeType(fileName);
 
     final safeName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
-    final cacheDir = Directory('$_tempDirPath${Platform.pathSeparator}aerodrive_webdav_cache');
+    final cacheDir = Directory(_cacheDirPath);
     final cacheFile = File('${cacheDir.path}${Platform.pathSeparator}${fileId}_$safeName');
     final rangeHeader = request.headers['range'];
 
@@ -1342,7 +1583,12 @@ class WebDavServer {
     });
 
     if (result['status'] == 'success') {
-      return shelf.Response(201, body: 'Created');
+      if (_activeLocks.containsKey(sourcePath)) {
+        final lockVal = _activeLocks.remove(sourcePath)!;
+        _activeLocks[destPath] = lockVal;
+      }
+      final replaced = result['replaced'] == true;
+      return shelf.Response(replaced ? 204 : 201, body: replaced ? 'No Content' : 'Created');
     } else {
       return shelf.Response(result['code'] ?? 500, body: result['error'] ?? 'Move failed');
     }
@@ -1417,10 +1663,12 @@ class _WorkerParams {
     required this.sendPort,
     required this.creds,
     required this.tempDirPath,
+    required this.cacheDirPath,
     required this.streamingPort,
   });
   final SendPort sendPort;
   final WebDavCredentials creds;
   final String tempDirPath;
+  final String cacheDirPath;
   final int streamingPort;
 }

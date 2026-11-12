@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/providers/security_providers.dart';
 import '../../../core/theme/app_colors.dart';
@@ -25,6 +26,24 @@ class CreateFolderDialog extends ConsumerStatefulWidget {
 class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
   final _nameController = TextEditingController();
   String _selectedColorHex = '0xFF3B82F6'; // Default Sky Blue
+  bool _isEncrypted = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final currentId = ref.read(currentFolderIdProvider);
+      if (currentId != null) {
+        final db = ref.read(databaseProvider);
+        final parent = await (db.select(db.folders)..where((f) => f.id.equals(currentId))).getSingleOrNull();
+        if (parent != null && !parent.isEncrypted && mounted) {
+          setState(() {
+            _isEncrypted = false;
+          });
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -36,62 +55,117 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
   Widget build(BuildContext context) => AlertDialog(
       backgroundColor: AppColors.surfaceElevated,
       title: Text('New Folder', style: TextStyle(color: AppColors.onSurface)),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _nameController,
-            autofocus: true,
-            style: TextStyle(color: AppColors.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Folder name',
-              hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
-              filled: true,
-              fillColor: AppColors.surfaceVariant,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameController,
+              autofocus: true,
+              style: TextStyle(color: AppColors.onSurface),
+              decoration: InputDecoration(
+                hintText: 'Folder name',
+                hintStyle: TextStyle(color: AppColors.onSurfaceVariant),
+                filled: true,
+                fillColor: AppColors.surfaceVariant,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
+            const SizedBox(height: 20),
+            Text(
               'Folder Color',
               style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 13, fontWeight: FontWeight.w500),
             ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 40,
-            width: double.maxFinite,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: AppColors.folderColors.entries.map((entry) {
-                final hex = '0x${entry.value.toARGB32().toRadixString(16).toUpperCase()}';
-                final isSelected = _selectedColorHex == hex;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedColorHex = hex;
-                    });
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: entry.value,
-                      border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 40,
+              width: double.maxFinite,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: AppColors.folderColors.entries.map((entry) {
+                  final hex = '0x${entry.value.toARGB32().toRadixString(16).toUpperCase()}';
+                  final isSelected = _selectedColorHex == hex;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedColorHex = hex;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: entry.value,
+                        border: isSelected ? Border.all(color: Colors.white, width: 3) : null,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _isEncrypted 
+                    ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
+                    : const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: _isEncrypted 
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.25)
+                      : const Color(0xFFF59E0B).withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isEncrypted ? Icons.lock_rounded : Icons.bolt_rounded,
+                    size: 20,
+                    color: _isEncrypted ? const Color(0xFF3B82F6) : const Color(0xFFF59E0B),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _isEncrypted ? 'Zero-Knowledge Encryption' : 'Fast Native Mode (Unencrypted)',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _isEncrypted ? const Color(0xFF3B82F6) : const Color(0xFFF59E0B),
+                          ),
+                        ),
+                        Text(
+                          _isEncrypted 
+                              ? 'AES-256 encrypted before leaving device'
+                              : 'Fastest transfers & instant WebDAV streaming',
+                          style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+                        ),
+                      ],
                     ),
                   ),
-                );
-              }).toList(),
+                  Switch.adaptive(
+                    value: _isEncrypted,
+                    activeTrackColor: const Color(0xFF3B82F6),
+                    onChanged: (val) {
+                      setState(() {
+                        _isEncrypted = val;
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
-          )
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -140,6 +214,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
               name: name,
               parentId: currentId,
               color: _selectedColorHex,
+              isEncrypted: _isEncrypted,
             );
             ref.invalidate(folderContentsProvider);
             
@@ -162,6 +237,7 @@ class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
                 parentFolderId: currentId,
                 masterKey: secretKey,
                 color: _selectedColorHex,
+                isEncrypted: _isEncrypted ? 1 : 0,
               );
 
               final tempDir = await getTemporaryDirectory();

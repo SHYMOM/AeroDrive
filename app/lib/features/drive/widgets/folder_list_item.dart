@@ -12,6 +12,7 @@ import '../../../core/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
 import '../../../domain/activity/activity_service.dart';
+import '../../../domain/drive_operations_service.dart';
 import '../../../domain/folder_download_service.dart';
 import '../providers/drive_providers.dart';
 import '../../../domain/sync/config_sync_service.dart';
@@ -20,6 +21,7 @@ import 'marquee_text.dart';
 import '../../security/biometric_auth_service.dart';
 import '../../sharing/share_dialog.dart';
 import 'file_info_inspector.dart';
+import 'rename_item_dialog.dart';
 
 class FolderListItem extends ConsumerStatefulWidget {
   const FolderListItem({super.key, required this.folder});
@@ -109,10 +111,27 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           child: Row(
             children: [
-              Icon(
-                Icons.folder_rounded,
-                size: 32,
-                color: folderColor,
+              Stack(
+                children: [
+                  Icon(
+                    Icons.folder_rounded,
+                    size: 32,
+                    color: folderColor,
+                  ),
+                  if (!widget.folder.isEncrypted)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.bolt_rounded, size: 10, color: Color(0xFFF59E0B)),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 14),
               // Folder Details
@@ -253,6 +272,12 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
               _showCopyDialog(context);
             } else if (value == 'star') {
               _toggleFavorite();
+            } else if (value == 'toggle_encryption') {
+              await ref.read(folderRepositoryProvider).updateFolder(
+                widget.folder.id,
+                isEncrypted: !widget.folder.isEncrypted,
+              );
+              ref.read(dbRebuildVersionProvider.notifier).update((v) => v + 1);
             } else if (value == 'info') {
               _showInfoDialog(context);
             }
@@ -287,6 +312,23 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
                     Icon(Icons.palette_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
                     const SizedBox(width: 10),
                     Text('Change Color', style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'toggle_encryption',
+                child: Row(
+                  children: [
+                    Icon(
+                      widget.folder.isEncrypted ? Icons.bolt_rounded : Icons.lock_outline_rounded,
+                      size: 16,
+                      color: widget.folder.isEncrypted ? const Color(0xFFF59E0B) : const Color(0xFF3B82F6),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      widget.folder.isEncrypted ? 'Fast Native Mode' : 'Encrypted Mode',
+                      style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13),
+                    ),
                   ],
                 ),
               ),
@@ -466,11 +508,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
   }
 
   Future<void> _toggleFavorite() async {
-    final db = ref.read(databaseProvider);
-    await (db.update(db.folders)..where((f) => f.id.equals(widget.folder.id))).write(
-      FoldersCompanion(isFavorite: drift.Value(!widget.folder.isFavorite)),
-    );
-    ref.read(dbRebuildVersionProvider.notifier).state++;
+    await ref.read(driveOperationsServiceProvider).toggleFolderFavorite(widget.folder.id);
   }
 
   void _toggleSelection() {
@@ -496,44 +534,7 @@ class _FolderListItemState extends ConsumerState<FolderListItem> {
   }
 
   Future<void> _showRenameDialog(BuildContext context) async {
-    final controller = TextEditingController(text: widget.folder.name);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surfaceElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Rename Folder', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            hintText: 'Folder Name',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15))),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Rename', style: TextStyle(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true && controller.text.trim().isNotEmpty) {
-      final db = ref.read(databaseProvider);
-      await (db.update(db.folders)..where((f) => f.id.equals(widget.folder.id))).write(
-        FoldersCompanion(name: drift.Value(controller.text.trim())),
-      );
-      ref.read(dbRebuildVersionProvider.notifier).state++;
-    }
+    await showAeroDriveRenameDialog(context: context, ref: ref, folder: widget.folder);
   }
 
   Future<void> _showDeleteConfirm(BuildContext context) async {

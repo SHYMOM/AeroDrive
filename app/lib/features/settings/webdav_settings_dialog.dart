@@ -23,13 +23,17 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
   bool _isLoading = true;
   String? _error;
 
-  // Windows-specific states
+  // Platform states
   bool _isWindows = false;
+  bool _isLinux = false;
+  bool _isMacOS = false;
   bool _startupEnabled = false;
   bool _isFileSizeLimit4GB = true;
   String? _mountedDriveLetter;
   bool _isMountingDrive = false;
   bool _isFixingLimit = false;
+  List<String> _availableLetters = ['Z:', 'Y:', 'X:', 'W:', 'V:'];
+  String _selectedDriveLetter = 'Z:';
 
   late TextEditingController _portController;
 
@@ -38,6 +42,8 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
     super.initState();
     _portController = TextEditingController();
     _isWindows = !kIsWeb && Platform.isWindows;
+    _isLinux = !kIsWeb && Platform.isLinux;
+    _isMacOS = !kIsWeb && Platform.isMacOS;
     _isRunning = WebDavServer.isRunning;
     _loadConfig();
   }
@@ -53,6 +59,15 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
       limit4GB = await WindowsNetworkDriveService.isFileSizeLimit4GB();
       if (_isRunning) {
         drive = await WindowsNetworkDriveService.getMountedDrive(creds.port);
+      }
+      final available = await WindowsNetworkDriveService.getAvailableDriveLetters();
+      if (mounted) {
+        setState(() {
+          _availableLetters = available;
+          if (!available.contains(_selectedDriveLetter) && available.isNotEmpty) {
+            _selectedDriveLetter = available.first;
+          }
+        });
       }
     }
 
@@ -196,7 +211,7 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
     if (_creds == null) return;
     setState(() => _isMountingDrive = true);
     try {
-      final driveLetter = await WindowsNetworkDriveService.mountDrive(_creds!.port);
+      final driveLetter = await WindowsNetworkDriveService.mountDrive(_creds!.port, preferredLetter: _selectedDriveLetter);
       await TrayService.instance.updateContextMenu();
       if (!mounted) return;
       setState(() {
@@ -221,6 +236,54 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
       if (mounted) {
         setState(() => _isMountingDrive = false);
       }
+    }
+  }
+
+  Future<void> _mountLinuxDrive() async {
+    if (_creds == null) return;
+    setState(() => _isMountingDrive = true);
+    try {
+      await WindowsNetworkDriveService.mountLinux(_creds!.port);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Launched GIO / File Manager mount for AeroDrive!'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: Colors.red, content: Text('Mount error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMountingDrive = false);
+    }
+  }
+
+  Future<void> _mountMacOSDrive() async {
+    if (_creds == null) return;
+    setState(() => _isMountingDrive = true);
+    try {
+      await WindowsNetworkDriveService.mountMacOS(_creds!.port);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.green,
+            content: Text('Opening Finder Connect to Server...'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(backgroundColor: Colors.red, content: Text('Mount error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isMountingDrive = false);
     }
   }
 
@@ -351,15 +414,41 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
                                   style: TextStyle(fontSize: 12, color: Colors.white70),
                                 ),
                                 const SizedBox(height: 10),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton.icon(
-                                    icon: _isMountingDrive
-                                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                                        : const Icon(Icons.drive_file_move),
-                                    label: const Text('Mount as Windows Drive (Z:)'),
-                                    onPressed: _isMountingDrive ? null : _mountWindowsDrive,
-                                  ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                                      ),
+                                      child: DropdownButton<String>(
+                                        value: _selectedDriveLetter,
+                                        underline: const SizedBox(),
+                                        isDense: true,
+                                        items: _availableLetters.map((letter) => DropdownMenuItem(
+                                          value: letter,
+                                          child: Text('Drive $letter', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                        )).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setState(() => _selectedDriveLetter = val);
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: FilledButton.icon(
+                                        icon: _isMountingDrive
+                                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                            : const Icon(Icons.drive_file_move),
+                                        label: Text('Mount as Windows Drive ($_selectedDriveLetter)'),
+                                        onPressed: _isMountingDrive ? null : _mountWindowsDrive,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ] else ...[
                                 Row(
@@ -511,6 +600,88 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
                         ),
                       ],
 
+                      // Linux Native Mount Section
+                      if (_isLinux && _isRunning) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.deepOrangeAccent.withAlpha(25),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.deepOrangeAccent.withAlpha(80)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.desktop_windows_outlined, size: 20, color: Colors.deepOrangeAccent),
+                                  SizedBox(width: 8),
+                                  Text('Linux Desktop Mount (GVFS / GIO)', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Mount directly into Nautilus / Dolphin / Thunar via native GNOME/KDE WebDAV integration.',
+                                style: TextStyle(fontSize: 12, color: Colors.white70),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  icon: _isMountingDrive
+                                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.folder_shared_rounded),
+                                  label: const Text('Mount in File Manager (GIO)'),
+                                  onPressed: _isMountingDrive ? null : _mountLinuxDrive,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      // macOS Native Mount Section
+                      if (_isMacOS && _isRunning) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.cyanAccent.withAlpha(25),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.cyanAccent.withAlpha(80)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Row(
+                                children: [
+                                  Icon(Icons.apple_rounded, size: 20, color: Colors.cyanAccent),
+                                  SizedBox(width: 8),
+                                  Text('macOS Finder Mount', style: TextStyle(fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Connect directly via native macOS WebDAV client in Finder.',
+                                style: TextStyle(fontSize: 12, color: Colors.white70),
+                              ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  icon: _isMountingDrive
+                                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : const Icon(Icons.folder_open_rounded),
+                                  label: const Text('Connect to Finder (cmd+K)'),
+                                  onPressed: _isMountingDrive ? null : _mountMacOSDrive,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
                       // Windows Auto-Startup & Background Option
                       if (_isWindows) ...[
                         const SizedBox(height: 12),
@@ -580,6 +751,73 @@ class _WebDavSettingsDialogState extends ConsumerState<WebDavSettingsDialog> {
                         ),
                         keyboardType: TextInputType.number,
                         enabled: !_isRunning,
+                      ),
+
+                      // Live Activity & Diagnostics Bar
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest.withAlpha(90),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: _isRunning 
+                                ? Colors.greenAccent.withAlpha(80) 
+                                : Theme.of(context).colorScheme.outlineVariant,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _isRunning ? Colors.greenAccent : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _isRunning
+                                        ? '127.0.0.1:${_creds?.port ?? 49188} — Localhost Isolated 🔒'
+                                        : 'Server Stopped',
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                  ),
+                                  Text(
+                                    _isRunning
+                                        ? 'Strict loopback binding. Inaccessible from external LAN.'
+                                        : 'Not listening for filesystem or WebDAV requests.',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: _isRunning 
+                                    ? Colors.green.withAlpha(40) 
+                                    : Colors.grey.withAlpha(40),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                _isRunning ? 'ACTIVE' : 'OFFLINE',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: _isRunning ? Colors.greenAccent : Colors.grey,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),

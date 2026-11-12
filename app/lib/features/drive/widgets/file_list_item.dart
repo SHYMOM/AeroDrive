@@ -15,12 +15,14 @@ import '../../preview/preview_router.dart';
 import '../../sharing/share_dialog.dart';
 import '../../tags/tag_dialog.dart';
 import '../../../domain/sync/config_sync_service.dart';
+import '../../../domain/drive_operations_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_info_dialog.dart';
 import 'file_info_inspector.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
+import 'rename_item_dialog.dart';
 
 class FileListItem extends ConsumerWidget {
   
@@ -149,6 +151,11 @@ class FileListItem extends ConsumerWidget {
                           Padding(
                             padding: const EdgeInsets.only(left: 6),
                             child: Icon(Icons.star_rounded, color: const Color(0xFFF59E0B), size: 16),
+                          ),
+                        if (!file.isEncrypted)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.bolt_rounded, color: Color(0xFFF59E0B), size: 15),
                           ),
                         if (ref.watch(offlinePinnedIdsProvider).contains(file.id))
                           const Padding(
@@ -375,6 +382,8 @@ class FileListItem extends ConsumerWidget {
               }
             }
           }
+        } else if (value == 'rename') {
+          showAeroDriveRenameDialog(context: context, ref: ref, file: file);
         } else if (value == 'share') {
           showDialog(
             context: context,
@@ -399,6 +408,16 @@ class FileListItem extends ConsumerWidget {
         final isOfflinePinned = ref.watch(offlinePinnedIdsProvider).contains(file.id);
         return [
           PopupMenuItem(value: 'download', child: Text('Download', style: TextStyle(color: theme.colorScheme.onSurface))),
+          PopupMenuItem(
+            value: 'rename',
+            child: Row(
+              children: [
+                Icon(Icons.edit_outlined, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 10),
+                Text('Rename', style: TextStyle(color: theme.colorScheme.onSurface)),
+              ],
+            ),
+          ),
           PopupMenuItem(
             value: 'offline',
             child: Row(
@@ -428,11 +447,7 @@ class FileListItem extends ConsumerWidget {
     );
 
   Future<void> _toggleFavorite(WidgetRef ref) async {
-    final db = ref.read(databaseProvider);
-    await (db.update(db.files)..where((f) => f.id.equals(file.id))).write(
-      FilesCompanion(isFavorite: drift.Value(!file.isFavorite)),
-    );
-    ref.read(dbRebuildVersionProvider.notifier).state++;
+    await ref.read(driveOperationsServiceProvider).toggleFileFavorite(file.id);
   }
 
   void _toggleSelection(WidgetRef ref) {

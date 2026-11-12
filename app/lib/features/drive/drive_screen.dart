@@ -42,6 +42,7 @@ import 'widgets/folder_grid_item.dart';
 import 'widgets/folder_list_item.dart';
 import 'widgets/folder_picker_dialog.dart';
 import 'widgets/quick_access_row.dart';
+import 'widgets/rename_item_dialog.dart';
 import '../scanner/document_scanner_screen.dart';
 import 'widgets/breadcrumb_bar.dart';
 import 'widgets/channel_setup_wizard_dialog.dart';
@@ -100,6 +101,35 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
     }
   }
 
+  void _renameSelectedIfAny() {
+    final selectedFolder = ref.read(selectedFolderForInspectorProvider);
+    final selectedFile = ref.read(selectedFileForInspectorProvider);
+    if (selectedFolder != null) {
+      showAeroDriveRenameDialog(context: context, ref: ref, folder: selectedFolder);
+      return;
+    }
+    if (selectedFile != null) {
+      showAeroDriveRenameDialog(context: context, ref: ref, file: selectedFile);
+      return;
+    }
+    final selectedItems = ref.read(selectedItemsProvider);
+    if (selectedItems.length == 1) {
+      final id = selectedItems.first;
+      final db = ref.read(databaseProvider);
+      (db.select(db.folders)..where((f) => f.id.equals(id))).getSingleOrNull().then((f) {
+        if (f != null && mounted) {
+          showAeroDriveRenameDialog(context: context, ref: ref, folder: f);
+        } else {
+          (db.select(db.files)..where((file) => file.id.equals(id))).getSingleOrNull().then((file) {
+            if (file != null && mounted) {
+              showAeroDriveRenameDialog(context: context, ref: ref, file: file);
+            }
+          });
+        }
+      });
+    }
+  }
+
   void _clearSelection() {
     final isSelectionMode = ref.read(isSelectionModeProvider);
     if (isSelectionMode) {
@@ -137,6 +167,11 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
           _deleteSelectedIfAny();
           return KeyEventResult.handled;
         }
+      }
+
+      if (event.logicalKey == LogicalKeyboardKey.f2) {
+        _renameSelectedIfAny();
+        return KeyEventResult.handled;
       }
 
       if (event.logicalKey == LogicalKeyboardKey.escape) {
@@ -745,6 +780,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
         const SingleActivator(LogicalKeyboardKey.delete): _deleteSelectedIfAny,
         const SingleActivator(LogicalKeyboardKey.backspace): _deleteSelectedIfAny,
         const SingleActivator(LogicalKeyboardKey.escape): _clearSelection,
+        const SingleActivator(LogicalKeyboardKey.f2): _renameSelectedIfAny,
       },
       child: Focus(
         autofocus: true,

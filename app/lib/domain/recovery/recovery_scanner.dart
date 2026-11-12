@@ -14,6 +14,7 @@ import '../../data/db/database.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../smart_analyzer.dart';
 import '../sync/config_sync_service.dart';
+import '../sync/realtime_sync_service.dart';
 import '../thumbnail_cache_manager.dart';
 import 'manifest_encoder.dart';
 
@@ -132,13 +133,26 @@ class ZeroDBRecoveryService {
                 ? existingDbFolder.createdAt!
                 : remoteDate;
 
+            final encRaw = manifest['enc'];
+            final isFolderEnc = encRaw == null || encRaw == 1 || encRaw == true || encRaw == '1';
+
+            final favRaw = manifest['fav'];
+            final isFolderFav = favRaw == 1 || favRaw == true || favRaw == '1';
+
+            String folderName = manifest['name'] as String;
+            if (existingDbFolder != null && RealtimeSyncService.isRecentlyRenamed(folderId)) {
+              folderName = existingDbFolder.name;
+            }
+
             recoveredFolderIds.add(folderId);
             recoveredFolders.add(
               FoldersCompanion.insert(
                 id: folderId,
-                name: manifest['name'] as String,
+                name: folderName,
                 parentId: drift.Value(manifest['pid'] as String?), // Can be null
                 color: drift.Value(manifest['col'] as String?),
+                isEncrypted: drift.Value(isFolderEnc),
+                isFavorite: drift.Value(existingDbFolder != null ? (existingDbFolder.isFavorite || isFolderFav) : isFolderFav),
                 createdAt: drift.Value(recoveredDate), 
                 updatedAt: drift.Value(recoveredDate),
               ),
@@ -223,14 +237,25 @@ class ZeroDBRecoveryService {
                   ? DateTime.fromMillisecondsSinceEpoch(ptSeconds * 1000) 
                   : null;
 
+              final isEncVal = manifest['enc'] == null || manifest['enc'] == 1 || manifest['enc'] == true || manifest['enc'] == '1';
+
+              final favRaw = manifest['fav'];
+              final isFileFav = favRaw == 1 || favRaw == true || favRaw == '1';
+
+              String fileName = manifest['name'] as String;
+              if (existingDbFile != null && RealtimeSyncService.isRecentlyRenamed(fileId)) {
+                fileName = existingDbFile.name;
+              }
+
               recoveredFiles.add(
                 FilesCompanion.insert(
                   id: fileId,
-                  name: manifest['name'] as String,
+                  name: fileName,
                   folderId: drift.Value(manifest['pid'] as String?),
                   size: drift.Value(size),
                   mimeType: drift.Value(manifest['mime'] as String?),
-                  isEncrypted: drift.Value(manifest['enc'] == 1),
+                  isEncrypted: drift.Value(isEncVal),
+                  isFavorite: drift.Value(existingDbFile != null ? (existingDbFile.isFavorite || isFileFav) : isFileFav),
                   isChunked: drift.Value(isChunkedVal),
                   totalChunks: drift.Value(totalChunksVal),
                   sha256Hash: drift.Value(wrappedDekString),

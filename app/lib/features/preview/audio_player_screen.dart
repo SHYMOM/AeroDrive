@@ -15,6 +15,7 @@ import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../../domain/download_orchestrator.dart';
+import '../../domain/drive_operations_service.dart';
 import '../../domain/offline/offline_pin_service.dart';
 import '../../domain/streaming/streaming_server.dart';
 import '../gallery/thumbnail_service.dart';
@@ -302,12 +303,10 @@ class _AudioPlayerScreenState extends ConsumerState<AudioPlayerScreen>
   }
 
   void _toggleFavorite() async {
-    final db = ref.read(databaseProvider);
-    final newFav = !_isFavorite;
-    setState(() => _isFavorite = newFav);
-
-    await (db.update(db.files)..where((tbl) => tbl.id.equals(currentFile.id)))
-        .write(FilesCompanion(isFavorite: drift.Value(newFav)));
+    final newFav = await ref.read(driveOperationsServiceProvider).toggleFileFavorite(currentFile.id);
+    if (mounted) {
+      setState(() => _isFavorite = newFav);
+    }
 
     final idx = _playlist.indexWhere((f) => f.id == currentFile.id);
     if (idx >= 0) {

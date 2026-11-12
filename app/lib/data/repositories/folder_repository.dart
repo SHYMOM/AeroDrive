@@ -42,7 +42,7 @@ class FolderRepository {
     return path.isEmpty ? '/' : path;
   }
 
-  Future<String> createFolder({required String name, String? parentId, String? color}) async {
+  Future<String> createFolder({required String name, String? parentId, String? color, bool isEncrypted = true}) async {
     if (name.length > 200) {
       throw FolderNameTooLongException();
     }
@@ -61,6 +61,7 @@ class FolderRepository {
         name: name,
         parentId: Value(parentId),
         color: Value(color),
+        isEncrypted: Value(isEncrypted),
         createdAt: Value(DateTime.now()),
         updatedAt: Value(DateTime.now()),
       ),
@@ -68,12 +69,13 @@ class FolderRepository {
     return id;
   }
   
-  Future<void> updateFolder(String folderId, {String? newName, String? newColor}) async {
+  Future<void> updateFolder(String folderId, {String? newName, String? newColor, bool? isEncrypted}) async {
     final now = DateTime.now();
     await (_db.update(_db.folders)..where((f) => f.id.equals(folderId))).write(
       FoldersCompanion(
         name: newName != null ? Value(newName) : const Value.absent(),
         color: newColor != null ? Value(newColor) : const Value.absent(),
+        isEncrypted: isEncrypted != null ? Value(isEncrypted) : const Value.absent(),
         updatedAt: Value(now),
       ),
     );

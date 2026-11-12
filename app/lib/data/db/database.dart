@@ -33,7 +33,7 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
   AeroDriveDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,63 +41,100 @@ class AeroDriveDatabase extends _$AeroDriveDatabase {
         await m.createAll();
       },
       onUpgrade: (m, from, to) async {
+        Future<void> safeAddColumn(TableInfo table, GeneratedColumn column) async {
+          try {
+            final rows = await customSelect("PRAGMA table_info('${table.actualTableName}')").get();
+            final colName = column.name.toLowerCase();
+            final exists = rows.any((r) =>
+                (r.data['name'] as String?)?.toLowerCase() == colName);
+            if (exists) {
+              return;
+            }
+          } catch (_) {}
+
+          try {
+            await m.addColumn(table, column);
+          } catch (e) {
+            final msg = e.toString().toLowerCase();
+            if (msg.contains('duplicate column') || msg.contains('already exists')) {
+              return;
+            }
+            rethrow;
+          }
+        }
+
+        Future<void> safeCreateTable(TableInfo table) async {
+          try {
+            await m.createTable(table);
+          } catch (e) {
+            final msg = e.toString().toLowerCase();
+            if (msg.contains('already exists')) {
+              return;
+            }
+            rethrow;
+          }
+        }
+
         if (from < 2) {
           await m.createAll();
         }
         if (from < 3) {
-          await m.addColumn(files, files.sha256Hash);
+          await safeAddColumn(files, files.sha256Hash);
         }
         if (from < 4) {
-          await m.addColumn(files, files.manifestMessageId);
-          await m.addColumn(files, files.version);
+          await safeAddColumn(files, files.manifestMessageId);
+          await safeAddColumn(files, files.version);
         }
         if (from < 5) {
-          await m.addColumn(files, files.encryptionNonce);
-          await m.addColumn(files, files.encryptionAlgo);
-          await m.addColumn(files, files.manifestVersion);
-          await m.addColumn(files, files.isFavorite);
-          await m.addColumn(channels, channels.isHidden);
-          await m.addColumn(accounts, accounts.telegramUserId);
-          await m.addColumn(accounts, accounts.phoneNumberMasked);
-          await m.addColumn(accounts, accounts.isActive);
-          await m.createTable(thumbnails);
-          await m.createTable(manifestMessages);
-          await m.createTable(shareLinks);
+          await safeAddColumn(files, files.encryptionNonce);
+          await safeAddColumn(files, files.encryptionAlgo);
+          await safeAddColumn(files, files.manifestVersion);
+          await safeAddColumn(files, files.isFavorite);
+          await safeAddColumn(channels, channels.isHidden);
+          await safeAddColumn(accounts, accounts.telegramUserId);
+          await safeAddColumn(accounts, accounts.phoneNumberMasked);
+          await safeAddColumn(accounts, accounts.isActive);
+          await safeCreateTable(thumbnails);
+          await safeCreateTable(manifestMessages);
+          await safeCreateTable(shareLinks);
         }
         if (from < 6) {
-          await m.addColumn(tags, tags.source);
-          await m.createTable(places);
-          await m.createTable(filePlaces);
+          await safeAddColumn(tags, tags.source);
+          await safeCreateTable(places);
+          await safeCreateTable(filePlaces);
         }
         if (from < 7) {
-          await m.addColumn(folders, folders.isFavorite);
+          await safeAddColumn(folders, folders.isFavorite);
         }
         if (from < 8) {
-          await m.addColumn(files, files.photoTakenAt);
+          await safeAddColumn(files, files.photoTakenAt);
         }
         if (from < 9) {
-          await m.addColumn(files, files.duration);
+          await safeAddColumn(files, files.duration);
         }
         if (from < 10) {
-          await m.addColumn(files, files.thumbnailMessageId);
-          await m.addColumn(files, files.thumbnailChannelId);
+          await safeAddColumn(files, files.thumbnailMessageId);
+          await safeAddColumn(files, files.thumbnailChannelId);
           try {
             await m.deleteTable('photo_faces');
           } catch (_) {}
-          await m.createTable(photoFaces);
+          await safeCreateTable(photoFaces);
         }
         if (from < 11) {
           // Phase 0: Add Channel purpose and auto-create columns
-          await m.addColumn(channels, channels.purpose);
-          await m.addColumn(channels, channels.descriptionCached);
-          await m.addColumn(channels, channels.isAutoCreated);
+          await safeAddColumn(channels, channels.purpose);
+          await safeAddColumn(channels, channels.descriptionCached);
+          await safeAddColumn(channels, channels.isAutoCreated);
         }
         if (from < 12) {
           // Phase 0: Add dedicated DEK storage to TransferQueue
-          await m.addColumn(transferQueue, transferQueue.encryptedDek);
-          await m.addColumn(transferQueue, transferQueue.encryptionAlgo);
-          await m.addColumn(transferQueue, transferQueue.encryptionNonce);
-          await m.addColumn(transferQueue, transferQueue.streamingIv);
+          await safeAddColumn(transferQueue, transferQueue.encryptedDek);
+          await safeAddColumn(transferQueue, transferQueue.encryptionAlgo);
+          await safeAddColumn(transferQueue, transferQueue.encryptionNonce);
+          await safeAddColumn(transferQueue, transferQueue.streamingIv);
+        }
+        if (from < 13) {
+          await safeAddColumn(folders, folders.isEncrypted);
         }
       },
     );

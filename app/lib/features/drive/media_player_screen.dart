@@ -9,6 +9,7 @@ import '../../core/providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../data/db/database.dart';
+import '../../domain/drive_operations_service.dart';
 import '../../domain/streaming/streaming_server.dart';
 import '../../domain/sync/config_sync_service.dart';
 import '../sharing/share_dialog.dart';
@@ -240,12 +241,10 @@ class _MediaPlayerScreenState extends ConsumerState<MediaPlayerScreen> {
   }
 
   Future<void> _toggleFavorite() async {
-    final db = ref.read(databaseProvider);
-    final newFav = !_isFavorite;
-    await (db.update(db.files)..where((f) => f.id.equals(widget.file.id))).write(
-      FilesCompanion(isFavorite: drift.Value(newFav))
-    );
-    setState(() => _isFavorite = newFav);
+    final newFav = await ref.read(driveOperationsServiceProvider).toggleFileFavorite(widget.file.id);
+    if (mounted) {
+      setState(() => _isFavorite = newFav);
+    }
   }
 
   void _showMoreOptions() {

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/drive/providers/drive_providers.dart';
 import '../../features/drive/widgets/create_or_upload_sheet.dart';
 import '../../features/drive/widgets/file_info_inspector.dart';
+import '../../features/settings/webdav_settings_dialog.dart';
 import '../../features/transfers/widgets/floating_transfer_card.dart';
 import '../../features/transfers/widgets/global_progress_bar.dart';
 import '../constants.dart';
@@ -56,6 +57,10 @@ class _ResponsiveScaffoldState extends ConsumerState<ResponsiveScaffold> {
 
   int _currentIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/media')) return 1;
+    if (location.startsWith('/transfers')) return 2;
+    if (location.startsWith('/settings') && !location.startsWith('/settings/shared_links')) return 3;
+    if (location.startsWith('/drive')) return 0;
     final index = AppDestination.values.indexWhere(
       (d) => location.startsWith(d.path),
     );
@@ -456,61 +461,86 @@ class SidebarContent extends ConsumerWidget {
           const SizedBox(height: 14),
 
           // ── Navigation Items List ────────────────────────────
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              children: [
-                // 1. My Drive
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.home_rounded,
-                  label: 'My Drive',
-                  isSelected: selectedIndex == 0,
-                  onTap: () => onDestinationSelected(0),
+          Builder(
+            builder: (context) {
+              final location = GoRouterState.of(context).uri.path;
+              final isSharedLinks = location.startsWith('/settings/shared_links') || location == '/sharing';
+              final isSettings = location.startsWith('/settings') && !isSharedLinks;
+              final isTrash = location.startsWith('/trash');
+              final isMedia = location.startsWith('/media');
+              final isTransfers = location.startsWith('/transfers');
+              final isDrive = location.startsWith('/drive') || (!isSharedLinks && !isSettings && !isTrash && !isMedia && !isTransfers);
+
+              return Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  children: [
+                    // 1. My Drive
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.home_rounded,
+                      label: 'My Drive',
+                      isSelected: isDrive,
+                      onTap: () => context.go('/drive'),
+                    ),
+                    // 2. Media
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.photo_library_rounded,
+                      label: 'Media',
+                      isSelected: isMedia,
+                      onTap: () => context.go('/media'),
+                    ),
+                    // 3. Transfers
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.swap_vert_rounded,
+                      label: 'Transfers',
+                      isSelected: isTransfers,
+                      badge: _TransferBadge(),
+                      onTap: () => context.go('/transfers'),
+                    ),
+                    // 4. Shared Links
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.link_rounded,
+                      label: 'Shared Links',
+                      isSelected: isSharedLinks,
+                      onTap: () => context.go('/settings/shared_links'),
+                    ),
+                    // 5. Settings
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.settings_rounded,
+                      label: 'Settings',
+                      isSelected: isSettings,
+                      onTap: () => context.go('/settings'),
+                    ),
+                    // 6. Trash
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.delete_outline_rounded,
+                      label: 'Trash',
+                      isSelected: isTrash,
+                      onTap: () => context.go('/trash'),
+                    ),
+                    // 7. WebDAV Drive Native Mount
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.dns_rounded,
+                      label: 'WebDAV Drive',
+                      isSelected: false,
+                      onTap: () {
+                        showDialog<void>(
+                          context: context,
+                          builder: (ctx) => const WebDavSettingsDialog(),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                // 2. Media
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.photo_library_rounded,
-                  label: 'Media',
-                  isSelected: selectedIndex == 1,
-                  onTap: () => onDestinationSelected(1),
-                ),
-                // 3. Transfers
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.swap_vert_rounded,
-                  label: 'Transfers',
-                  isSelected: selectedIndex == 2,
-                  badge: _TransferBadge(),
-                  onTap: () => onDestinationSelected(2),
-                ),
-                // 4. Shared Links
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.link_rounded,
-                  label: 'Shared Links',
-                  isSelected: false,
-                  onTap: () => context.push('/settings/shared_links'),
-                ),
-                // 5. Settings
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.settings_rounded,
-                  label: 'Settings',
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onDestinationSelected(3),
-                ),
-                // 6. Trash
-                _buildNavItem(
-                  context: context,
-                  icon: Icons.delete_outline_rounded,
-                  label: 'Trash',
-                  isSelected: false,
-                  onTap: () => context.push('/trash'),
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           // ── Bottom Zero-Knowledge Storage Card ───────────────

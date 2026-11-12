@@ -453,50 +453,12 @@ class DownloadQueueService {
       await _markQueueFailed(queueId, 'File not found in database');
       return;
     }
-    if (dbFile.sha256Hash == null || dbFile.sha256Hash!.isEmpty) {
+    if (dbFile.isEncrypted && (dbFile.sha256Hash == null || dbFile.sha256Hash!.isEmpty)) {
       await _markQueueFailed(queueId, 'File has no encryption key (sha256Hash is null/empty)');
       return;
     }
 
     try {
-      final dekBytesStr = dbFile.sha256Hash!;
-      List<int> dekBytes;
-      List<int>? ctrIv;
-      
-      final masterKey = _ref.read(masterKeyProvider);
-      
-      if (dekBytesStr.contains('|') && masterKey != null) {
-        final parts = dekBytesStr.split('|');
-        if (parts.length >= 3) {
-          final nonce = base64Decode(parts[0]);
-          final mac = Mac(base64Decode(parts[1]));
-          final cipherText = base64Decode(parts[2]);
-          
-          final cipher = AesGcm.with256bits();
-          final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
-          
-          dekBytes = await cipher.decrypt(
-            SecretBox(cipherText, nonce: nonce, mac: mac),
-            secretKey: secretKey,
-          );
-
-          if (parts.length >= 4) {
-            ctrIv = base64Decode(parts[3]);
-          }
-        } else {
-           throw Exception("Corrupted wrapped DEK payload.");
-        }
-      } else if (dekBytesStr.contains(',')) {
-        dekBytes = dekBytesStr.split(',').map((s) => int.parse(s.trim())).toList();
-      } else {
-        try {
-          dekBytes = base64Decode(dekBytesStr);
-        } catch (e) {
-          AppLogger.error('DownloadQueue: base64 decode failed for DEK', e);
-          throw Exception("Unable to parse DEK from sha256Hash field. Expected base64, comma-separated ints, or wrapped format.");
-        }
-      }
-
       final queueParts = item.fileId?.split('|');
       final String? customOutputPath = (queueParts != null && queueParts.length > 1 && queueParts[1] != 'null' && queueParts[1].isNotEmpty) ? queueParts[1] : null;
 
@@ -505,13 +467,66 @@ class DownloadQueueService {
       final rawOutputPath = customOutputPath ?? '${targetDir.path}${Platform.pathSeparator}$safeFileName';
       final outputPath = await DownloadOrchestrator.dedupFilePath(rawOutputPath);
 
-      final decryptedFile = await _orchestrator.processFileForDownload(
-        localEncryptedPaths,
-        safeFileName,
-        dekBytes,
-        outputPath: outputPath,
-        ctrIv: ctrIv,
-      );
+      File decryptedFile;
+      if (!dbFile.isEncrypted) {
+        if (localEncryptedPaths.length == 1) {
+          decryptedFile = await File(localEncryptedPaths.first).copy(outputPath);
+        } else {
+          final outSink = File(outputPath).openWrite();
+          for (final chunkP in localEncryptedPaths) {
+            await outSink.addStream(File(chunkP).openRead());
+          }
+          await outSink.flush();
+          await outSink.close();
+          decryptedFile = File(outputPath);
+        }
+      } else {
+        final dekBytesStr = dbFile.sha256Hash!;
+        List<int> dekBytes;
+        List<int>? ctrIv;
+        
+        final masterKey = _ref.read(masterKeyProvider);
+        
+        if (dekBytesStr.contains('|') && masterKey != null) {
+          final parts = dekBytesStr.split('|');
+          if (parts.length >= 3) {
+            final nonce = base64Decode(parts[0]);
+            final mac = Mac(base64Decode(parts[1]));
+            final cipherText = base64Decode(parts[2]);
+            
+            final cipher = AesGcm.with256bits();
+            final secretKey = await cipher.newSecretKeyFromBytes(masterKey);
+            
+            dekBytes = await cipher.decrypt(
+              SecretBox(cipherText, nonce: nonce, mac: mac),
+              secretKey: secretKey,
+            );
+
+            if (parts.length >= 4) {
+              ctrIv = base64Decode(parts[3]);
+            }
+          } else {
+             throw Exception("Corrupted wrapped DEK payload.");
+          }
+        } else if (dekBytesStr.contains(',')) {
+          dekBytes = dekBytesStr.split(',').map((s) => int.parse(s.trim())).toList();
+        } else {
+          try {
+            dekBytes = base64Decode(dekBytesStr);
+          } catch (e) {
+            AppLogger.error('DownloadQueue: base64 decode failed for DEK', e);
+            throw Exception("Unable to parse DEK from sha256Hash field. Expected base64, comma-separated ints, or wrapped format.");
+          }
+        }
+
+        decryptedFile = await _orchestrator.processFileForDownload(
+          localEncryptedPaths,
+          safeFileName,
+          dekBytes,
+          outputPath: outputPath,
+          ctrIv: ctrIv,
+        );
+      }
 
       // Clean up temporary encrypted chunk files from disk
       for (final p in localEncryptedPaths) {

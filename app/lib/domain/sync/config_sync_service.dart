@@ -15,6 +15,7 @@ import '../../data/db/database.dart';
 import '../../features/drive/providers/drive_providers.dart';
 import '../../features/telegram/telegram_service.dart';
 import '../../features/trash/trash_screen.dart';
+import '../drive_operations_service.dart';
 
 enum ConfigStatus {
   synced,
@@ -83,6 +84,21 @@ class ConfigSyncService {
     final List<String> deletedFilesList = deletedFilesJson != null ? List<String>.from(jsonDecode(deletedFilesJson)) : [];
     final List<String> deletedFoldersList = deletedFoldersJson != null ? List<String>.from(jsonDecode(deletedFoldersJson)) : [];
 
+    // Read Starred files & folders for cross-device favorites sync
+    final starredFiles = await (db.select(db.files)..where((f) => f.isFavorite.equals(true) & f.deletedAt.isNull())).get();
+    final starredFolders = await (db.select(db.folders)..where((f) => f.isFavorite.equals(true) & f.deletedAt.isNull())).get();
+
+    // Custom folder colors & encryption modes
+    final coloredFolders = await (db.select(db.folders)..where((f) => f.color.isNotNull() & f.deletedAt.isNull())).get();
+    final customFolderColors = {for (final f in coloredFolders) f.id: f.color!};
+
+    final unencryptedFolders = await (db.select(db.folders)..where((f) => f.isEncrypted.equals(false) & f.deletedAt.isNull())).get();
+    final folderEncryptionModes = {for (final f in unencryptedFolders) f.id: false};
+
+    // Renamed folder tombstones
+    final tombstonesJson = await settingsRepo.getSetting('renamed_folder_tombstones');
+    final Map<String, dynamic> tombstonesMap = tombstonesJson != null ? Map<String, dynamic>.from(jsonDecode(tombstonesJson)) : {};
+
     final configMap = {
       'storage_channels_list': rawChannels ?? '[]',
       'active_channel_id': activeChannel ?? '',
@@ -94,6 +110,11 @@ class ConfigSyncService {
       'trashed_folders': trashedFoldersMap,
       'deleted_file_ids': deletedFilesList,
       'deleted_folder_ids': deletedFoldersList,
+      'starred_file_ids': starredFiles.map((f) => f.id).toList(),
+      'starred_folder_ids': starredFolders.map((f) => f.id).toList(),
+      'folder_colors': customFolderColors,
+      'folder_encryption': folderEncryptionModes,
+      'renamed_folder_tombstones': tombstonesMap,
       'lww_timestamp': nowLww,
     };
     final String configToSync = jsonEncode(configMap);
@@ -341,6 +362,69 @@ class ConfigSyncService {
           dbChanged = true;
           AppLogger.info('ConfigSyncService: Folder ${folder.id} restored remotely');
         }
+      }
+
+      // 5. Starred files (Favorites sync across devices)
+      if (configMap.containsKey('starred_file_ids')) {
+        final remoteStarredFiles = Set<String>.from((configMap['starred_file_ids'] as List<dynamic>?)?.map((e) => e.toString()) ?? []);
+        final allFiles = await (db.select(db.files)..where((f) => f.deletedAt.isNull())).get();
+        for (final file in allFiles) {
+          final shouldBeFav = remoteStarredFiles.contains(file.id);
+          if (file.isFavorite != shouldBeFav) {
+            await (db.update(db.files)..where((f) => f.id.equals(file.id)))
+                .write(FilesCompanion(isFavorite: drift.Value(shouldBeFav)));
+            dbChanged = true;
+          }
+        }
+      }
+
+      // 6. Starred folders (Favorites sync across devices)
+      if (configMap.containsKey('starred_folder_ids')) {
+        final remoteStarredFolders = Set<String>.from((configMap['starred_folder_ids'] as List<dynamic>?)?.map((e) => e.toString()) ?? []);
+        final allFolders = await (db.select(db.folders)..where((f) => f.deletedAt.isNull())).get();
+        for (final folder in allFolders) {
+          final shouldBeFav = remoteStarredFolders.contains(folder.id);
+          if (folder.isFavorite != shouldBeFav) {
+            await (db.update(db.folders)..where((f) => f.id.equals(folder.id)))
+                .write(FoldersCompanion(isFavorite: drift.Value(shouldBeFav)));
+            dbChanged = true;
+          }
+        }
+      }
+
+      // 7. Custom folder colors
+      if (configMap.containsKey('folder_colors')) {
+        final colors = Map<String, dynamic>.from(configMap['folder_colors'] as Map? ?? {});
+        for (final entry in colors.entries) {
+          final colorVal = entry.value?.toString();
+          if (colorVal != null) {
+            final count = await (db.update(db.folders)..where((f) => f.id.equals(entry.key) & f.color.isNotValue(colorVal)))
+                .write(FoldersCompanion(color: drift.Value(colorVal)));
+            if (count > 0) dbChanged = true;
+          }
+        }
+      }
+
+      // 8. Folder encryption modes
+      if (configMap.containsKey('folder_encryption')) {
+        final encMap = Map<String, dynamic>.from(configMap['folder_encryption'] as Map? ?? {});
+        for (final entry in encMap.entries) {
+          final isEnc = entry.value == true;
+          final count = await (db.update(db.folders)..where((f) => f.id.equals(entry.key) & f.isEncrypted.isNotValue(isEnc)))
+              .write(FoldersCompanion(isEncrypted: drift.Value(isEnc)));
+          if (count > 0) dbChanged = true;
+        }
+      }
+
+      // 9. Renamed folder tombstones
+      if (configMap.containsKey('renamed_folder_tombstones')) {
+        final settingsRepo = _ref.read(settingsRepositoryProvider);
+        final remoteTombstones = Map<String, dynamic>.from(configMap['renamed_folder_tombstones'] as Map? ?? {});
+        final localTombstonesJson = await settingsRepo.getSetting('renamed_folder_tombstones');
+        final Map<String, dynamic> localTombstones = localTombstonesJson != null ? Map<String, dynamic>.from(jsonDecode(localTombstonesJson)) : {};
+        localTombstones.addAll(remoteTombstones);
+        await settingsRepo.setSetting('renamed_folder_tombstones', jsonEncode(localTombstones));
+        DriveOperationsService.loadTombstones(localTombstones.map((k, v) => MapEntry(k, v.toString())));
       }
 
       if (dbChanged) {

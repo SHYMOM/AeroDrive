@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
 import '../../data/db/database.dart';
+import '../../domain/drive_operations_service.dart';
 import 'archive_viewer.dart';
 import 'audio_player_screen.dart';
 import 'file_decryption_util.dart';
@@ -38,8 +39,7 @@ class PreviewFavoriteButton extends ConsumerWidget {
           ),
           tooltip: isFav ? 'Remove from favorites' : 'Add to favorites',
           onPressed: () async {
-            await (db.update(db.files)..where((f) => f.id.equals(file.id)))
-                .write(FilesCompanion(isFavorite: drift.Value(!isFav)));
+            await ref.read(driveOperationsServiceProvider).toggleFileFavorite(file.id);
           },
         );
       },
