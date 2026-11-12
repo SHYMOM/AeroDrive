@@ -24,7 +24,7 @@ class CreateFolderDialog extends ConsumerStatefulWidget {
 
 class _CreateFolderDialogState extends ConsumerState<CreateFolderDialog> {
   final _nameController = TextEditingController();
-  String _selectedColorHex = '0xFF60A5FA'; // Default Blue
+  String _selectedColorHex = '0xFF3B82F6'; // Default Sky Blue
 
   @override
   void dispose() {

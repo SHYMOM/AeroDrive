@@ -379,7 +379,7 @@ Future<String?> _resolveBackupFolderIdInDispatcher(
   return currentFolderId;
 }
 
-RawServerSocket? _uiLockSocket;
+ServerSocket? _uiLockSocket;
 
 /// AeroDrive application entry point.
 void main() async {
@@ -400,20 +400,78 @@ void main() async {
     } catch (_) {}
   }
 
-  // Signal any running background headless service to yield the port lock
-  try {
-    final socket = await Socket.connect('127.0.0.1', 46828, timeout: const Duration(seconds: 1));
-    await socket.close();
-    // Wait for the background engine to shut down and release the port
-    await Future.delayed(const Duration(milliseconds: 1500));
-  } catch (_) {}
+  // Single-instance enforcement and activation protocol on Desktop platforms
+  if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    try {
+      final socket = await Socket.connect('127.0.0.1', 46828, timeout: const Duration(milliseconds: 600));
+      socket.writeln('ACTIVATE');
+      await socket.flush();
 
-  // Bind main UI lock port
-  try {
-    _uiLockSocket = await RawServerSocket.bind('127.0.0.1', 46828);
-    AppLogger.info('[AeroDrive UI] Successfully acquired UI isolate lock.');
-  } catch (e) {
-    AppLogger.warning('[AeroDrive UI] Failed to acquire UI isolate lock: $e');
+      final completer = Completer<String>();
+      socket.listen(
+        (data) {
+          if (!completer.isCompleted) {
+            completer.complete(utf8.decode(data).trim());
+          }
+        },
+        onError: (_) {
+          if (!completer.isCompleted) completer.complete('');
+        },
+        onDone: () {
+          if (!completer.isCompleted) completer.complete('');
+        },
+      );
+
+      final reply = await completer.future.timeout(
+        const Duration(milliseconds: 1000),
+        onTimeout: () => '',
+      );
+      try {
+        await socket.close();
+      } catch (_) {}
+
+      if (reply.contains('ACTIVATED')) {
+        AppLogger.info('[AeroDrive UI] Active instance notified. Terminating duplicate instance.');
+        exit(0);
+      }
+
+      // If existing process yielded the port (e.g. background sync worker), wait for release
+      await Future.delayed(const Duration(milliseconds: 1200));
+    } catch (_) {
+      // Port is not in use or connect timed out, proceed as primary
+    }
+
+    // Bind main UI lock port and listen for future activate requests
+    try {
+      final server = await ServerSocket.bind('127.0.0.1', 46828);
+      _uiLockSocket = server;
+      AppLogger.info('[AeroDrive UI] Successfully acquired UI isolate lock.');
+
+      server.listen((client) {
+        client.listen((data) async {
+          final msg = utf8.decode(data).trim();
+          if (msg.contains('ACTIVATE')) {
+            AppLogger.info('[AeroDrive UI] Received ACTIVATE command from duplicate launch.');
+            if (Platform.isWindows) {
+              await TrayService.instance.restoreWindow();
+            } else {
+              if (await windowManager.isMinimized()) {
+                await windowManager.restore();
+              }
+              await windowManager.show();
+              await windowManager.focus();
+            }
+            try {
+              client.writeln('ACTIVATED');
+              await client.flush();
+              await client.close();
+            } catch (_) {}
+          }
+        });
+      });
+    } catch (e) {
+      AppLogger.warning('[AeroDrive UI] Failed to acquire UI isolate lock: ');
+    }
   }
 
   // 2. Allow google_fonts to fetch at runtime (fonts not bundled as assets).
@@ -773,6 +831,14 @@ class _AeroDriveAppState extends ConsumerState<AeroDriveApp> with WindowListener
       locale: locale,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.touch,
+          PointerDeviceKind.stylus,
+          PointerDeviceKind.trackpad,
+        },
+      ),
     );
   }
 }
@@ -854,7 +920,7 @@ void _savePublicCrashReport(Object error, StackTrace stack) {
   });
 }
 
-RawServerSocket? _backgroundLockSocket;
+ServerSocket? _backgroundLockSocket;
 bool _backgroundIsSyncing = false;
 ProviderContainer? _backgroundContainer;
 
@@ -868,14 +934,18 @@ void _tryAcquireBackgroundLock() async {
   }
 
   try {
-    final socket = await RawServerSocket.bind('127.0.0.1', 46828);
+    final socket = await ServerSocket.bind('127.0.0.1', 46828);
     _backgroundLockSocket = socket;
     debugPrint('[AeroDrive Background] Successfully bound port lock. Starting background sync.');
     
     // Listen for UI launching connection to yield the lock
     socket.listen((client) async {
       debugPrint('[AeroDrive Background] UI app requested lock. Yielding...');
-      await client.close();
+      try {
+        client.writeln('YIELDED');
+        await client.flush();
+        await client.close();
+      } catch (_) {}
       await _stopBackgroundSync();
     });
 

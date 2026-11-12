@@ -11,11 +11,14 @@ import '../../../core/providers.dart';
 import '../../../core/providers/repository_providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/db/database.dart';
+import '../../../domain/activity/activity_service.dart';
+import '../../../domain/folder_download_service.dart';
 import '../providers/drive_providers.dart';
 import '../../../domain/sync/config_sync_service.dart';
 import 'folder_picker_dialog.dart';
 import '../../security/biometric_auth_service.dart';
 import '../../sharing/share_dialog.dart';
+import 'file_info_inspector.dart';
 
 class FolderGridItem extends ConsumerStatefulWidget {
   const FolderGridItem({super.key, required this.folder});
@@ -29,21 +32,7 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
   bool _isHovered = false;
   Offset? _tapPosition;
 
-  Color _getFolderColor() {
-    final colorStr = widget.folder.color;
-    if (colorStr == null || colorStr.isEmpty) return AppColors.folderDefault;
-    try {
-      var s = colorStr;
-      if (s.startsWith('#')) {
-        s = s.replaceFirst('#', '0xFF');
-      } else if (!s.startsWith('0x') && !s.startsWith('0X')) {
-        s = '0x$s';
-      }
-      return Color(int.parse(s));
-    } catch (_) {
-      return AppColors.folderDefault;
-    }
-  }
+  Color _getFolderColor() => AppColors.resolveFolderColor(widget.folder.color);
 
   @override
   Widget build(BuildContext context) {
@@ -78,6 +67,8 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
           _tapPosition = details.globalPosition;
         },
         onTap: () async {
+          ref.read(selectedFolderForInspectorProvider.notifier).state = widget.folder;
+          ref.read(selectedFileForInspectorProvider.notifier).state = null;
           if (isSelectionMode) {
             _toggleSelection();
           } else {
@@ -114,160 +105,63 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
+          height: 68,
           decoration: BoxDecoration(
-            gradient: isSelected
-                ? LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary.withValues(alpha: 0.22),
-                      isDark ? const Color(0xFF101826) : colorScheme.primaryContainer.withValues(alpha: 0.35),
-                    ],
-                  )
-                : _isHovered
-                    ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? [
-                                folderColor.withValues(alpha: 0.16),
-                                const Color(0xFF141926),
-                                const Color(0xFF0F131E),
-                              ]
-                            : [
-                                folderColor.withValues(alpha: 0.16),
-                                colorScheme.surfaceContainerHigh,
-                                colorScheme.surfaceContainer,
-                              ],
-                      )
-                    : LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: isDark
-                            ? [
-                                folderColor.withValues(alpha: 0.09),
-                                const Color(0xFF151926),
-                                const Color(0xFF0F131E),
-                              ]
-                            : [
-                                folderColor.withValues(alpha: 0.12),
-                                colorScheme.surface,
-                                colorScheme.surfaceContainer,
-                              ],
-                        stops: const [0.0, 0.45, 1.0],
-                      ),
+            color: isSelected
+                ? AppColors.surfaceVariant
+                : (_isHovered ? AppColors.surfaceVariant.withValues(alpha: 0.6) : AppColors.surface),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isSelected
-                  ? colorScheme.primary
-                  : _isHovered
-                      ? folderColor.withValues(alpha: 0.45)
-                      : isDark
-                          ? folderColor.withValues(alpha: 0.18)
-                          : colorScheme.outlineVariant.withValues(alpha: 0.6),
+                  ? AppColors.primary
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.04)
+                      : (_isHovered
+                          ? AppColors.outline
+                          : AppColors.outline.withValues(alpha: 0.5))),
               width: isSelected ? 1.5 : 1.0,
             ),
-            boxShadow: [
-              if (isSelected)
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.22),
-                  blurRadius: 14,
-                  offset: const Offset(0, 3),
-                )
-              else if (_isHovered)
-                BoxShadow(
-                  color: folderColor.withValues(alpha: 0.22),
-                  blurRadius: 14,
-                  offset: const Offset(0, 3),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-            ],
+            boxShadow: AppColors.cardShadow,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
             children: [
-              // Top Row: Folder Badge + Actions / Star
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+              // Left: Theme-Adaptive Duotone Folder Icon (with optional Vault badge)
+              Stack(
                 children: [
-                  // Glowing Folder Icon Badge
                   Container(
-                    width: 36,
-                    height: 36,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          folderColor.withValues(alpha: 0.30),
-                          folderColor.withValues(alpha: 0.10),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: folderColor.withValues(alpha: 0.40),
-                        width: 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: folderColor.withValues(alpha: 0.20),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: folderColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Center(
                       child: Icon(
                         Icons.folder_rounded,
-                        size: 20,
+                        size: 26,
                         color: folderColor,
                       ),
                     ),
                   ),
-                  // Trailing Actions (Star, Selection or 3-dots Menu)
-                  if (isSelectionMode)
-                    Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: isSelected ? colorScheme.primary : Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isSelected ? colorScheme.primary : colorScheme.outline,
-                          width: 1.5,
+                  if (widget.folder.isVault)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          shape: BoxShape.circle,
                         ),
+                        child: Icon(Icons.lock_rounded, size: 10, color: folderColor),
                       ),
-                      child: isSelected
-                          ? Icon(Icons.check, size: 14, color: colorScheme.onPrimary)
-                          : null,
-                    )
-                  else
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (widget.folder.isFavorite)
-                          const Padding(
-                            padding: EdgeInsets.only(right: 2),
-                            child: Icon(
-                              Icons.star_rounded,
-                              color: Color(0xFFFFC107),
-                              size: 18,
-                            ),
-                          ),
-                        _buildOptionsMenu(context),
-                      ],
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
-              // Folder Details: Title and Metadata neatly centered
+              const SizedBox(width: 12),
+
+              // Center: Folder Name & Metadata Subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,29 +169,65 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
                   children: [
                     Text(
                       widget.folder.name,
+                      style: TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13.5,
-                        letterSpacing: 0.15,
-                      ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
                       sizeText.isNotEmpty ? '$itemsCountText • $sizeText' : itemsCountText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.65),
-                        fontSize: 11,
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
                         fontWeight: FontWeight.w400,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
+
+              // Right: Selection Checkbox or Context Menu
+              if (isSelectionMode)
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: isSelected ? colorScheme.primary : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? colorScheme.primary : AppColors.outline,
+                      width: 1.5,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, size: 13, color: Colors.white)
+                      : null,
+                )
+              else
+                IconButton(
+                  onPressed: () {
+                    final isMobile = MediaQuery.of(context).size.width < 600;
+                    if (isMobile) {
+                      FileInfoInspector.showModal(context, ref, folder: widget.folder);
+                    } else if (_tapPosition != null) {
+                      _showGridContextMenu(context, _tapPosition!);
+                    }
+                  },
+                  icon: Icon(
+                    Icons.more_vert_rounded,
+                    size: 18,
+                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                  ),
+                  splashRadius: 16,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                ),
             ],
           ),
         ),
@@ -335,7 +265,9 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(),
           onSelected: (value) async {
-            if (value == 'rename') {
+            if (value == 'download') {
+              FolderTreeHelper.confirmAndDownloadFolder(context: context, ref: ref, folder: widget.folder);
+            } else if (value == 'rename') {
               _showRenameDialog(context);
             } else if (value == 'color') {
               _showColorPickerDialog(context);
@@ -359,6 +291,16 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
           itemBuilder: (context) {
             final theme = Theme.of(context);
             return [
+              PopupMenuItem(
+                value: 'download',
+                child: Row(
+                  children: [
+                    Icon(Icons.download_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 10),
+                    Text('Download Folder', style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
+                  ],
+                ),
+              ),
               PopupMenuItem(
                 value: 'rename',
                 child: Row(
@@ -724,21 +666,36 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
   }
 
   Future<void> _showDeleteConfirm(BuildContext context) async {
+    final db = ref.read(databaseProvider);
+    final scan = await FolderTreeHelper.scanFolderTree(db, widget.folder);
+    if (!mounted) return;
+
+    final countWarning = (scan.totalFiles > 0 || scan.totalSubfolders > 0)
+        ? '\n\nThis folder contains ${scan.totalFiles} file(s) and ${scan.totalSubfolders} subfolder(s). All contents will be moved to the Trash bin.'
+        : '';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surfaceElevated,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Folder', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
-        content: Text('Are you sure you want to delete "${widget.folder.name}" and all its contents?', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.7))),
+        title: Text(
+          'Delete Folder "${widget.folder.name}"?',
+          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Are you sure you want to move "${widget.folder.name}" to Trash?$countWarning',
+          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface.withValues(alpha: 0.8), height: 1.4),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text('Cancel', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: AppColors.error)),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Move to Trash'),
           ),
         ],
       ),
@@ -747,6 +704,7 @@ class _FolderGridItemState extends ConsumerState<FolderGridItem> {
     if (confirmed == true) {
       final folderRepo = ref.read(folderRepositoryProvider);
       await folderRepo.trashFolder(widget.folder.id);
+      await ref.read(activityServiceProvider).recordTrash(folder: widget.folder);
       ref.read(configSyncServiceProvider).syncConfigToChannel();
       ref.read(dbRebuildVersionProvider.notifier).state++;
     }

@@ -238,7 +238,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: cs.surface,
+      backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: Stack(
           children: [
@@ -355,10 +355,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        color: (cs ?? Theme.of(context).colorScheme).surfaceContainerHighest.withValues(alpha: 0.5),
+        color: AppColors.surface,
         border: Border.all(
-          color: (cs ?? Theme.of(context).colorScheme).outlineVariant,
+          color: AppColors.borderSubtle,
         ),
+        boxShadow: AppColors.cardShadow,
       ),
       child: child,
     );
@@ -950,17 +951,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: cs.error.withValues(alpha: 0.12),
+              color: AppColors.error.withValues(alpha: 0.1),
             ),
-            child: Icon(Icons.error_outline, color: cs.error, size: 28),
+            child: Icon(Icons.error_outline_rounded, color: AppColors.error, size: 28),
           ),
           const SizedBox(height: 16),
           Text('Connection Error', style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Text(
-            'Failed to initialize. Check your API credentials.',
+            'Failed to initialize TDLib connection. Check your API credentials or restart the application.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: () => _service.resetAuthFlow(),
+                icon: const Icon(Icons.refresh_rounded, size: 16),
+                label: const Text('Retry Connection'),
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

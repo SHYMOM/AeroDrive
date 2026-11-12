@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
+import '../../core/theme/app_colors.dart';
 import '../../data/db/database.dart';
 import '../drive/widgets/file_list_item.dart';
 import '../drive/widgets/folder_grid_item.dart';
@@ -12,13 +13,12 @@ import '../drive/widgets/folder_grid_item.dart';
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 enum SearchSortBy { name, date, size, type }
-enum SearchFilterType { all, files, folders, images, videos, documents, audio, archives }
+enum SearchFilterType { all, folders, images, videos, documents, audio, dateModified }
 
 final searchSortByProvider = StateProvider<SearchSortBy>((ref) => SearchSortBy.name);
 final searchFilterTypeProvider = StateProvider<SearchFilterType>((ref) => SearchFilterType.all);
 
 class _ParsedSearchQuery {
-
   const _ParsedSearchQuery({required this.textQuery, this.tagName});
   final String textQuery;
   final String? tagName;
@@ -64,13 +64,10 @@ final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
     final folderQuery = db.select(db.folders)
       ..where((f) => f.name.like('%$textQuery%') & f.deletedAt.isNull());
     matchedFolders = await folderQuery.get();
-    switch (sortBy) {
-      case SearchSortBy.name:
-        matchedFolders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case SearchSortBy.date:
-        matchedFolders.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
-      default:
-        break;
+    if (filterType == SearchFilterType.dateModified || sortBy == SearchSortBy.date) {
+      matchedFolders.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+    } else {
+      matchedFolders.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
     }
   }
 
@@ -116,47 +113,64 @@ final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
       }).toList();
     } else if (filterType == SearchFilterType.audio) {
       matchedFiles = matchedFiles.where((f) => f.mimeType?.startsWith('audio/') == true).toList();
-    } else if (filterType == SearchFilterType.archives) {
-      matchedFiles = matchedFiles.where((f) {
-        final m = f.mimeType ?? '';
-        return m.contains('zip') || m.contains('rar') || m.contains('tar') || m.contains('7z') || m.contains('compress');
-      }).toList();
     }
 
-    switch (sortBy) {
-      case SearchSortBy.name:
-        matchedFiles.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      case SearchSortBy.date:
-        matchedFiles.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
-      case SearchSortBy.size:
-        matchedFiles.sort((a, b) => (b.size ?? 0).compareTo(a.size ?? 0));
-      case SearchSortBy.type:
-        matchedFiles.sort((a, b) => (a.mimeType ?? '').compareTo(b.mimeType ?? ''));
+    if (filterType == SearchFilterType.dateModified || sortBy == SearchSortBy.date) {
+      matchedFiles.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+    } else {
+      switch (sortBy) {
+        case SearchSortBy.name:
+          matchedFiles.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        case SearchSortBy.date:
+          matchedFiles.sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+        case SearchSortBy.size:
+          matchedFiles.sort((a, b) => (b.size ?? 0).compareTo(a.size ?? 0));
+        case SearchSortBy.type:
+          matchedFiles.sort((a, b) => (a.mimeType ?? '').compareTo(b.mimeType ?? ''));
+      }
     }
   }
 
   return {'folders': matchedFolders, 'files': matchedFiles};
 });
 
-class SearchScreen extends ConsumerWidget {
+class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends ConsumerState<SearchScreen> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: ref.read(searchQueryProvider));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final searchResultsAsync = ref.watch(searchResultsProvider);
     final query = ref.watch(searchQueryProvider);
-    final sortBy = ref.watch(searchSortByProvider);
     final filterType = ref.watch(searchFilterTypeProvider);
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
           tooltip: 'Back to Drive',
           onPressed: () {
             if (context.canPop()) {
@@ -166,280 +180,252 @@ class SearchScreen extends ConsumerWidget {
             }
           },
         ),
-        title: TextField(
-          autofocus: true,
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
-          decoration: InputDecoration(
-            hintText: 'Search files, folders or #tags...',
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            border: InputBorder.none,
-            icon: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
+        title: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
           ),
-          onChanged: (val) {
-            ref.read(searchQueryProvider.notifier).state = val;
-          },
-        ),
-        actions: [
-          PopupMenuButton<SearchSortBy>(
-            icon: Icon(Icons.sort, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            tooltip: 'Sort',
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
-            onSelected: (value) {
-              ref.read(searchSortByProvider.notifier).state = value;
-            },
-            itemBuilder: (context) {
-              final theme = Theme.of(context);
-              return [
-                CheckedPopupMenuItem<SearchSortBy>(
-                  value: SearchSortBy.name,
-                  checked: sortBy == SearchSortBy.name,
-                  child: Text('Name', style: TextStyle(color: theme.colorScheme.onSurface)),
+          child: Row(
+            children: [
+              Icon(Icons.search_rounded, color: AppColors.onSurfaceVariant, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  style: TextStyle(color: AppColors.onSurface, fontSize: 13.5),
+                  decoration: InputDecoration(
+                    hintText: 'Search files, folders, or types...',
+                    hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.7)),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                  onChanged: (val) {
+                    ref.read(searchQueryProvider.notifier).state = val;
+                  },
                 ),
-                CheckedPopupMenuItem<SearchSortBy>(
-                  value: SearchSortBy.date,
-                  checked: sortBy == SearchSortBy.date,
-                  child: Text('Date', style: TextStyle(color: theme.colorScheme.onSurface)),
+              ),
+              if (query.isNotEmpty)
+                IconButton(
+                  icon: Icon(Icons.close_rounded, size: 18, color: AppColors.onSurfaceVariant),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                    _controller.clear();
+                    ref.read(searchQueryProvider.notifier).state = '';
+                  },
                 ),
-                CheckedPopupMenuItem<SearchSortBy>(
-                  value: SearchSortBy.size,
-                  checked: sortBy == SearchSortBy.size,
-                  child: Text('Size', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchSortBy>(
-                  value: SearchSortBy.type,
-                  checked: sortBy == SearchSortBy.type,
-                  child: Text('Type', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-              ];
-            },
-          ),
-          PopupMenuButton<SearchFilterType>(
-            icon: Icon(Icons.filter_list, color: Theme.of(context).colorScheme.onSurfaceVariant),
-            tooltip: 'Filter',
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
-            onSelected: (value) {
-              ref.read(searchFilterTypeProvider.notifier).state = value;
-            },
-            itemBuilder: (context) {
-              final theme = Theme.of(context);
-              return [
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.all,
-                  checked: filterType == SearchFilterType.all,
-                  child: Text('All', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.files,
-                  checked: filterType == SearchFilterType.files,
-                  child: Text('Files', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.folders,
-                  checked: filterType == SearchFilterType.folders,
-                  child: Text('Folders', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.images,
-                  checked: filterType == SearchFilterType.images,
-                  child: Text('Images', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.videos,
-                  checked: filterType == SearchFilterType.videos,
-                  child: Text('Videos', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.documents,
-                  checked: filterType == SearchFilterType.documents,
-                  child: Text('Documents', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.audio,
-                  checked: filterType == SearchFilterType.audio,
-                  child: Text('Audio', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-                CheckedPopupMenuItem<SearchFilterType>(
-                  value: SearchFilterType.archives,
-                  checked: filterType == SearchFilterType.archives,
-                  child: Text('Archives', style: TextStyle(color: theme.colorScheme.onSurface)),
-                ),
-              ];
-            },
-          ),
-        ],
-      ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            center: const Alignment(0, -0.3),
-            radius: 1.8,
-            colors: [
-              Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-              Theme.of(context).colorScheme.secondary.withValues(alpha: 0.05),
-              Theme.of(context).scaffoldBackgroundColor,
-              Theme.of(context).scaffoldBackgroundColor,
             ],
           ),
         ),
-        child: Column(
-          children: [
-            if (query.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(52),
+          child: Container(
+            height: 52,
+            color: AppColors.surface,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                _buildFilterChip('All', SearchFilterType.all, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Folders', SearchFilterType.folders, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Images', SearchFilterType.images, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Videos', SearchFilterType.videos, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Documents', SearchFilterType.documents, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Audio', SearchFilterType.audio, filterType),
+                const SizedBox(width: 8),
+                _buildFilterChip('Date Modified', SearchFilterType.dateModified, filterType),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: searchResultsAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(
+            child: Text('Error: $err', style: TextStyle(color: AppColors.onSurface)),
+          ),
+          data: (results) {
+            final folders = results['folders'] as List<FolderData>;
+            final files = results['files'] as List<FileData>;
+
+            if (query.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Sort: ${sortBy.name}',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 11),
-                    ),
-                    const SizedBox(width: 8),
-                    if (filterType != SearchFilterType.all)
-                      Chip(
-                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                        labelStyle: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11),
-                        side: BorderSide(color: Theme.of(context).colorScheme.primary),
-                        label: Text(filterType.name),
-                        deleteIcon: Icon(Icons.close, size: 14, color: Theme.of(context).colorScheme.primary),
-                        onDeleted: () => ref.read(searchFilterTypeProvider.notifier).state = SearchFilterType.all,
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.secondary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(Icons.search_rounded, size: 32, color: AppColors.secondary),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Search your Drive',
+                      style: TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Find files, encrypted folders, or #tags across Telegram storage',
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12.5,
+                      ),
+                    ),
                   ],
                 ),
-              ),
-            Expanded(
-              child: searchResultsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Theme.of(context).colorScheme.onSurface))),
-                data: (results) {
-                  final theme = Theme.of(context);
-                  final folders = results['folders'] as List<FolderData>;
-                  final files = results['files'] as List<FileData>;
-                  if (query.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Search your Vault',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Type to search for files, folders, and tags',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
+              );
+            }
+
+            if (folders.isEmpty && files.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.search_off_rounded, size: 48, color: AppColors.onSurfaceVariant.withValues(alpha: 0.4)),
+                    const SizedBox(height: 14),
+                    Text(
+                      'No matching items found',
+                      style: TextStyle(
+                        color: AppColors.onSurface,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
-                    );
-                  }
-                  if (folders.isEmpty && files.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3)),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No results found',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Try a different search term or filter',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      ref.invalidate(searchResultsProvider);
-                    },
-                    child: CustomScrollView(
-                      slivers: [
-                        if (folders.isNotEmpty) ...[
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              child: Text(
-                                'Folders',
-                                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverGrid(
-                              gridDelegate: isMobile
-                                  ? const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      mainAxisSpacing: 12,
-                                      crossAxisSpacing: 12,
-                                      childAspectRatio: 1.65,
-                                    )
-                                  : const SliverGridDelegateWithMaxCrossAxisExtent(
-                                      maxCrossAxisExtent: 220,
-                                      mainAxisSpacing: 12,
-                                      crossAxisSpacing: 12,
-                                      childAspectRatio: 1.65,
-                                    ),
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final child = FolderGridItem(folder: folders[index]);
-                                  return child.animate()
-                                      .fadeIn(duration: 250.ms, delay: (index % 10 * 30).ms)
-                                      .scale(begin: const Offset(0.9, 0.9), end: const Offset(1, 1), duration: 250.ms);
-                                },
-                                childCount: folders.length,
-                              ),
-                            ),
-                          ),
-                          const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                        ],
-                        if (files.isNotEmpty) ...[
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              child: Text(
-                                'Files',
-                                style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final child = FileListItem(file: files[index]);
-                                  return child.animate()
-                                      .fadeIn(duration: 250.ms, delay: (index % 10 * 30).ms)
-                                      .slideY(begin: 0.05, end: 0, duration: 250.ms, curve: Curves.easeOutQuad);
-                                },
-                                childCount: files.length,
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SliverToBoxAdapter(child: SizedBox(height: 48)),
-                      ],
                     ),
-                  );
-                },
+                    const SizedBox(height: 4),
+                    Text(
+                      'Try different keywords or filters',
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () async => ref.invalidate(searchResultsProvider),
+              child: CustomScrollView(
+                slivers: [
+                  if (folders.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                        child: Text(
+                          'Folders (${folders.length})',
+                          style: TextStyle(
+                            color: AppColors.onSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverGrid(
+                        gridDelegate: isMobile
+                            ? SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: MediaQuery.of(context).size.width < 420 ? 1 : 2,
+                                mainAxisExtent: 68,
+                                mainAxisSpacing: 10,
+                                crossAxisSpacing: 12,
+                              )
+                            : const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 260,
+                                mainAxisExtent: 68,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
+                              ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FolderGridItem(folder: folders[index]),
+                          childCount: folders.length,
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                  ],
+                  if (files.isNotEmpty) ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 10),
+                        child: Text(
+                          'Files (${files.length})',
+                          style: TextStyle(
+                            color: AppColors.onSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => FileListItem(file: files[index], siblings: files),
+                          childCount: files.length,
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SliverToBoxAdapter(child: SizedBox(height: 48)),
+                ],
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, SearchFilterType type, SearchFilterType currentType) {
+    final isSelected = type == currentType;
+    return InkWell(
+      onTap: () {
+        ref.read(searchFilterTypeProvider.notifier).state = type;
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.surfaceVariant.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.outline.withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppColors.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             ),
-          ],
+          ),
         ),
       ),
     );

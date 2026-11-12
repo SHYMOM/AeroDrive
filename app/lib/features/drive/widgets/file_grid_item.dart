@@ -19,6 +19,7 @@ import '../../../domain/sync/config_sync_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_info_dialog.dart';
+import 'file_info_inspector.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
 
@@ -70,6 +71,8 @@ class FileGridItem extends ConsumerWidget {
         tapPosition = details.globalPosition;
       },
       onTap: () {
+        ref.read(selectedFileForInspectorProvider.notifier).state = file;
+        ref.read(selectedFolderForInspectorProvider.notifier).state = null;
         if (isSelectionMode) {
           _toggleSelection(ref);
         } else {
@@ -93,29 +96,20 @@ class FileGridItem extends ConsumerWidget {
       },
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(12),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected 
-                ? Theme.of(context).colorScheme.primary // Glow cyan
-                : Theme.of(context).colorScheme.outlineVariant, // Subtle 1px stroke
+                ? AppColors.primary
+                : (Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withValues(alpha: 0.04)
+                    : AppColors.outline.withValues(alpha: 0.5)),
             width: isSelected ? 1.5 : 1.0,
           ),
-          boxShadow: [
-            if (isSelected)
-              BoxShadow(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                blurRadius: 10,
-              )
-            else
-              BoxShadow(
-                color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.2),
-                blurRadius: 8,
-              ),
-          ],
+          boxShadow: AppColors.cardShadow,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -147,19 +141,20 @@ class FileGridItem extends ConsumerWidget {
                           ),
                         ),
 
-                        // Top-Left Badge (File type icon)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                              borderRadius: BorderRadius.circular(6),
+                        // Top-Left Badge (File type icon) - Retained only for videos
+                        if (isVid)
+                          Positioned(
+                            top: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(Icons.play_arrow_rounded, color: Colors.amber, size: 14),
                             ),
-                            child: _buildTypeBadgeIcon(ext, context),
                           ),
-                        ),
                         
                         // Top-Right Star Icon
                         Positioned(
@@ -269,32 +264,35 @@ class FileGridItem extends ConsumerWidget {
                     ),
                   ),
                   
-                  // Bottom Section: Title & details
-                  Padding(
-                    padding: const EdgeInsets.all(12),
+                  // Bottom Section: Title & details (compact ~50px height)
+                  Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
                                 file.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.onSurface,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                               Text(
-                                '$dateString • $sizeString',
+                                '$sizeString • $dateString',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  fontSize: 10,
+                                  color: AppColors.onSurfaceVariant,
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w400,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -435,10 +433,13 @@ class FileGridItem extends ConsumerWidget {
         } else if (value == 'star') {
           _toggleFavorite(ref);
         } else if (value == 'info') {
-          showDialog(
-            context: context,
-            builder: (ctx) => FileInfoDialog(file: file),
-          );
+          if (MediaQuery.of(context).size.width < 600) {
+            FileInfoInspector.showModal(context, ref, file: file);
+          } else {
+            ref.read(selectedFileForInspectorProvider.notifier).state = file;
+            ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+            ref.read(isInspectorOpenProvider.notifier).state = true;
+          }
         }
       },
       itemBuilder: (context) {
@@ -637,10 +638,13 @@ class FileGridItem extends ConsumerWidget {
     } else if (value == 'star') {
       _toggleFavorite(ref);
     } else if (value == 'info') {
-      showDialog(
-        context: context,
-        builder: (ctx) => FileInfoDialog(file: file),
-      );
+      if (MediaQuery.of(context).size.width < 600) {
+        FileInfoInspector.showModal(context, ref, file: file);
+      } else {
+        ref.read(selectedFileForInspectorProvider.notifier).state = file;
+        ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+        ref.read(isInspectorOpenProvider.notifier).state = true;
+      }
     } else if (value == 'select') {
       ref.read(isSelectionModeProvider.notifier).state = true;
       ref.read(selectedItemsProvider.notifier).state = {file.id};

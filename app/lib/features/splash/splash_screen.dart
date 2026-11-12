@@ -11,7 +11,6 @@ import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../features/security/biometric_auth_service.dart';
 import '../../features/telegram/telegram_service.dart';
-import '../../widgets/aerodrive_logo.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -116,52 +115,43 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: RadialGradient(
-            radius: 1.5,
-            colors: [
-              Theme.of(context).colorScheme.surface,
-              Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Starfield
-            Positioned.fill(
-              child: CustomPaint(
-                painter: StarfieldPainter(),
-              ).animate(onPlay: (controller) => controller.repeat())
-               .moveY(begin: 0, end: 100, duration: 10.seconds, curve: Curves.linear),
-            ),
+      backgroundColor: AppColors.background,
+      body: Container(
+        color: AppColors.background,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: AppColors.floatingShadow,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.cloud_rounded,
+                    color: AppColors.primary,
+                    size: 48,
+                  ),
+                ),
+              ).animate()
+               .scale(begin: const Offset(0.95, 0.95), end: const Offset(1.0, 1.0), duration: 800.ms, curve: Curves.easeOut)
+               .fadeIn(duration: 500.ms),
 
-            // Content
-            Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Logo with neon pulse
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
-                          blurRadius: 30,
-                          spreadRadius: 10,
-                        ),
-                      ],
-                    ),
-                    child: const AeroDriveLogo(
-                      size: AeroDriveLogoSize.large,
-                      showText: false,
-                    ),
-                  ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                   .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.1, 1.1), duration: 2.seconds, curve: Curves.easeInOut)
-                   .fadeIn(duration: 800.ms, curve: Curves.easeOut),
-
-                  const SizedBox(height: 64),
+              const SizedBox(height: 20),
+              Text(
+                'AeroDrive',
+                style: TextStyle(
+                  color: AppColors.onSurface,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 48),
 
                   SafeArea(
                     child: Padding(
@@ -247,11 +237,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
+          ),
+        );
+}
+
 class StarfieldPainter extends CustomPainter {
   final Random random = Random(42); // fixed seed for consistent stars
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/aerodrive_theme.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/theme/theme_provider.dart';
 
 class AppearanceSettingsScreen extends ConsumerWidget {
@@ -235,12 +236,15 @@ class _ModeCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? primaryColor.withValues(alpha: 0.12)
-              : cs.surfaceContainerHighest.withValues(alpha: 0.5),
+              : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? primaryColor : cs.outlineVariant,
+            color: isSelected ? primaryColor : Theme.of(context).dividerColor.withValues(alpha: 0.5),
             width: isSelected ? 1.5 : 1,
           ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: primaryColor.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]
+              : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -283,14 +287,14 @@ class _PresetCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+          color: isSelected ? AppColors.surfaceVariant : Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isSelected ? preset.primary : cs.outlineVariant,
+            color: isSelected ? preset.primary : Theme.of(context).dividerColor.withValues(alpha: 0.5),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: isSelected
-              ? [BoxShadow(color: preset.primary.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 3))]
+              ? [BoxShadow(color: preset.primary.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 2))]
               : null,
         ),
         child: Padding(

@@ -18,10 +18,12 @@ import 'package:uuid/uuid.dart';
 import '../../core/constants.dart';
 import '../../core/logger.dart';
 import '../../core/providers.dart';
+import '../../core/routing/responsive_scaffold.dart';
 import '../../core/providers/infrastructure_providers.dart';
 import '../../core/providers/repository_providers.dart';
 import '../../core/providers/security_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../domain/infrastructure/infrastructure_provisioning_service.dart';
 import '../../data/db/database.dart';
 import '../../domain/channel_load_balancer.dart';
@@ -32,7 +34,6 @@ import '../../domain/sync/realtime_sync_service.dart';
 import '../sharing/share_service.dart';
 import '../telegram/telegram_service.dart';
 import '../transfers/transfers_screen.dart';
-import '../transfers/widgets/global_progress_bar.dart';
 import 'providers/drive_providers.dart';
 import 'widgets/create_folder_dialog.dart';
 import 'widgets/file_grid_item.dart';
@@ -57,6 +58,22 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
   bool _isDragging = false;
   bool _isCheckingConfig = false;
   DateTime? _lastControlPressTime;
+  late final ScrollController _mainScrollController;
+
+  void _deselectChildItem() {
+    ref.read(selectedFileForInspectorProvider.notifier).state = null;
+    final currentFolderId = ref.read(currentFolderIdProvider);
+    if (currentFolderId == null) {
+      ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+    } else {
+      final db = ref.read(databaseProvider);
+      (db.select(db.folders)..where((f) => f.id.equals(currentFolderId))).getSingleOrNull().then((folder) {
+        if (mounted) {
+          ref.read(selectedFolderForInspectorProvider.notifier).state = folder;
+        }
+      });
+    }
+  }
 
   void _selectAllVisible() {
     final contentsAsync = ref.read(folderContentsProvider);
@@ -128,6 +145,8 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
           _clearSelection();
           return KeyEventResult.handled;
         }
+        _deselectChildItem();
+        return KeyEventResult.handled;
       }
     }
 
@@ -161,6 +180,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
   @override
   void initState() {
     super.initState();
+    _mainScrollController = ScrollController();
     WidgetsBinding.instance.addObserver(this);
     Future.microtask(() async {
       final settings = ref.read(settingsRepositoryProvider);
@@ -211,6 +231,7 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
 
   @override
   void dispose() {
+    _mainScrollController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -627,6 +648,19 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
       }
     });
 
+    ref.listen<String?>(currentFolderIdProvider, (previous, next) async {
+      ref.read(selectedFileForInspectorProvider.notifier).state = null;
+      if (next == null) {
+        ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+      } else {
+        final db = ref.read(databaseProvider);
+        final folder = await (db.select(db.folders)..where((f) => f.id.equals(next))).getSingleOrNull();
+        if (mounted) {
+          ref.read(selectedFolderForInspectorProvider.notifier).state = folder;
+        }
+      }
+    });
+
     final isConfigChecked = ref.watch(configCheckedProvider);
 
     if (!isConfigChecked) {
@@ -718,7 +752,10 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
         child: Scaffold(
           backgroundColor: AppColors.background,
           appBar: _buildAppBar(context),
-          body: DropTarget(
+          body: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _deselectChildItem,
+            child: DropTarget(
         onDragEntered: (_) => setState(() => _isDragging = true),
         onDragExited: (_) => setState(() => _isDragging = false),
         onDragDone: (detail) async {
@@ -777,83 +814,146 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
         },
         child: Stack(
           children: [
-            contentsAsync.when(
-          loading: () => Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: AppColors.onSurface))),
-          data: (contents) {
-            final folders = contents['folders'] as List<FolderData>? ?? [];
-            final files = contents['files'] as List<FileData>? ?? [];
-            
-            final isRoot = ref.watch(navigationStackProvider).isEmpty && currentFolderId == null;
-
-            return RefreshIndicator(
-              color: AppColors.primary,
-              backgroundColor: AppColors.surfaceElevated,
-              onRefresh: () async {
-                if (!mounted) return;
-                await ref.read(realtimeSyncServiceProvider).catchUp(force: true);
-                if (mounted) {
-                  ref.invalidate(folderContentsProvider);
+            Builder(
+              builder: (context) {
+                final effectiveContents = contentsAsync.valueOrNull;
+                if (effectiveContents == null && contentsAsync.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
                 }
-              },
-              child: CustomScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: [
-                if (isRoot && !isFavoriteOnly) ...[
-                  SliverToBoxAdapter(child: QuickAccessRow()),
-                ],
-                // Header (My Drive or Breadcrumb Path overview)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: isFavoriteOnly
-                              ? Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-                                      onPressed: () => ref.read(isFavoriteOnlyProvider.notifier).state = false,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
-                                    SizedBox(width: 12),
-                                    Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
-                                  ],
-                                )
-                              : isOfflineOnly
+                if (effectiveContents == null && contentsAsync.hasError) {
+                  return Center(
+                    child: Text('Error: ${contentsAsync.error}', style: TextStyle(color: AppColors.onSurface)),
+                  );
+                }
+
+                final contents = effectiveContents ?? const {'folders': <FolderData>[], 'files': <FileData>[]};
+                final folders = contents['folders'] as List<FolderData>? ?? [];
+                final directFiles = contents['files'] as List<FileData>? ?? [];
+
+                final isRoot = ref.watch(navigationStackProvider).isEmpty && currentFolderId == null;
+
+                final recentFilesAsync = isRoot && !isFavoriteOnly && !isOfflineOnly
+                    ? ref.watch(recentDriveFilesProvider)
+                    : null;
+                final recentFiles = recentFilesAsync?.valueOrNull ?? [];
+                final files = (isRoot && !isFavoriteOnly && !isOfflineOnly && directFiles.isEmpty)
+                    ? recentFiles
+                    : directFiles;
+                final filesSectionTitle = (isRoot && !isFavoriteOnly && !isOfflineOnly)
+                    ? 'Recent Files'
+                    : 'Files';
+
+                return RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surfaceElevated,
+                  onRefresh: () async {
+                    if (!mounted) return;
+                    await ref.read(realtimeSyncServiceProvider).catchUp(force: true);
+                    if (mounted) {
+                      ref.invalidate(folderContentsProvider);
+                    }
+                  },
+                  child: CustomScrollView(
+                    controller: _mainScrollController,
+                    key: PageStorageKey('aerodrive_main_scroll_${currentFolderId ?? "root"}'),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                    if (isRoot && !isFavoriteOnly) ...[
+                      SliverToBoxAdapter(child: QuickAccessRow()),
+                    ],
+                    // Header (My Drive or Breadcrumb Path overview)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: isFavoriteOnly
                                   ? Row(
                                       children: [
                                         IconButton(
                                           icon: Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
-                                          onPressed: () => ref.read(isOfflineOnlyProvider.notifier).state = false,
+                                          onPressed: () => ref.read(isFavoriteOnlyProvider.notifier).state = false,
                                           padding: EdgeInsets.zero,
                                           constraints: const BoxConstraints(),
                                         ),
-                                        SizedBox(width: 12),
-                                        const Icon(Icons.offline_pin_rounded, color: Colors.tealAccent, size: 20),
-                                        SizedBox(width: 8),
-                                        Text('Available Offline', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                                        const SizedBox(width: 12),
+                                        Text('Favorites', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                       ],
                                     )
-                              : const BreadcrumbBar(),
-                        ),
-                        Row(
-                          children: [
-                            _buildLayoutSelector(context, isGridView),
-                            SizedBox(width: 8),
-                             IconButton(
-                               onPressed: () => _showSortBottomSheet(context),
-                               icon: Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
-                             ),
+                                  : isOfflineOnly
+                                      ? Row(
+                                          children: [
+                                            IconButton(
+                                              icon: Icon(Icons.arrow_back, color: AppColors.onSurfaceVariant),
+                                              onPressed: () => ref.read(isOfflineOnlyProvider.notifier).state = false,
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            const Icon(Icons.offline_pin_rounded, color: Colors.tealAccent, size: 20),
+                                            const SizedBox(width: 8),
+                                            Text('Available Offline', style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
+                                          ],
+                                        )
+                                      : const BreadcrumbBar(),
+                            ),
+                            Row(
+                              children: [
+                                _buildLayoutSelector(context, isGridView),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  onPressed: () => _showSortBottomSheet(context),
+                                  icon: Icon(Icons.sort, color: AppColors.onSurfaceVariant, size: 20),
+                                  tooltip: 'Sort options',
+                                ),
+                                if (!isMobile) ...[
+                                  const SizedBox(width: 6),
+                                  IconButton(
+                                    onPressed: () => ref.read(isInspectorOpenProvider.notifier).update((v) => !v),
+                                    icon: Icon(
+                                      ref.watch(isInspectorOpenProvider)
+                                          ? Icons.info_rounded
+                                          : Icons.info_outline_rounded,
+                                      color: ref.watch(isInspectorOpenProvider)
+                                          ? AppColors.primary
+                                          : AppColors.onSurfaceVariant,
+                                      size: 20,
+                                    ),
+                                    tooltip: ref.watch(isInspectorOpenProvider) ? 'Hide File Info' : 'Show File Info',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
+                    if (isMobile) ...[
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                          child: Row(
+                            children: [
+                              _buildMobileNavPill(
+                                icon: Icons.link_rounded,
+                                label: 'Shared Links',
+                                onTap: () => context.push('/settings/shared_links'),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildMobileNavPill(
+                                icon: Icons.delete_outline_rounded,
+                                label: 'Trash',
+                                onTap: () => context.push('/trash'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                 SliverToBoxAdapter(child: SizedBox(height: 16)),
 
                 if (isGridView) ...[
@@ -861,33 +961,33 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                   if (folders.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                         child: Text(
-                          'Folders',
+                          'My Files',
                           style: TextStyle(
-                            color: AppColors.onSurface.withValues(alpha: 0.7),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            color: AppColors.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverGrid(
                         gridDelegate: isMobile
-                            ? const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                mainAxisSpacing: 12,
+                            ? SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: MediaQuery.of(context).size.width < 420 ? 1 : 2,
+                                mainAxisExtent: 72,
+                                mainAxisSpacing: 10,
                                 crossAxisSpacing: 12,
-                                childAspectRatio: 1.65,
                               )
                             : const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 170,
-                                mainAxisSpacing: 10,
-                                crossAxisSpacing: 10,
-                                childAspectRatio: 1.65,
+                                maxCrossAxisExtent: 260,
+                                mainAxisExtent: 72,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
                               ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FolderGridItem(folder: folders[index]),
@@ -897,18 +997,18 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                     ),
                   ],
                   if (folders.isNotEmpty && files.isNotEmpty)
-                    SliverToBoxAdapter(child: SizedBox(height: 20)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
                   if (files.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                         child: Text(
-                          'Files',
+                          filesSectionTitle,
                           style: TextStyle(
-                            color: AppColors.onSurface.withValues(alpha: 0.7),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            color: AppColors.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
@@ -921,13 +1021,13 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                                 crossAxisCount: 2,
                                 mainAxisSpacing: 12,
                                 crossAxisSpacing: 12,
-                                childAspectRatio: 0.82,
+                                mainAxisExtent: 155,
                               )
                             : const SliverGridDelegateWithMaxCrossAxisExtent(
-                                maxCrossAxisExtent: 160,
-                                mainAxisSpacing: 10,
-                                crossAxisSpacing: 10,
-                                childAspectRatio: 0.82,
+                                maxCrossAxisExtent: 200,
+                                mainAxisExtent: 155,
+                                mainAxisSpacing: 12,
+                                crossAxisSpacing: 12,
                               ),
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FileGridItem(file: files[index], siblings: files),
@@ -941,20 +1041,20 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                   if (folders.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                         child: Text(
-                          'Folders',
+                          'My Files',
                           style: TextStyle(
-                            color: AppColors.onSurface.withValues(alpha: 0.7),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            color: AppColors.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FolderListItem(folder: folders[index]),
@@ -964,24 +1064,83 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
                     ),
                   ],
                   if (folders.isNotEmpty && files.isNotEmpty)
-                    SliverToBoxAdapter(child: SizedBox(height: 16)),
+                    const SliverToBoxAdapter(child: SizedBox(height: 20)),
                   if (files.isNotEmpty) ...[
                     SliverToBoxAdapter(
                       child: Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
                         child: Text(
-                          'Files',
+                          filesSectionTitle,
                           style: TextStyle(
-                            color: AppColors.onSurface.withValues(alpha: 0.7),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
+                            color: AppColors.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
                           ),
                         ),
                       ),
                     ),
+                    if (!isMobile)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: Text(
+                                  'NAME',
+                                  style: TextStyle(
+                                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'SIZE',
+                                  style: TextStyle(
+                                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'LAST MODIFIED',
+                                  style: TextStyle(
+                                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  'STATUS',
+                                  style: TextStyle(
+                                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48),
+                            ],
+                          ),
+                        ),
+                      ),
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) => FileListItem(file: files[index], siblings: files),
@@ -1016,28 +1175,40 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
         ],
       ),
     ),
-      floatingActionButton: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(30),
-          gradient: LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.primaryLight],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.glowCyan,
-              blurRadius: 12,
-              offset: Offset(0, 4),
+  ),
+      floatingActionButton: isMobile
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 70),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(24),
+                  color: AppColors.primary,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: FloatingActionButton.extended(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  highlightElevation: 0,
+                  onPressed: () => _showNewOptionsBottomSheet(context, currentFolderId),
+                  icon: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                  label: const Text(
+                    'New',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14.5,
+                    ),
+                  ),
+                ),
+              ),
             )
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          onPressed: () => _showNewOptionsBottomSheet(context, currentFolderId),
-          icon: Icon(Icons.add, color: AppColors.onSurface),
-          label: Text('New', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold, fontSize: 16)),
-        ),
-      ),
+          : null,
       bottomNavigationBar: (isMobile && !isKeyboardVisible)
           ? const SizedBox(height: 80)
           : null,
@@ -1222,77 +1393,216 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
       );
     }
 
-    final progressState = ref.watch(aggregateTransferProgressProvider);
+    final isDesktop = MediaQuery.of(context).size.width >= AppConstants.desktopBreakpoint;
+
+    if (isDesktop) {
+      return PreferredSize(
+        preferredSize: const Size.fromHeight(68),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          color: AppColors.background,
+          child: Row(
+            children: [
+              // Left Sidebar Collapse Toggle (at far left of top header bar)
+              IconButton(
+                icon: Icon(
+                  ref.watch(isSidebarCollapsedProvider)
+                      ? Icons.menu_rounded
+                      : Icons.menu_open_rounded,
+                  color: AppColors.onSurfaceVariant,
+                  size: 22,
+                ),
+                tooltip: ref.watch(isSidebarCollapsedProvider) ? 'Show Sidebar' : 'Hide Sidebar',
+                onPressed: () => ref.read(isSidebarCollapsedProvider.notifier).update((v) => !v),
+                splashRadius: 20,
+              ),
+              const SizedBox(width: 8),
+              // Search Pill
+              Expanded(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => context.push('/search'),
+                    borderRadius: BorderRadius.circular(24),
+                    child: Container(
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: AppColors.outline.withValues(alpha: 0.5),
+                        ),
+                        boxShadow: AppColors.cardShadow,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search_rounded, color: AppColors.onSurfaceVariant, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Search files, folders, or types...',
+                              style: TextStyle(
+                                color: AppColors.onSurfaceVariant,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w400,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceVariant,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Ctrl + K',
+                              style: TextStyle(
+                                color: AppColors.onSurfaceVariant,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Quick Theme Toggle (Sun/Moon)
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Theme.of(context).brightness == Brightness.dark
+                        ? Icons.light_mode_rounded
+                        : Icons.dark_mode_rounded,
+                    color: AppColors.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  tooltip: Theme.of(context).brightness == Brightness.dark
+                      ? 'Switch to Soft-Tonic Light'
+                      : 'Switch to macOS Dark',
+                  onPressed: () {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    ref.read(themeProvider.notifier).setThemeMode(
+                          isDark ? ThemeMode.light : ThemeMode.dark,
+                        );
+                  },
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Notification Bell
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.notifications_none_rounded, color: AppColors.onSurfaceVariant, size: 20),
+                  onPressed: () => _showBackgroundTasksBottomSheet(context),
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // User Avatar & Inspector Toggle
+              InkWell(
+                onTap: () {
+                  ref.read(isInspectorOpenProvider.notifier).update((v) => !v);
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'A',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.menu, color: AppColors.onSurface),
-        onPressed: () {
-          Scaffold.of(context).openDrawer();
-        },
-      ),
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.cloud_outlined, color: AppColors.primary, size: 28),
-          SizedBox(width: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.secondary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.cloud_rounded, color: AppColors.secondary, size: 20),
+          ),
+          const SizedBox(width: 10),
           Text(
             'AeroDrive',
             style: TextStyle(
               color: AppColors.onSurface,
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              letterSpacing: -0.3,
             ),
           ),
         ],
       ),
       centerTitle: false,
       actions: [
-        progressState.when(
-          data: (data) {
-            if (data['hasActive'] != true) return const SizedBox.shrink();
-            final progress = data['progress'] as double;
-            
-            return InkWell(
-              onTap: () => _showBackgroundTasksBottomSheet(context),
-              borderRadius: BorderRadius.circular(20),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 2,
-                        backgroundColor: AppColors.outlineVariant.withValues(alpha: 0.3),
-                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      '${(progress * 100).toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+        IconButton(
+          icon: Icon(
+            Theme.of(context).brightness == Brightness.dark
+                ? Icons.light_mode_rounded
+                : Icons.dark_mode_rounded,
+            color: AppColors.onSurfaceVariant,
+          ),
+          tooltip: 'Toggle Theme',
+          onPressed: () {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            ref.read(themeProvider.notifier).setThemeMode(
+                  isDark ? ThemeMode.light : ThemeMode.dark,
+                );
           },
-          loading: () => const SizedBox.shrink(),
-          error: (_, _) => const SizedBox.shrink(),
         ),
         IconButton(
-          icon: Icon(Icons.search, color: AppColors.onSurfaceVariant),
+          icon: Icon(Icons.search_rounded, color: AppColors.onSurfaceVariant),
           onPressed: () => context.push('/search'),
+        ),
+        IconButton(
+          icon: Icon(Icons.notifications_none_rounded, color: AppColors.onSurfaceVariant),
+          onPressed: () => _showBackgroundTasksBottomSheet(context),
         ),
       ],
     );
@@ -1906,21 +2216,120 @@ class _DriveScreenState extends ConsumerState<DriveScreen> with WidgetsBindingOb
       },
     );
 
-  Widget _buildLayoutSelector(BuildContext context, bool isGridView) => IconButton(
-        icon: Icon(
-          isGridView ? Icons.list_rounded : Icons.grid_view_rounded,
-          size: 22,
-          color: Theme.of(context).primaryColor,
+  Widget _buildMobileNavPill({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceVariant.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.outline.withValues(alpha: 0.4),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: AppColors.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.onSurface,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ),
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(),
-        onPressed: () async {
-          final newValue = !isGridView;
-          ref.read(isGridViewProvider.notifier).state = newValue;
-          await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', newValue);
-        },
-        tooltip: isGridView ? 'Switch to List view' : 'Switch to Grid view',
-      );
+      ),
+    );
+  }
+
+  Widget _buildLayoutSelector(BuildContext context, bool isGridView) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      height: 32,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF151D2A) : AppColors.surfaceVariant.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : AppColors.outline.withValues(alpha: 0.5),
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _layoutOptionButton(
+            icon: Icons.grid_view_rounded,
+            isSelected: isGridView,
+            tooltip: 'Grid view',
+            onTap: () async {
+              if (!isGridView) {
+                ref.read(isGridViewProvider.notifier).state = true;
+                await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', true);
+              }
+            },
+          ),
+          const SizedBox(width: 2),
+          _layoutOptionButton(
+            icon: Icons.view_list_rounded,
+            isSelected: !isGridView,
+            tooltip: 'List view',
+            onTap: () async {
+              if (isGridView) {
+                ref.read(isGridViewProvider.notifier).state = false;
+                await ref.read(settingsRepositoryProvider).setBoolSetting('is_grid_view', false);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _layoutOptionButton({
+    required IconData icon,
+    required bool isSelected,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 16,
+              color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _showNoChannelDialog(BuildContext context) {
     showDialog(

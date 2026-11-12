@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' as drift;
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,8 +42,8 @@ final breadcrumbsProvider = FutureProvider<List<FolderData>>((ref) async {
   return breadcrumbs;
 });
 
-/// Controls whether the UI is in Grid or List view.
-final isGridViewProvider = StateProvider<bool>((ref) => true);
+/// Controls whether the UI is in Grid or List view (default: List Mode as per desktop standards).
+final isGridViewProvider = StateProvider<bool>((ref) => false);
 
 /// Synchronous navigation stack: tracks the parent folder ID before each navigation.
 /// Used by PopScope to navigate back without async DB calls.
@@ -82,6 +83,20 @@ final driveSortOptionProvider = StateProvider<DriveSortOption>((ref) => const Dr
   order: DriveSortOrder.ascending,
   categoryPriority: DriveSortCategory.none,
 ));
+
+/// Queries top 20 recent files across all folders in the drive for the Home screen.
+final recentDriveFilesProvider = FutureProvider<List<FileData>>((ref) async {
+  ref.watch(dbRebuildVersionProvider);
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.files)
+        ..where((f) => f.deletedAt.isNull())
+        ..orderBy([
+          (f) => drift.OrderingTerm.desc(f.updatedAt),
+          (f) => drift.OrderingTerm.desc(f.createdAt),
+        ])
+        ..limit(20))
+      .get();
+});
 
 /// Fetches the contents of the current folder, watches rebuild version, and applies sorting.
 final folderContentsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
@@ -268,6 +283,9 @@ final quickAccessStatsProvider = FutureProvider<Map<String, int>>((ref) async {
   };
 });
 
+/// Alias for Quick Access category counts
+final categoryCountsProvider = quickAccessStatsProvider;
+
 /// Providers to manage multiple item selection mode.
 final selectedItemsProvider = StateProvider<Set<String>>((ref) => {});
 final isSelectionModeProvider = StateProvider<bool>((ref) => false);
@@ -332,10 +350,23 @@ final totalStorageProvider = StreamProvider.autoDispose<int>((ref) {
       .map((row) => row.read<int?>('total') ?? 0);
 });
 
+final totalStorageUsedBytesProvider = totalStorageProvider;
+
 /// Reads the saved file icon style setting ('Minimal', 'Filled', 'Colored', 'Outlined').
 /// Watches [settingsUpdateProvider] so changing the setting in Appearance triggers a refresh.
 final fileIconStyleProvider = FutureProvider<String>((ref) async {
   ref.watch(settingsUpdateProvider);
   final settings = ref.read(settingsRepositoryProvider);
   return await settings.getSetting('app_file_icon_style') ?? 'Colored';
+});
+
+/// Contextual Inspector Selection
+final selectedFileForInspectorProvider = StateProvider<FileData?>((ref) => null);
+final selectedFolderForInspectorProvider = StateProvider<FolderData?>((ref) => null);
+final isInspectorOpenProvider = StateProvider<bool>((ref) => true);
+
+/// Looks up a single file by its ID from the database
+final fileByIdProvider = FutureProvider.family<FileData?, String>((ref, fileId) async {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.files)..where((f) => f.id.equals(fileId))).getSingleOrNull();
 });

@@ -18,6 +18,7 @@ import '../../../domain/sync/config_sync_service.dart';
 import '../../../domain/offline/offline_pin_service.dart';
 import '../providers/drive_providers.dart';
 import 'file_info_dialog.dart';
+import 'file_info_inspector.dart';
 import 'file_type_icon.dart';
 import 'folder_picker_dialog.dart';
 
@@ -79,27 +80,161 @@ class FileListItem extends ConsumerWidget {
       subtitleText = '$sizeString • $dateString';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-            : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isSelected
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+
+    // Desktop Multi-Column Data Table Row
+    if (isDesktop && !isSelectionMode) {
+      return Container(
+        height: 52,
+        margin: const EdgeInsets.only(bottom: 2),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.surfaceVariant : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: isSelected ? Border.all(color: AppColors.primary, width: 1.5) : null,
         ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            hoverColor: AppColors.surfaceVariant.withValues(alpha: 0.6),
+            onTap: () {
+              ref.read(selectedFileForInspectorProvider.notifier).state = file;
+              ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+            },
+            onDoubleTap: () {
+              PreviewRouter.openPreview(context, file, siblings: siblings);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  // Col 1: File icon + Name (flex: 4)
+                  Expanded(
+                    flex: 4,
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: (isImg || isVid)
+                                ? FutureBuilder<File?>(
+                                    future: ref.read(thumbnailServiceProvider).getThumbnail(file),
+                                    builder: (context, snapshot) {
+                                      if (snapshot.hasData && snapshot.data != null) {
+                                        return Image.file(snapshot.data!, fit: BoxFit.cover);
+                                      }
+                                      return FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 28);
+                                    },
+                                  )
+                                : FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 28),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            file.name,
+                            style: TextStyle(
+                              color: AppColors.onSurface,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (file.isFavorite)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Icon(Icons.star_rounded, color: const Color(0xFFF59E0B), size: 16),
+                          ),
+                        if (ref.watch(offlinePinnedIdsProvider).contains(file.id))
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.offline_pin_rounded, color: AppColors.categoryOffline, size: 15),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Col 2: Size (flex: 2)
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      sizeString,
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+
+                  // Col 3: Last Modified (flex: 2)
+                  Expanded(
+                    flex: 2,
+                    child: Text(
+                      dateString,
+                      style: TextStyle(
+                        color: AppColors.onSurfaceVariant,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ),
+
+                  // Col 4: Status / Encryption (flex: 2)
+                  Expanded(
+                    flex: 2,
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.categoryOfflineBg,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'AES-256',
+                          style: TextStyle(
+                            color: AppColors.categoryOffline,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Col 5: Actions (...)
+                  _buildOptionsMenu(context, ref),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 2),
+      decoration: BoxDecoration(
+        color: isSelected ? AppColors.surfaceVariant : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: isSelected
+            ? Border.all(color: AppColors.primary, width: 1.5)
+            : null,
       ),
       child: Material(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         leading: SizedBox(
-          width: 52,
-          height: 52,
+          width: 44,
+          height: 44,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: (isImg || isVid)
@@ -129,10 +264,10 @@ class FileListItem extends ConsumerWidget {
                           ],
                         );
                       }
-                      return FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 52);
+                      return FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 44);
                     },
                   )
-                : FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 52),
+                : FileTypeIcon(mimeType: file.mimeType, fileName: file.name, size: 44),
           ),
         ),
         title: Row(
@@ -175,6 +310,8 @@ class FileListItem extends ConsumerWidget {
               )
             : _buildOptionsMenu(context, ref),
         onTap: () {
+          ref.read(selectedFileForInspectorProvider.notifier).state = file;
+          ref.read(selectedFolderForInspectorProvider.notifier).state = null;
           if (isSelectionMode) {
             _toggleSelection(ref);
           } else {
@@ -398,9 +535,12 @@ class FileListItem extends ConsumerWidget {
   }
 
   void _showInfoDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => FileInfoDialog(file: file),
-    );
+    if (MediaQuery.of(context).size.width < 600) {
+      FileInfoInspector.showModal(context, ref, file: file);
+    } else {
+      ref.read(selectedFileForInspectorProvider.notifier).state = file;
+      ref.read(selectedFolderForInspectorProvider.notifier).state = null;
+      ref.read(isInspectorOpenProvider.notifier).state = true;
+    }
   }
 }

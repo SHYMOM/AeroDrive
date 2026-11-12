@@ -21,21 +21,137 @@ class AeroThemePreset {
   final List<Color> gradient;
 }
 
+/// AeroDrive Theme Extension for Soft-Tonic design tokens
+class AeroThemeTokens extends ThemeExtension<AeroThemeTokens> {
+  const AeroThemeTokens({
+    required this.workspaceBackground,
+    required this.cardBackground,
+    required this.hoverPillBackground,
+    required this.categoryImages,
+    required this.categoryImagesBg,
+    required this.categoryVideos,
+    required this.categoryVideosBg,
+    required this.categoryDocuments,
+    required this.categoryDocumentsBg,
+    required this.categoryAudio,
+    required this.categoryAudioBg,
+    required this.categoryOffline,
+    required this.categoryOfflineBg,
+  });
+
+  final Color workspaceBackground;
+  final Color cardBackground;
+  final Color hoverPillBackground;
+  final Color categoryImages;
+  final Color categoryImagesBg;
+  final Color categoryVideos;
+  final Color categoryVideosBg;
+  final Color categoryDocuments;
+  final Color categoryDocumentsBg;
+  final Color categoryAudio;
+  final Color categoryAudioBg;
+  final Color categoryOffline;
+  final Color categoryOfflineBg;
+
+  @override
+  AeroThemeTokens copyWith({
+    Color? workspaceBackground,
+    Color? cardBackground,
+    Color? hoverPillBackground,
+    Color? categoryImages,
+    Color? categoryImagesBg,
+    Color? categoryVideos,
+    Color? categoryVideosBg,
+    Color? categoryDocuments,
+    Color? categoryDocumentsBg,
+    Color? categoryAudio,
+    Color? categoryAudioBg,
+    Color? categoryOffline,
+    Color? categoryOfflineBg,
+  }) => AeroThemeTokens(
+    workspaceBackground: workspaceBackground ?? this.workspaceBackground,
+    cardBackground: cardBackground ?? this.cardBackground,
+    hoverPillBackground: hoverPillBackground ?? this.hoverPillBackground,
+    categoryImages: categoryImages ?? this.categoryImages,
+    categoryImagesBg: categoryImagesBg ?? this.categoryImagesBg,
+    categoryVideos: categoryVideos ?? this.categoryVideos,
+    categoryVideosBg: categoryVideosBg ?? this.categoryVideosBg,
+    categoryDocuments: categoryDocuments ?? this.categoryDocuments,
+    categoryDocumentsBg: categoryDocumentsBg ?? this.categoryDocumentsBg,
+    categoryAudio: categoryAudio ?? this.categoryAudio,
+    categoryAudioBg: categoryAudioBg ?? this.categoryAudioBg,
+    categoryOffline: categoryOffline ?? this.categoryOffline,
+    categoryOfflineBg: categoryOfflineBg ?? this.categoryOfflineBg,
+  );
+
+  @override
+  AeroThemeTokens lerp(ThemeExtension<AeroThemeTokens>? other, double t) {
+    if (other is! AeroThemeTokens) return this;
+    return AeroThemeTokens(
+      workspaceBackground: Color.lerp(workspaceBackground, other.workspaceBackground, t)!,
+      cardBackground: Color.lerp(cardBackground, other.cardBackground, t)!,
+      hoverPillBackground: Color.lerp(hoverPillBackground, other.hoverPillBackground, t)!,
+      categoryImages: Color.lerp(categoryImages, other.categoryImages, t)!,
+      categoryImagesBg: Color.lerp(categoryImagesBg, other.categoryImagesBg, t)!,
+      categoryVideos: Color.lerp(categoryVideos, other.categoryVideos, t)!,
+      categoryVideosBg: Color.lerp(categoryVideosBg, other.categoryVideosBg, t)!,
+      categoryDocuments: Color.lerp(categoryDocuments, other.categoryDocuments, t)!,
+      categoryDocumentsBg: Color.lerp(categoryDocumentsBg, other.categoryDocumentsBg, t)!,
+      categoryAudio: Color.lerp(categoryAudio, other.categoryAudio, t)!,
+      categoryAudioBg: Color.lerp(categoryAudioBg, other.categoryAudioBg, t)!,
+      categoryOffline: Color.lerp(categoryOffline, other.categoryOffline, t)!,
+      categoryOfflineBg: Color.lerp(categoryOfflineBg, other.categoryOfflineBg, t)!,
+    );
+  }
+
+  static const light = AeroThemeTokens(
+    workspaceBackground: Color(0xFFF4F7FE),
+    cardBackground: Color(0xFFFFFFFF),
+    hoverPillBackground: Color(0xFFEEF2FF),
+    categoryImages: Color(0xFF6366F1),
+    categoryImagesBg: Color(0xFFEEF2FF),
+    categoryVideos: Color(0xFFEF4444),
+    categoryVideosBg: Color(0xFFFEF2F2),
+    categoryDocuments: Color(0xFF0EA5E9),
+    categoryDocumentsBg: Color(0xFFF0F9FF),
+    categoryAudio: Color(0xFFF59E0B),
+    categoryAudioBg: Color(0xFFFFFBEB),
+    categoryOffline: Color(0xFF10B981),
+    categoryOfflineBg: Color(0xFFECFDF5),
+  );
+
+  static const dark = AeroThemeTokens(
+    workspaceBackground: Color(0xFF0B0F17),
+    cardBackground: Color(0xFF151C28),
+    hoverPillBackground: Color(0xFF1E293B),
+    categoryImages: Color(0xFF6366F1),
+    categoryImagesBg: Color(0xFF23254B),
+    categoryVideos: Color(0xFFEF4444),
+    categoryVideosBg: Color(0xFF451E24),
+    categoryDocuments: Color(0xFF0EA5E9),
+    categoryDocumentsBg: Color(0xFF153448),
+    categoryAudio: Color(0xFFF59E0B),
+    categoryAudioBg: Color(0xFF422E15),
+    categoryOffline: Color(0xFF10B981),
+    categoryOfflineBg: Color(0xFF13392E),
+  );
+}
+
 /// AeroDrive dynamic theme generation using FlexColorScheme.
 abstract final class AeroDriveTheme {
 
-  static const int _defaultAccent    = 0xFF1A73E8; // Google Blue
-  static const int _defaultSecondary = 0xFF4285F4; // Google Blue Light
+  static const int defaultAccent = 0xFF4F46E5; // Royal Indigo
+  static const int defaultSecondary = 0xFF3B82F6; // Sky Blue
 
   /// Curated theme presets for AeroDrive.
   static const List<AeroThemePreset> presets = [
-    // ── Professional presets (top of list = default) ──────────────
+    // ── Primary Theme Preset (Default) ─────────────────────────────
     AeroThemePreset(
-      name: 'Professional Dark',
-      primary: Color(0xFF1A73E8),
-      secondary: Color(0xFF4285F4),
-      icon: Icons.dark_mode,
-      gradient: [Color(0xFF1A73E8), Color(0xFF4285F4)],
+      name: 'Soft-Tonic Indigo',
+      primary: Color(0xFF4F46E5),
+      secondary: Color(0xFF3B82F6),
+      icon: Icons.cloud_outlined,
+      gradient: [Color(0xFF4F46E5), Color(0xFF3B82F6)],
     ),
     AeroThemePreset(
       name: 'Google Blue',
@@ -45,21 +161,6 @@ abstract final class AeroDriveTheme {
       gradient: [Color(0xFF1A73E8), Color(0xFF4285F4)],
     ),
     AeroThemePreset(
-      name: 'Material Light',
-      primary: Color(0xFF1565C0),
-      secondary: Color(0xFF42A5F5),
-      icon: Icons.light_mode,
-      gradient: [Color(0xFF1565C0), Color(0xFF42A5F5)],
-    ),
-    // ── Fun/Lifestyle presets ─────────────────────────────────────
-    AeroThemePreset(
-      name: 'Neon Cyan',
-      primary: Color(0xFF00E5FF),
-      secondary: Color(0xFF7C3AED),
-      icon: Icons.bolt,
-      gradient: [Color(0xFF00E5FF), Color(0xFF7C3AED)],
-    ),
-    AeroThemePreset(
       name: 'Electric Violet',
       primary: Color(0xFF7C3AED),
       secondary: Color(0xFFEC4899),
@@ -67,11 +168,11 @@ abstract final class AeroDriveTheme {
       gradient: [Color(0xFF7C3AED), Color(0xFFEC4899)],
     ),
     AeroThemePreset(
-      name: 'Rose Gold',
-      primary: Color(0xFFE8758A),
-      secondary: Color(0xFFF59E0B),
-      icon: Icons.diamond_outlined,
-      gradient: [Color(0xFFE8758A), Color(0xFFF59E0B)],
+      name: 'Neon Cyan',
+      primary: Color(0xFF00E5FF),
+      secondary: Color(0xFF7C3AED),
+      icon: Icons.bolt,
+      gradient: [Color(0xFF00E5FF), Color(0xFF7C3AED)],
     ),
     AeroThemePreset(
       name: 'Forest Green',
@@ -116,33 +217,34 @@ abstract final class AeroDriveTheme {
   static ThemeData getLight(AeroThemeState state) {
     final primary = Color(state.accentColorValue != 0
         ? state.accentColorValue
-        : _defaultAccent);
+        : defaultAccent);
     final preset = presetFromAccentValue(state.accentColorValue);
-    final secondary = preset != null ? preset.secondary : Color(_defaultSecondary);
+    final secondary = preset != null ? preset.secondary : const Color(defaultSecondary);
 
-    return FlexThemeData.light(
+    final baseTheme = FlexThemeData.light(
       colors: FlexSchemeColor.from(
         primary: primary,
         secondary: secondary,
         brightness: Brightness.light,
       ),
+      scaffoldBackground: const Color(0xFFF4F7FE),
       surfaceMode: FlexSurfaceMode.highSurfaceLowScaffold,
-      blendLevel: state.highContrast ? 0 : 4,
+      blendLevel: state.highContrast ? 0 : 2,
       appBarStyle: FlexAppBarStyle.scaffoldBackground,
-      appBarOpacity: 0.97,
+      appBarOpacity: 0.98,
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 8,
+        blendOnLevel: 4,
         useTextTheme: true,
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 12,
+        inputDecoratorRadius: 14,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
         fabRadius: 16,
-        cardRadius: 12,
-        bottomSheetRadius: 20,
-        dialogRadius: 16,
+        cardRadius: 16,
+        bottomSheetRadius: 28,
+        dialogRadius: 20,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,
@@ -166,39 +268,57 @@ abstract final class AeroDriveTheme {
       fontFamily: GoogleFonts.inter().fontFamily,
       textTheme: _buildTextTheme(state.fontScale, Brightness.light),
     );
+
+    return baseTheme.copyWith(
+      scaffoldBackgroundColor: const Color(0xFFF4F7FE),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        shadowColor: const Color(0x0A000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.zero,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      extensions: [AeroThemeTokens.light],
+    );
   }
 
   /// Generates the Dark ThemeData based on the current global state.
   static ThemeData getDark(AeroThemeState state) {
     final primary = Color(state.accentColorValue != 0
         ? state.accentColorValue
-        : _defaultAccent);
+        : defaultAccent);
     final preset = presetFromAccentValue(state.accentColorValue);
-    final secondary = preset != null ? preset.secondary : Color(_defaultSecondary);
+    final secondary = preset != null ? preset.secondary : const Color(defaultSecondary);
 
-    return FlexThemeData.dark(
+    final baseTheme = FlexThemeData.dark(
       colors: FlexSchemeColor.from(
         primary: primary,
         secondary: secondary,
         brightness: Brightness.dark,
       ),
+      scaffoldBackground: const Color(0xFF0B0F17),
       surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: state.highContrast ? 0 : 15,
+      blendLevel: state.highContrast ? 0 : 8,
       appBarStyle: FlexAppBarStyle.background,
       appBarOpacity: 0.90,
       subThemesData: const FlexSubThemesData(
-        blendOnLevel: 20,
+        blendOnLevel: 10,
         useTextTheme: true,
         useM2StyleDividerInM3: true,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
-        inputDecoratorRadius: 12,
+        inputDecoratorRadius: 14,
         inputDecoratorUnfocusedHasBorder: false,
         fabUseShape: true,
         fabRadius: 16,
-        cardRadius: 12,
-        bottomSheetRadius: 20,
-        dialogRadius: 16,
+        cardRadius: 16,
+        bottomSheetRadius: 28,
+        dialogRadius: 20,
         navigationBarSelectedLabelSchemeColor: SchemeColor.primary,
         navigationBarUnselectedLabelSchemeColor: SchemeColor.onSurface,
         navigationBarMutedUnselectedLabel: true,
@@ -222,6 +342,23 @@ abstract final class AeroDriveTheme {
       fontFamily: GoogleFonts.inter().fontFamily,
       textTheme: _buildTextTheme(state.fontScale, Brightness.dark),
     );
+
+    return baseTheme.copyWith(
+      scaffoldBackgroundColor: const Color(0xFF0B0F17),
+      cardTheme: CardThemeData(
+        color: const Color(0xFF151C28),
+        elevation: 0,
+        shadowColor: const Color(0x40000000),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.zero,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: const Color(0xFF151C28),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      extensions: [AeroThemeTokens.dark],
+    );
   }
 
   /// Builds the text theme dynamically applying the user's font scale.
@@ -229,13 +366,13 @@ abstract final class AeroDriveTheme {
     final bodyFont = GoogleFonts.inter();
     final displayFont = GoogleFonts.outfit();
 
-    // Light mode uses strong dark ink; dark mode uses white.
+    // High-contrast slate 900 for Light mode, pure white for Dark mode.
     final color = brightness == Brightness.dark
-        ? const Color(0xFFFFFFFF)
-        : const Color(0xFF0D1117);
+        ? const Color(0xFFF8FAFC)
+        : const Color(0xFF0F172A);
     final variantColor = brightness == Brightness.dark
-        ? const Color(0xB3FFFFFF) // 70% white
-        : const Color(0xFF4A5568); // Slate-600 — legible on white
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B); // Slate-500
 
     return TextTheme(
       // Display

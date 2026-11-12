@@ -246,6 +246,7 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
           child: Column(
             children: [
               _buildHeader(),
+              _buildTopSegmentedBar(),
               
               if (_filterYear != null || _filterMonth != null || _selectedAlbum != null || _showFavoritesOnly)
                 _buildActiveFiltersHeader(),
@@ -263,11 +264,60 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   child: _buildBody(),
                 ),
               ),
-
-              _buildBottomSubNavBar(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTopSegmentedBar() {
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Row(
+        children: MediaTab.values.map((tab) {
+          final isSelected = _currentTab == tab;
+          final label = tab == MediaTab.photos
+              ? 'All Media'
+              : (tab == MediaTab.albums ? 'Albums' : 'Explore');
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _currentTab = tab;
+                  _filterYear = null;
+                  _filterMonth = null;
+                  _selectedAlbum = null;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.surfaceVariant : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -930,10 +980,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   padding: const EdgeInsets.all(16),
                   sliver: SliverGrid(
                     gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 220,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.15,
+                      maxCrossAxisExtent: 180,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: 1.0,
                     ),
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -945,12 +995,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                   ),
                 ),
                 if (otherFolders.isNotEmpty) ...[
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: Text(
                         'More albums',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(color: AppColors.onSurface, fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -959,9 +1009,9 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                     sliver: SliverGrid(
                       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                         maxCrossAxisExtent: 160,
-                        crossAxisSpacing: 10,
-                        mainAxisSpacing: 10,
-                        childAspectRatio: 0.78, // Adjust aspect ratio to fit subtitles safely
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.82,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
@@ -977,11 +1027,12 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 AspectRatio(
-                                  aspectRatio: 1, // Fixed square aspect ratio prevents covers from shrinking
+                                  aspectRatio: 1,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+                                      boxShadow: AppColors.cardShadow,
                                     ),
                                     clipBehavior: Clip.antiAlias,
                                     child: _ThumbnailOrCover(file: folderFiles.isNotEmpty ? folderFiles.first : null),
@@ -992,11 +1043,11 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
                                   folder.name,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: TextStyle(color: AppColors.onSurface, fontSize: 12.5, fontWeight: FontWeight.w600),
                                 ),
                                 Text(
-                                  '${folderFiles.length}',
-                                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 10),
+                                  '${folderFiles.length} items',
+                                  style: TextStyle(color: AppColors.onSurfaceVariant, fontSize: 11),
                                 ),
                               ],
                             ),
@@ -1044,8 +1095,10 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+          boxShadow: AppColors.cardShadow,
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -1488,45 +1541,6 @@ class _MediaScreenState extends ConsumerState<MediaScreen> {
     );
   }
 
-  Widget _buildBottomSubNavBar() => DecoratedBox(
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 0.5)),
-      ),
-      child: BottomNavigationBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        currentIndex: _currentTab.index,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.white60,
-        onTap: (index) {
-          setState(() {
-            _currentTab = MediaTab.values[index];
-            _filterYear = null;
-            _filterMonth = null;
-            _selectedAlbum = null;
-          });
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.image_outlined),
-            activeIcon: Icon(Icons.image, color: AppColors.primary),
-            label: 'All media',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.photo_album_outlined),
-            activeIcon: Icon(Icons.photo_album, color: AppColors.primary),
-            label: 'Albums',
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.explore_outlined),
-            activeIcon: Icon(Icons.explore, color: AppColors.primary),
-            label: 'Explore',
-          ),
-        ],
-      ),
-    );
-
   Widget _buildEmptyState(IconData icon, String message) => Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1645,8 +1659,8 @@ class _GalleryItemState extends ConsumerState<_GalleryItem> {
       onTap: () => PreviewRouter.openPreview(context, widget.file, siblings: widget.siblings),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.03),
-          borderRadius: BorderRadius.circular(4),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(8),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(

@@ -107,7 +107,7 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
     final transfersAsync = ref.watch(transfersStreamProvider);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Row(
           children: [
@@ -119,12 +119,12 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.folder_outlined, size: 16, color: Theme.of(context).colorScheme.primary),
+                    Icon(Icons.folder_outlined, size: 16, color: AppColors.primary),
                     const SizedBox(width: 6),
                     Text(
                       'Drive',
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: AppColors.primary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -133,19 +133,19 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 ),
               ),
             ),
-            Icon(Icons.chevron_right_rounded, size: 16, color: Theme.of(context).colorScheme.outlineVariant),
+            Icon(Icons.chevron_right_rounded, size: 16, color: AppColors.onSurfaceVariant),
             const SizedBox(width: 4),
             Text(
               'Transfers',
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
+              style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_rounded, color: AppColors.onSurface),
           tooltip: 'Back to Drive',
           onPressed: () {
             if (context.canPop()) {
@@ -156,35 +156,31 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
           },
         ),
         actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.folder_outlined, size: 16),
-            label: const Text('My Drive'),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
-            ),
-            onPressed: () => context.go('/drive'),
-          ),
           IconButton(
-            icon: Icon(Icons.delete_sweep_outlined, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            icon: Icon(Icons.delete_sweep_outlined, color: AppColors.onSurfaceVariant),
             tooltip: 'Clear History',
             onPressed: () => _clearHistory(context),
           ),
+          const SizedBox(width: 8),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                _buildFilterChip(TransferFilter.all, 'All'),
-                const SizedBox(width: 8),
-                _buildFilterChip(TransferFilter.active, 'Active'),
-                const SizedBox(width: 8),
-                _buildFilterChip(TransferFilter.completed, 'Completed'),
-                const SizedBox(width: 8),
-                _buildFilterChip(TransferFilter.failed, 'Failed'),
-              ],
+          preferredSize: const Size.fromHeight(56),
+          child: Container(
+            color: AppColors.surface,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  _buildFilterChip(TransferFilter.all, 'All'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(TransferFilter.active, 'Active'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(TransferFilter.completed, 'Completed'),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(TransferFilter.failed, 'Failed'),
+                ],
+              ),
             ),
           ),
         ),
@@ -226,9 +222,10 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                    border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+                    boxShadow: AppColors.cardShadow,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -407,43 +404,49 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
 
   Widget _buildStatusBadge(String? status) {
     Color color;
+    Color bgColor;
     String text;
     
     switch (status) {
       case 'PENDING':
-        color = Colors.orangeAccent;
+        color = AppColors.categoryDocuments;
+        bgColor = AppColors.categoryDocumentsBg;
         text = 'PENDING';
       case 'ENCRYPTING':
-        color = Colors.amber;
+        color = AppColors.categoryAudio;
+        bgColor = AppColors.categoryAudioBg;
         text = 'ENCRYPTING';
       case 'PROCESSING':
-        color = Colors.blueAccent;
+        color = AppColors.primary;
+        bgColor = AppColors.primaryContainer;
         text = 'UPLOADING';
       case 'COMPLETED':
-        color = Colors.green;
+        color = AppColors.categoryOffline;
+        bgColor = AppColors.categoryOfflineBg;
         text = 'SUCCESS';
       case 'FAILED':
-        color = Colors.red;
+        color = AppColors.categoryVideos;
+        bgColor = AppColors.categoryVideosBg;
         text = 'FAILED';
       default:
-        color = Colors.grey;
+        color = AppColors.subtleText;
+        bgColor = AppColors.surfaceVariant;
         text = 'UNKNOWN';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 0.5),
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         text,
         style: TextStyle(
           color: color,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
         ),
       ),
     );
@@ -451,31 +454,31 @@ class _TransfersScreenState extends ConsumerState<TransfersScreen> {
 
   Widget _buildFilterChip(TransferFilter filter, String label) {
     final selected = _currentFilter == filter;
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      selectedColor: Theme.of(context).colorScheme.primaryContainer,
-      checkmarkColor: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      labelStyle: TextStyle(
-        color: selected ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurfaceVariant,
-        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-        fontSize: 12,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outlineVariant,
-          width: 0.5,
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _currentFilter = filter;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.surfaceVariant : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.primary.withValues(alpha: 0.4) : AppColors.outline.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? AppColors.primary : AppColors.onSurfaceVariant,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 12.5,
+          ),
         ),
       ),
-      onSelected: (selected) {
-        if (selected) {
-          setState(() {
-            _currentFilter = filter;
-          });
-        }
-      },
     );
   }
 }

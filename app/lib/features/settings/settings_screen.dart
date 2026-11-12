@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers/repository_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/theme_provider.dart';
 import '../../domain/background_service_manager.dart';
 import '../telegram/telegram_service.dart';
 import '../cleaner/cleaner_screen.dart';
@@ -43,13 +42,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text('Settings', style: TextStyle(color: AppColors.onSurface, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: cs.onSurface),
+          icon: Icon(Icons.arrow_back, color: AppColors.onSurface),
           onPressed: () => context.go('/drive'),
         ),
       ),
@@ -57,6 +57,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Column(
           children: [
             _buildSearchBar(cs),
+            _buildThemeSwitcher(context),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -142,42 +143,126 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildSearchBar(ColorScheme cs) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: cs.outlineVariant),
+  Widget _buildThemeSwitcher(BuildContext context) {
+    final currentTheme = ref.watch(themeProvider).themeMode;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withValues(alpha: 0.04)
+                : AppColors.outline.withValues(alpha: 0.5),
           ),
-          child: TextField(
-            controller: _searchController,
-            style: TextStyle(color: cs.onSurface),
-            decoration: InputDecoration(
-              hintText: 'Search settings...',
-              hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.7)),
-              prefixIcon: Icon(Icons.search, color: cs.primary),
-              suffixIcon: _searchQuery.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.clear, color: cs.onSurfaceVariant),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _searchQuery = '');
-                    },
-                  )
-                : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: Row(
+          children: [
+            _buildThemeOption(
+              title: 'Soft-Tonic Light',
+              icon: Icons.light_mode_rounded,
+              isSelected: currentTheme == ThemeMode.light,
+              onTap: () => ref.read(themeProvider.notifier).setThemeMode(ThemeMode.light),
             ),
-            onChanged: (val) {
-              setState(() => _searchQuery = val.toLowerCase());
-            },
+            _buildThemeOption(
+              title: 'macOS Dark',
+              icon: Icons.dark_mode_rounded,
+              isSelected: currentTheme == ThemeMode.dark,
+              onTap: () => ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark),
+            ),
+            _buildThemeOption(
+              title: 'System',
+              icon: Icons.brightness_auto_rounded,
+              isSelected: currentTheme == ThemeMode.system,
+              onTap: () => ref.read(themeProvider.notifier).setThemeMode(ThemeMode.system),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeOption({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.surfaceVariant : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: isSelected ? Border.all(color: AppColors.primary, width: 1.2) : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: isSelected ? AppColors.primary : AppColors.onSurfaceVariant,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? AppColors.onSurface : AppColors.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
-      )
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0);
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(ColorScheme cs) => Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+          boxShadow: AppColors.cardShadow,
+        ),
+        child: TextField(
+          controller: _searchController,
+          style: TextStyle(color: AppColors.onSurface),
+          decoration: InputDecoration(
+            hintText: 'Search settings...',
+            hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.7)),
+            prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary),
+            suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: AppColors.onSurfaceVariant),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                )
+              : null,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          ),
+          onChanged: (val) {
+            setState(() => _searchQuery = val.toLowerCase());
+          },
+        ),
+      ),
+    ).animate().fadeIn(duration: 300.ms).slideY(begin: -0.1, end: 0);
 
   Widget _buildSettingsGroup(String title, IconData icon, ColorScheme cs, List<dynamic> items) {
     final filteredItems = items.where((item) {
@@ -217,41 +302,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ],
             ),
           ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-              ),
-              child: Column(
-                children: List.generate(filteredItems.length, (index) {
-                  final item = filteredItems[index];
-                  Widget child;
-                  if (item is _SettingsItem) {
-                    child = _buildTile(item.title, item.subtitle, item.icon, item.onTap, cs);
-                  } else if (item is _SettingsSwitchItem) {
-                    child = _buildSwitchTile(item.title, item.subtitle, item.icon, item.settingKey, item.defaultValue, cs);
-                  } else if (item is _DynamicItemBuilder) {
-                    child = item.build(context, ref);
-                  } else {
-                    child = const SizedBox.shrink();
-                  }
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.outline.withValues(alpha: 0.5)),
+              boxShadow: AppColors.cardShadow,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: List.generate(filteredItems.length, (index) {
+                final item = filteredItems[index];
+                Widget child;
+                if (item is _SettingsItem) {
+                  child = _buildTile(item.title, item.subtitle, item.icon, item.onTap, cs);
+                } else if (item is _SettingsSwitchItem) {
+                  child = _buildSwitchTile(item.title, item.subtitle, item.icon, item.settingKey, item.defaultValue, cs);
+                } else if (item is _DynamicItemBuilder) {
+                  child = item.build(context, ref);
+                } else {
+                  child = const SizedBox.shrink();
+                }
 
-                  return Column(
-                    children: [
-                      child,
-                      if (index < filteredItems.length - 1)
-                        Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.3), indent: 56),
-                    ],
-                  );
-                }),
-              ),
+                return Column(
+                  children: [
+                    child,
+                    if (index < filteredItems.length - 1)
+                      Divider(height: 1, color: AppColors.outline.withValues(alpha: 0.4), indent: 56),
+                  ],
+                );
+              }),
             ),
           ),
         ],
-      ).animate().fadeIn(duration: 500.ms).slideX(begin: 0.1, end: 0),
+      ).animate().fadeIn(duration: 350.ms).slideX(begin: 0.05, end: 0),
     );
   }
 

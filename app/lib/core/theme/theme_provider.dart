@@ -58,13 +58,13 @@ class AeroThemeState {
 class ThemeNotifier extends StateNotifier<AeroThemeState> {
 
   ThemeNotifier(this._ref) : super(const AeroThemeState(
-    themeMode: ThemeMode.dark,
-    accentColorValue: 0xFF1A73E8, // default Professional Blue accent
+    themeMode: ThemeMode.light,
+    accentColorValue: 0xFF4F46E5, // default Soft-Tonic Indigo accent #4F46E5
     fontScale: 1,
     highContrast: false,
     localeString: 'System Default',
   )) {
-    _updateAppColors(ThemeMode.dark);
+    _updateAppColors(ThemeMode.light);
     _loadTheme();
     final dispatcher = WidgetsBinding.instance.platformDispatcher;
     void handlePlatformBrightnessChanged() {
@@ -106,16 +106,16 @@ class ThemeNotifier extends StateNotifier<AeroThemeState> {
       
       // Load Mode
       final themeStr = await settings.getSetting('app_theme');
-      ThemeMode mode = ThemeMode.dark; // default to dark for professional look
+      ThemeMode mode = ThemeMode.light; // default to Soft-Tonic Light
       if (themeStr == 'light') mode = ThemeMode.light;
       if (themeStr == 'dark') mode = ThemeMode.dark;
       if (themeStr == 'system') mode = ThemeMode.system;
 
       // Load Accent
       final accentStr = await settings.getSetting('app_accent_color');
-      var accentValue = 0xFF1A73E8;
+      var accentValue = 0xFF4F46E5;
       if (accentStr != null) {
-        accentValue = int.tryParse(accentStr) ?? 0xFF1A73E8;
+        accentValue = int.tryParse(accentStr) ?? 0xFF4F46E5;
       }
 
       // Load Font Scale

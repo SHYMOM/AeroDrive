@@ -31,7 +31,7 @@ class FileTypeIcon extends ConsumerWidget {
       case 'xls':
       case 'xlsx':
       case 'csv':
-        color = const Color(0xFF10B981); // Green
+        color = const Color(0xFF10B981); // Emerald Green
       case 'doc':
       case 'docx':
         color = const Color(0xFF3B82F6); // Blue
@@ -40,24 +40,37 @@ class FileTypeIcon extends ConsumerWidget {
         color = const Color(0xFFF97316); // Orange
       case 'ps':
       case 'psd':
-        color = const Color(0xFF0284C7); // Light Blue
+      case 'ai':
+        color = const Color(0xFF0284C7); // Light Blue / Creative
       case 'zip':
       case 'rar':
       case '7z':
       case 'tar':
-        color = const Color(0xFFF59E0B); // Amber
+      case 'gz':
+        color = const Color(0xFF14B8A6); // Teal
       case 'mp3':
       case 'wav':
       case 'ogg':
       case 'flac':
       case 'm4a':
+      case 'aac':
         color = const Color(0xFF8B5CF6); // Purple
+      case 'js':
+      case 'ts':
+      case 'html':
+      case 'css':
+      case 'dart':
+      case 'py':
+      case 'json':
+      case 'yaml':
+      case 'xml':
+        color = const Color(0xFFF59E0B); // Amber / Code
       case 'txt':
       case 'md':
       case 'log':
         color = const Color(0xFF64748B); // Slate Grey
       default:
-        color = const Color(0xFF475569); // Dark slate
+        color = const Color(0xFF64748B); // Slate
     }
 
     switch (effectiveStyle) {
@@ -116,24 +129,26 @@ class FileTypeIcon extends ConsumerWidget {
   }
 
   Widget _buildFilled(String ext, Color color) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(size * 0.12),
-        ),
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.only(top: size * 0.15),
-            child: Text(
-              ext.toUpperCase(),
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: size * 0.20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.5,
+    return Center(
+      child: SizedBox(
+        width: size * 0.74,
+        height: size * 0.96,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(size * 0.12),
+          ),
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(top: size * 0.15),
+              child: Text(
+                ext.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: size * 0.20,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),
@@ -177,43 +192,62 @@ class DogEarFilePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Vertical document sheet aspect ratio (~0.74 width, 0.96 height) centered
+    final docWidth = size.width * 0.74;
+    final docHeight = size.height * 0.96;
+    final left = (size.width - docWidth) / 2;
+    final top = (size.height - docHeight) / 2;
+    final right = left + docWidth;
+    final bottom = top + docHeight;
+
+    final fold = docWidth * 0.32; // crisp corner fold
+    final radius = docWidth * 0.08;
+
     final paint = Paint()
       ..color = color
       ..style = style
       ..strokeWidth = style == PaintingStyle.stroke ? 2.0 : 0;
 
     final path = Path();
-    final double fold = size.width * 0.32; // dog-ear corner size
-
-    path.moveTo(0, size.height * 0.1);
-    path.quadraticBezierTo(0, 0, size.height * 0.1, 0); // round top-left slightly
-    path.lineTo(size.width - fold, 0);
-    path.lineTo(size.width, fold);
-    path.lineTo(size.width, size.height - (size.height * 0.1));
-    path.quadraticBezierTo(size.width, size.height, size.width - (size.height * 0.1), size.height);
-    path.lineTo(size.height * 0.1, size.height);
-    path.quadraticBezierTo(0, size.height, 0, size.height - (size.height * 0.1));
+    path.moveTo(left, top + radius);
+    path.quadraticBezierTo(left, top, left + radius, top);
+    path.lineTo(right - fold, top);
+    path.lineTo(right, top + fold);
+    path.lineTo(right, bottom - radius);
+    path.quadraticBezierTo(right, bottom, right - radius, bottom);
+    path.lineTo(left + radius, bottom);
+    path.quadraticBezierTo(left, bottom, left, bottom - radius);
     path.close();
+
+    // Draw subtle drop shadow behind the page if fill style
+    if (style == PaintingStyle.fill) {
+      final shadowPaint = Paint()
+        ..color = Colors.black.withValues(alpha: 0.14)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+      canvas.drawPath(path.shift(const Offset(0, 1.5)), shadowPaint);
+    }
 
     canvas.drawPath(path, paint);
 
-    // Draw folded flap only for fill style
+    // Draw folded corner flap
     if (style == PaintingStyle.fill) {
+      // Dark under-flap
       final flapPaint = Paint()
-        ..color = Colors.black.withValues(alpha: 0.25)
+        ..color = Colors.black.withValues(alpha: 0.22)
         ..style = PaintingStyle.fill;
 
       final flapPath = Path();
-      flapPath.moveTo(size.width - fold, 0);
-      flapPath.lineTo(size.width - fold, fold - (fold * 0.2));
-      flapPath.quadraticBezierTo(size.width - fold, fold, size.width - fold + (fold * 0.2), fold);
-      flapPath.lineTo(size.width, fold);
+      flapPath.moveTo(right - fold, top);
+      flapPath.lineTo(right - fold, top + fold - 2);
+      flapPath.quadraticBezierTo(right - fold, top + fold, right - fold + 2, top + fold);
+      flapPath.lineTo(right, top + fold);
       flapPath.close();
 
       canvas.drawPath(flapPath, flapPaint);
 
+      // Light highlight on top of flap
       final flapHighlightPaint = Paint()
-        ..color = Colors.white.withValues(alpha: 0.18)
+        ..color = Colors.white.withValues(alpha: 0.20)
         ..style = PaintingStyle.fill;
 
       canvas.drawPath(flapPath, flapHighlightPaint);
